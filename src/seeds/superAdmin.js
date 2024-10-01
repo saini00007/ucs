@@ -7,8 +7,8 @@ const insertSuperAdmin = async () => {
     password: 'blabla', // replace with your desired password
     email: 'sarjeetsingh4680@gmail.com', // replace with your desired email
     role_id: 1, // Assuming 1 is the role ID for admin
-    department_id: null, // Assuming no specific department for super admin
-    company_id: null, // Assuming no specific company for super admin
+    department_id: null,// Assuming no specific department for super admin
+    company_id: null,// Assuming no specific company for super admin
   };
 
   // Hash the password

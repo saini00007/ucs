@@ -1,10 +1,10 @@
 {
   "name": "ucs",
-  "module": "index.ts",
+  "module": "server.js",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "bun src/server.js",
     "dev": "nodemon src/server.js"
   },
   "devDependencies": {
