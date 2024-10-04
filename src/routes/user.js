@@ -7,9 +7,9 @@ import {
 const router = express.Router();
 
 // Route to add an admin to a company
-router.post('/companies/:companyId/admins', addAdminToCompany);
+router.post('/companies/:companyId/users', addAdminToCompany);
 
 // Route to add a user to a department
-router.post('/departments/:departmentId/users', addUserToDepartment);
+router.post('/companies/:companyId/departments/:departmentId/users', addUserToDepartment);
 
 export default router;

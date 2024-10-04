@@ -1,7 +1,7 @@
 // middleware/authMiddleware.js
 
 const mockUser = {
-    user_id: 1, // Example user ID
+    userId: 1, // Example user ID
     username: 'superAdmin',
 };
 

@@ -7,13 +7,10 @@ import {
 
 const router = express.Router();
 
-// Route to get all departments for a specific company
-router.get('/company/:companyId', getAllDepartmentsForCompany);
+router.get('/companies/:companyId/departments', getAllDepartmentsForCompany);
 
-// Route to get a single department by ID
-router.get('/:departmentId', getDepartmentById);
+router.get('/departments/:departmentId', getDepartmentById);
 
-// Route to create a new department within a specific company
-router.post('/', createDepartment);
+router.post('/companies/:companyId/departments', createDepartment);
 
 export default router;
