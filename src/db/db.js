@@ -1,7 +1,6 @@
-import pkg from 'pg'; // Import PostgreSQL client
-import dotenv from 'dotenv'; // Import dotenv for environment variables
+import pkg from 'pg';
+import dotenv from 'dotenv'; 
 
-// Load environment variables from .env file
 dotenv.config();
 
 // Destructure the Pool from the imported package
@@ -43,5 +42,4 @@ const endPool = async () => {
   }
 };
 
-// Export the query function, connectToDatabase function, and endPool function
 export { query, connectToDatabase, endPool };

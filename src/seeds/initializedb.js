@@ -88,7 +88,7 @@ const initializeDatabase = async () => {
         company_id INTEGER REFERENCES companies(company_id) ON DELETE CASCADE -- Add foreign key reference with ON DELETE CASCADE
       )
     `);
-    
+
     // Add proper references for department_id and company_id only if they do not exist
     await query(`
       DO $$
@@ -160,6 +160,14 @@ const initializeDatabase = async () => {
       )
     `);
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS department_templates (
+        department_template_id SERIAL PRIMARY KEY,
+        department_id INTEGER REFERENCES departments(department_id) ON DELETE CASCADE,
+        template_id INTEGER REFERENCES templates(template_id) ON DELETE CASCADE
+      )
+    `);
+
     // Create Assessments Table
     await query(`
       CREATE TABLE IF NOT EXISTS assessments (
@@ -186,8 +194,9 @@ const initializeDatabase = async () => {
     await query(`
       CREATE TABLE IF NOT EXISTS evidence_files (
         evidence_file_id SERIAL PRIMARY KEY,
-        file_path TEXT NOT NULL,
-        uploaded_by_user_id INTEGER REFERENCES users(user_id), -- uploaded_by_user_id references users
+        file_path TEXT ,
+        pdf_data BYTEA,  -- Store the PDF data as binary  
+        uploaded_by_user_id INTEGER REFERENCES users(user_id),
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -198,8 +207,15 @@ const initializeDatabase = async () => {
         answer_id SERIAL PRIMARY KEY,
         assessment_question_id INTEGER REFERENCES assessment_questions(assessment_question_id),
         user_id INTEGER REFERENCES users(user_id), -- user_id references users
-        answer_text TEXT,
-        evidence_file_id INTEGER REFERENCES evidence_files(evidence_file_id)
+        answer_text TEXT
+      )
+    `); // Removed the trailing comma
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS answer_evidence_files (
+        answer_id INTEGER REFERENCES answers(answer_id),
+        evidence_file_id INTEGER REFERENCES evidence_files(evidence_file_id),
+        PRIMARY KEY (answer_id, evidence_file_id)
       )
     `);
 

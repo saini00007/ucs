@@ -1,12 +1,16 @@
 import express from 'express';
-import { connectToDatabase } from './db/db.js'; // Import the connection function for the database
+import { connectToDatabase } from './db/db.js'; 
+import path from 'path';
 
-import routes from './routes/temp.js'; // Import temporary routes
-import companyRoutes from './routes/company.js'; // Import company-related routes
-import departmentRoutes from './routes/department.js'; // Import department-related routes
-import userRoutes from './routes/user.js'; // Import user-related routes
-import authRoutes from './routes/auth.js'; // Import authentication-related routes
-import templateRoutes from './routes/template.js'; // Import template-related routes
+import routes from './routes/temp.js'; 
+import companyRoutes from './routes/company.js'; 
+import departmentRoutes from './routes/department.js'; 
+import userRoutes from './routes/user.js'; 
+import authRoutes from './routes/auth.js'; 
+import templateRoutes from './routes/template.js'; 
+import assessmentRoutes from'./routes/assessment.js';
+import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
+import answerRoutes from './routes/answer.js';
 
 import { mockAuthenticate } from './middlewares/mockAuth.js'; // Import mock authentication middleware
 import dotenv from 'dotenv'; // Import dotenv for environment variables
@@ -15,7 +19,7 @@ import dotenv from 'dotenv'; // Import dotenv for environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000; // Use environment port or default to 4000
+const PORT = process.env.PORT || 4000; 
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -30,6 +34,9 @@ app.use('/', departmentRoutes); // Routes for department operations
 app.use('/', userRoutes); // Routes for user operations
 app.use('/auth', authRoutes); // Routes for authentication operations
 app.use('/templates', templateRoutes); // Routes for template operations
+app.use('/assessment',assessmentRoutes);
+app.use('/question',assessmentQuestionRoutes);
+app.use('/answer',answerRoutes);
 
 // Connect to PostgreSQL
 connectToDatabase(); // Establish the database connection

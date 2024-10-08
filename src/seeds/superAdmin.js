@@ -4,9 +4,9 @@ import bcrypt from 'bcrypt'; // Import bcrypt for password hashing
 const insertSuperAdmin = async () => {
   // Define the super admin data
   const superAdminData = {
-    username: 'superAdmin', // Replace with your desired username
-    password: 'blabla', // Replace with your desired password
-    email: 'sarjeetsingh4680@gmail.com', // Replace with your desired email
+    username: 'superAdmin', 
+    password: 'blabla', 
+    email: 'sarjeetsingh4680@gmail.com', 
     role_id: 1, // Assuming 1 is the role ID for admin
     department_id: null, // Assuming no specific department for super admin
     company_id: null, // Assuming no specific company for super admin
@@ -15,7 +15,6 @@ const insertSuperAdmin = async () => {
   // Hash the password using bcrypt with a salt rounds of 10
   const hashedPassword = await bcrypt.hash(superAdminData.password, 10);
 
-  // Prepare the SQL insert query
   const insertQuery = `
     INSERT INTO users (username, password, email, role_id, department_id, company_id)
     VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id;

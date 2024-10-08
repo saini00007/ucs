@@ -1,7 +1,7 @@
 import { query } from '../db/db.js';
 
 // Controller to create a template based on a master department
-export const createTemplateFromDepartment = async (req, res) => {
+export const createTemplateFromMasterDepartment = async (req, res) => {
     const { templateName, masterDepartmentId } = req.body;
 
     try {
@@ -128,3 +128,37 @@ export const deleteTemplate = async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
+
+export const assignTemplateToDepartment = async (req, res) => {
+    const { departmentId, templateId } = req.body;
+  
+    try {
+      const result = await query(`
+        INSERT INTO department_templates (department_id, template_id)
+        VALUES ($1, $2)
+        RETURNING *
+      `, [departmentId, templateId]);
+  
+      res.status(201).json({ message: 'Template assigned successfully', data: result.rows[0] });
+    } catch (error) {
+      console.error('Error assigning template:', error);
+      res.status(500).json({ message: 'Error assigning template', error: error.message });
+    }
+  };
+
+  export const getTemplatesByDepartment = async (req, res) => {
+    const { departmentId } = req.params;
+    try {
+      const result = await query(`
+        SELECT t.template_id, t.template_name
+        FROM department_templates dt
+        JOIN templates t ON dt.template_id = t.template_id
+        WHERE dt.department_id = $1
+      `, [departmentId]);
+  
+      res.status(200).json({ templates: result.rows });
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ message: 'Error fetching templates', error: error.message });
+    }
+  };

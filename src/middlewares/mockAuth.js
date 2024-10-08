@@ -1,7 +1,6 @@
-// middleware/authMiddleware.js
-
+//fake auth for development --will change soon
 const mockUser = {
-    userId: 1, // Example user ID
+    userId: 1,
     username: 'superAdmin',
 };
 

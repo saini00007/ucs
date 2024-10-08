@@ -2,13 +2,15 @@ import express from 'express';
 const router = express.Router();
 
 import {
-    createTemplateFromDepartment,
+    createTemplateFromMasterDepartment,
     createEmptyTemplate,
     addQuestionsToTemplate,
     removeQuestionsFromTemplate,
-    deleteTemplate
+    deleteTemplate,
+    assignTemplateToDepartment,
+    getTemplatesByDepartment
   } from '../controllers/template.js'
-router.post('/create-from-department', createTemplateFromDepartment);
+router.post('/create-from-department', createTemplateFromMasterDepartment);
 
 router.post('/create-empty', createEmptyTemplate);
 
@@ -17,5 +19,9 @@ router.post('/add-questions', addQuestionsToTemplate);
 router.delete('/remove-questions', removeQuestionsFromTemplate);
 
 router.delete('/:templateId', deleteTemplate);
+
+router.post('/assign-templates',assignTemplateToDepartment);
+
+router.get('/department/:departmentId',getTemplatesByDepartment);
 
 export default router;
