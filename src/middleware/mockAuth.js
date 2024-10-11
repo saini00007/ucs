@@ -2,6 +2,7 @@
 const mockUser = {
     userId: 1,
     username: 'superAdmin',
+    role_id:'1'
 };
 
 export const mockAuthenticate = (req, res, next) => {

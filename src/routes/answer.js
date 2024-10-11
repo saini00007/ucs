@@ -1,5 +1,5 @@
 import express from 'express';
-import { uploadFiles } from '../middlewares/fileUpload.js'
+import { uploadFiles } from '../middleware/fileUpload.js'
 import { createAnswer, getAnswersByQuestion, deleteAnswer, serveFile } from '../controllers/answer.js';
 
 

@@ -102,10 +102,14 @@ export const verifyOtp = async (req, res) => {
     // Optionally, delete the used OTP from the database
     await query(`DELETE FROM otps WHERE user_id = $1`, [userId]);
 
-    res.status(200).json({ success: true, message: 'OTP verified successfully', token: finalToken });
+    // Set the final access token in an HTTP-only cookie
+    res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 3600000 });
+
+    res.status(200).json({ success: true, message: 'OTP verified successfully' });
   } catch (error) {
     // Log any error that occurs during OTP verification
     console.error('Error verifying OTP:', error);
     res.status(500).json({ success: false, message: 'Failed to verify OTP' });
   }
 };
+
