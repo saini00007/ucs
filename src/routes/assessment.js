@@ -1,22 +1,19 @@
 import express from 'express';
 import { 
-  createAssessment, 
-  getAssessmentById, 
-  deleteAssessment ,
-  getAllAssessmentsByDepartment
+    markAssessmentAsStarted, 
+    getAssessmentById, 
+    getAllAssessments 
 } from '../controllers/assessment.js';
 
 const router = express.Router();
 
-// Route to create a new assessment
-router.post('/', createAssessment);
+// Route to mark an assessment as started
+router.put('/assessments/:assessmentId/start', markAssessmentAsStarted);
 
 // Route to get an assessment by ID
-router.get('/:assessmentId', getAssessmentById);
+router.get('/assessments/:assessmentId', getAssessmentById);
 
-router.get('/department/:departmentId',getAllAssessmentsByDepartment);
-
-// Route to delete an assessment
-router.delete('/:assessmentId', deleteAssessment);
+// Route to get all assessments for a specific department
+router.get('/departments/:departmentId/assessments', getAllAssessments);
 
 export default router;

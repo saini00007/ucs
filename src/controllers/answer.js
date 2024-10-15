@@ -1,8 +1,18 @@
-import { query } from '../db/db.js';
+import { Answer, EvidenceFile, AnswerEvidenceFile } from '../models/index.js';
 
-// Controller to create an answer with file uploads
+import { validationResult } from 'express-validator'; // For input validation
+
 export const createAnswer = async (req, res) => {
-  const { assessment_question_id, user_id, answer_text } = req.body;
+  // Validate request body
+  const {assessmentQuestionId,assessmentId}=req.params;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
+  // Use camelCase properties from the request body
+  const {answerText } = req.body; 
+  const userId = req.user_id; // Assuming user_id is set in the request (e.g., by a middleware)
 
   // Check if files were uploaded in the request
   if (!req.files || req.files.length === 0) {
@@ -10,95 +20,86 @@ export const createAnswer = async (req, res) => {
   }
 
   try {
-    // Array to store IDs of the uploaded evidence files
-    const evidenceFileIds = [];
-
-    // Iterate through each uploaded file
-    for (const file of req.files) {
-      // Insert the file details into the evidence_files table
-      const fileResult = await query(`
-        INSERT INTO evidence_files (file_path, pdf_data, uploaded_by_user_id)
-        VALUES ($1, $2, $3)
-        RETURNING *
-      `, [file.originalname, file.buffer, user_id]); // Use originalname as file_path
-
-      // Collect the evidence file ID
-      evidenceFileIds.push(fileResult.rows[0].evidence_file_id);
-    }
+    // Array to store evidence files
+    const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+      // Create evidence file using Sequelize
+      const evidenceFile = await EvidenceFile.create({
+        file_path: file.originalname,
+        pdf_data: file.buffer,
+        uploaded_by_user_id: userId,
+      });
+      return evidenceFile;
+    }));
 
     // Insert the answer details into the answers table
-    const result = await query(`
-      INSERT INTO answers (assessment_question_id, user_id, answer_text)
-      VALUES ($1, $2, $3)
-      RETURNING *
-    `, [assessment_question_id, user_id, answer_text]);
+    const answer = await Answer.create({
+      assessment_question_id: assessmentQuestionId, // Using snake_case in the DB
+      user_id: userId,
+      answer_text: answerText, // Using snake_case in the DB
+    });
 
     // Link each uploaded file to the created answer
-    for (const evidenceFileId of evidenceFileIds) {
-      await query(`
-        INSERT INTO answer_evidence_files (answer_id, evidence_file_id)
-        VALUES ($1, $2)
-      `, [result.rows[0].answer_id, evidenceFileId]);
-    }
+    await Promise.all(evidenceFiles.map(async (evidenceFile) => {
+      await AnswerEvidenceFile.create({
+        answerId: answer.answer_id, // Ensure 'answer_id' matches the model definition
+        evidenceFileId: evidenceFile.evidence_file_id, // Ensure 'evidence_file_id' matches the model definition
+      });
+    }));
 
     // Respond with the created answer and associated evidence file IDs
-    res.status(201).json({ success: true, answer: result.rows[0], evidence_file_ids: evidenceFileIds });
+    res.status(201).json({
+      success: true,
+      answer,
+      evidence_file_ids: evidenceFiles.map(file => file.evidence_file_id),
+    });
   } catch (error) {
     console.error('Error creating answer:', error);
-    res.status(500).json({ success: false, message: 'Error creating answer.' });
+    res.status(500).json({ success: false, message: 'Internal server error while creating answer.' });
   }
 };
+
 
 // Controller to retrieve all answers for a specific assessment question
 export const getAnswersByQuestion = async (req, res) => {
-  const { assessment_question_id } = req.params;
-
-  try {
-    // Query to fetch answers and their associated evidence files
-    const result = await query(`
-      SELECT a.answer_id, a.user_id, a.answer_text, 
-             e.evidence_file_id, e.file_path
-      FROM answers a
-      LEFT JOIN answer_evidence_files aef ON a.answer_id = aef.answer_id
-      LEFT JOIN evidence_files e ON aef.evidence_file_id = e.evidence_file_id
-      WHERE a.assessment_question_id = $1
-    `, [assessment_question_id]);
-
-    // Check if no answers were found
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'No answers found for this question.' });
-    }
-
-    // Group answers with their associated evidence files
-    const answersWithEvidence = result.rows.reduce((acc, row) => {
-      const { answer_id, user_id, answer_text, evidence_file_id, file_path } = row;
-
-      // Check if the answer already exists in the accumulator
-      const existingAnswer = acc.find(answer => answer.answer_id === answer_id);
-      if (existingAnswer) {
-        // Add evidence file to the existing answer
-        if (file_path) {
-          existingAnswer.evidence_files.push({ evidence_file_id, file_path });
-        }
-      } else {
-        // Create a new answer entry with evidence files
-        acc.push({
-          answer_id,
-          user_id,
-          answer_text,
-          evidence_files: file_path ? [{ evidence_file_id, file_path }] : [],
-        });
+    const { assessment_question_id } = req.params;
+  
+    try {
+      // Query to fetch answers and their associated evidence files
+      const answers = await Answer.findAll({
+        where: { assessment_question_id },
+        include: [{
+          model: EvidenceFile,
+          through: { model: AnswerEvidenceFile },
+          as: 'EvidenceFiles', // This should match the alias defined in the association
+          required: false // Optional join
+        }]
+      });
+  
+      // Check if no answers were found
+      if (answers.length === 0) {
+        return res.status(404).json({ success: false, message: 'No answers found for this question.' });
       }
-      return acc;
-    }, []); // Initialize the accumulator as an empty array
+  
+      // Format the response to include evidence files with answers
+      const answersWithEvidence = answers.map(answer => ({
+        answer_id: answer.answer_id,
+        user_id: answer.user_id,
+        answer_text: answer.answer_text,
+        evidence_files: answer.EvidenceFiles.map(evidence => ({
+          evidence_file_id: evidence.evidence_file_id,
+          file_path: evidence.file_path
+        }))
+      }));
+  
+      // Respond with the gathered answers and evidence
+      res.status(200).json({ success: true, answers: answersWithEvidence });
+    } catch (error) {
+      console.error('Error retrieving answers:', error);
+      res.status(500).json({ success: false, message: 'Error retrieving answers.', error: error.message });
+    }
+  };
+  
 
-    // Respond with the gathered answers and evidence
-    res.status(200).json({ success: true, answers: answersWithEvidence });
-  } catch (error) {
-    console.error('Error retrieving answers:', error);
-    res.status(500).json({ success: false, message: 'Error retrieving answers.', error: error.message });
-  }
-};
 
 // Controller to serve an uploaded file
 export const serveFile = async (req, res) => {
@@ -106,18 +107,18 @@ export const serveFile = async (req, res) => {
 
   try {
     // Fetch the file data from the database using the file ID
-    const result = await query('SELECT file_path, pdf_data FROM evidence_files WHERE evidence_file_id = $1', [file_id]);
+    const evidenceFile = await EvidenceFile.findOne({ where: { evidence_file_id: file_id } });
 
     // Check if the file was found
-    if (result.rows.length === 0) {
+    if (!evidenceFile) {
       return res.status(404).json({ success: false, message: 'File not found.' });
     }
 
-    const { file_path, pdf_data } = result.rows[0];
+    const { file_path, pdf_data } = evidenceFile;
 
     // Set headers to indicate the file type and prompt download
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${file_path}"`); // Optional: prompt download with original file name
+    res.setHeader('Content-Disposition', `attachment; filename="${file_path}"`);
 
     // Send the PDF data as the response
     res.send(pdf_data);
@@ -133,14 +134,10 @@ export const deleteAnswer = async (req, res) => {
 
   try {
     // Delete the answer from the database
-    const result = await query(`
-      DELETE FROM answers
-      WHERE answer_id = $1
-      RETURNING *
-    `, [answer_id]);
+    const result = await Answer.destroy({ where: { answer_id } });
 
     // Check if the answer was not found
-    if (result.rowCount === 0) {
+    if (result === 0) {
       return res.status(404).json({ success: false, message: 'Answer not found.' });
     }
 

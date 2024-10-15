@@ -1,18 +1,19 @@
-import  nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Create a transporter object
 const transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    service: process.env.MAIL_SERVICE,
-    port: Number(process.env.MAIL_PORT),
-    secure: false,
+    service: 'gmail', // Directly use Gmail service
     auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
     },
     tls: {
-        rejectUnauthorized: false,
-    }
+        rejectUnauthorized: false, // Can be set to true for production
+    },
 });
 
 const sendEmail = async (to, subject, text) => {
@@ -20,13 +21,12 @@ const sendEmail = async (to, subject, text) => {
         from: process.env.MAIL_USER,
         to,
         subject,
-        text
+        text,
     };
 
     try {
-        const info=await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully');
-        console.log(info);
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.response);
     } catch (error) {
         console.error('Error sending email:', error);
         throw new Error('Failed to send email');

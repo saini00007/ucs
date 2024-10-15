@@ -8,13 +8,16 @@ import {
 
 const router = express.Router();
 
-// Add a question to an assessment
-router.post('/add', addAssessmentQuestion);
+// Route to add a question to an assessment
+router.post('/assessments/:assessmentId/questions', addAssessmentQuestion);
 
-router.get('/:id', getAssessmentQuestionById);
-router.get('/assessment/:assessmentId', getAssessmentQuestions);
+// Route to get a question by ID
+router.get('/assessments/:assessmentId/questions/:id', getAssessmentQuestionById);
 
+// Route to get all questions for a specific assessment
+router.get('/assessments/:assessmentId/questions', getAssessmentQuestions);
 
-router.delete('/delete/:id', deleteAssessmentQuestion);
+// Route to delete an assessment question
+router.delete('/questions/:id', deleteAssessmentQuestion);
 
 export default router;

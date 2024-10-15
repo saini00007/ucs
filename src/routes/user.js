@@ -1,15 +1,11 @@
 import express from 'express';
-import {
-  addAdminToCompany,
-  addUserToDepartment,
-} from '../controllers/user.js';
+import { addUser, deleteUser, updateUser } from '../controllers/user.js'; // Assuming you've updated your controller to have addUser
 
 const router = express.Router();
 
-// Route to add an admin to a company
-router.post('/companies/:companyId/users', addAdminToCompany);
+router.post('/users', addUser);
+router.put('/users/:userId', updateUser);
+router.delete('/users/:userId', deleteUser);
 
-// Route to add a user to a department
-router.post('/companies/:companyId/departments/:departmentId/users', addUserToDepartment);
 
 export default router;

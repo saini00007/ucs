@@ -1,48 +1,63 @@
 import express from 'express';
-import { connectToDatabase } from './db/db.js'; 
 import path from 'path';
 import cookieParser from 'cookie-parser';
-
-import routes from './routes/temp.js'; 
-import companyRoutes from './routes/company.js'; 
-import departmentRoutes from './routes/department.js'; 
-import userRoutes from './routes/user.js'; 
-import authRoutes from './routes/auth.js'; 
-import templateRoutes from './routes/template.js'; 
-import assessmentRoutes from'./routes/assessment.js';
-import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
-import answerRoutes from './routes/answer.js';
-
-import { mockAuthenticate } from './middleware/mockAuth.js'; // Import mock authentication middleware
 import dotenv from 'dotenv'; // Import dotenv for environment variables
-
+import fs from 'fs'; // Import fs for file system operations
+import url from 'url'; // Import url for converting paths to URLs
+import sequelize from './config/db.js'; // Import the Sequelize instance
+import initializeDatabase from './initializeDatabase.js'; // Import the database initialization function
+import mockAuthenticate from './middleware/mockAuth.js';
 // Load environment variables from .env file
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000; 
 
+
+import companyRoutes from './routes/company.js'; 
+import departmentRoutes from './routes/department.js'; 
+import userRoutes from './routes/user.js'; 
+import authRoutes from './routes/auth.js'; 
+import assessmentRoutes from'./routes/assessment.js';
+import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
+import answerRoutes from './routes/answer.js';
+
 // Middleware to parse JSON
 app.use(express.json());
 app.use(cookieParser());
-// Middleware for mock authentication
-// app.use(mockAuthenticate);
+app.use(mockAuthenticate);
 
-// Define the routes
-app.use('/', routes); // Temporary routes
-app.use('/companies', companyRoutes); // Routes for company operations
+// Dynamically import all models
+const importModels = async () => {
+  const modelsDir = path.join(process.cwd(), 'src/models'); // Adjust the path as necessary
+  const modelFiles = fs.readdirSync(modelsDir).filter(file => file.endsWith('.js'));
+
+  for (const file of modelFiles) {
+    const filePath = path.join(modelsDir, file);
+    const fileUrl = url.pathToFileURL(filePath).href; // Convert to file:// URL
+    await import(fileUrl); // Import each model file
+  }
+};
+
+
+app.use('/', companyRoutes); // Routes for company operations
 app.use('/', departmentRoutes); // Routes for department operations
 app.use('/', userRoutes); // Routes for user operations
-app.use('/auth', authRoutes); // Routes for authentication operations
-app.use('/templates', templateRoutes); // Routes for template operations
-app.use('/assessment',assessmentRoutes);
-app.use('/question',assessmentQuestionRoutes);
-app.use('/answer',answerRoutes);
+app.use('/', authRoutes); // Routes for authentication operations
+app.use('/',assessmentRoutes);
+app.use('/',assessmentQuestionRoutes);
+app.use('/',answerRoutes);
 
-// Connect to PostgreSQL
-connectToDatabase(); // Establish the database connection
+const startServer = async () => {
+  try {
+    await importModels(); // Import all models
+    await initializeDatabase(); // Initialize and sync database models
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+  }
+};
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+startServer();

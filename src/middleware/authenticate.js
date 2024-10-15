@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { query } from '../db/db.js';
+import  User  from '../models/User.js'; // Import your User model
 
 export const authenticate = async (req, res, next) => {
   // Log cookies in development mode only
@@ -16,13 +16,19 @@ export const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const result = await query('SELECT user_id, username, email, role_id FROM users WHERE user_id = $1', [decoded.userId]);
+    // Use Sequelize to find the user by userId
+    const user = await User.findOne({
+      where: {
+        user_id: decoded.userId,
+      },
+      attributes: ['user_id', 'username', 'email', 'role_id'], // Specify attributes to retrieve
+    });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    req.user = result.rows[0];
+    req.user = user; // Attach the user object to the request
     next();
   } catch (error) {
     console.error('Authentication error:', error);
