@@ -1,7 +1,6 @@
 // controllers/companyController.js
-import { Company } from '../models/index.js'; // Adjust the import based on your project structure
+import { Company } from '../models/index.js';
 
-// Create Company
 export const createCompany = async (req, res) => {
     console.log('Creating company...');
     const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
@@ -35,7 +34,6 @@ export const createCompany = async (req, res) => {
     }
 };
 
-// Get All Companies
 export const getAllCompanies = async (req, res) => {
     try {
         const companies = await Company.findAll();
@@ -46,11 +44,9 @@ export const getAllCompanies = async (req, res) => {
     }
 };
 
-// Get Company By ID
 export const getCompanyById = async (req, res) => {
     const { companyId } = req.params;
 
-    // Validate ID
     if (!companyId) {
         return res.status(400).json({ success: false, error: 'Company ID is required.' });
     }
@@ -69,12 +65,10 @@ export const getCompanyById = async (req, res) => {
     }
 };
 
-// Update Company
 export const updateCompany = async (req, res) => {
-    const { companyId } = req.params; // Get company ID from the request parameters
+    const { companyId } = req.params;
     const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
 
-    // Validate ID
     if (!companyId) {
         return res.status(400).json({ success: false, error: 'Company ID is required.' });
     }
@@ -86,7 +80,6 @@ export const updateCompany = async (req, res) => {
             return res.status(404).json({ success: false, error: 'Company not found.' });
         }
 
-        // Update fields if provided
         if (companyName) company.company_name = companyName;
         if (postalAddress) company.postal_address = postalAddress;
         if (gstNumber) company.gst_number = gstNumber;
@@ -95,7 +88,6 @@ export const updateCompany = async (req, res) => {
         if (primaryPhone) company.primary_phone = primaryPhone;
         if (secondaryPhone) company.secondary_phone = secondaryPhone;
 
-        // Save the updated company
         await company.save();
 
         res.status(200).json({ success: true, message: 'Company updated successfully', company });
@@ -105,11 +97,9 @@ export const updateCompany = async (req, res) => {
     }
 };
 
-// Delete Company
 export const deleteCompany = async (req, res) => {
-    const { companyId } = req.params; // Get company ID from the request parameters
+    const { companyId } = req.params;
 
-    // Validate ID
     if (!companyId) {
         return res.status(400).json({ success: false, error: 'Company ID is required.' });
     }
@@ -123,7 +113,7 @@ export const deleteCompany = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Company not found' });
         }
 
-        res.status(204).json({ success: true, message: 'Company deleted successfully' }); // Respond with no content (204 status)
+        res.status(204).json({ success: true, message: 'Company deleted successfully' });
     } catch (error) {
         console.error('Error deleting company:', error);
         res.status(500).json({ success: false, message: 'Error deleting company', error: error.message });

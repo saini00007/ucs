@@ -1,24 +1,21 @@
-import { User } from '../models/index.js'; // Import the User model from index
-import sendEmail from '../utils/mailer.js'; // This remains unchanged unless you want to also adjust this import
+import { User } from '../models/index.js'; 
+import sendEmail from '../utils/mailer.js'; 
 import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
-// Function to generate an alphanumeric user ID
 const generateUserId = (username) => {
   const prefix = username.substring(0, 4).toLowerCase();
-  const randomDigits = Math.random().toString().slice(2, 10); // Get 8 random digits
-  return `${prefix}${randomDigits}`; // Combine prefix and random digits
+  const randomDigits = Math.random().toString().slice(2, 10);
+  return `${prefix}${randomDigits}`;
 };
 
-// Add a user (admin or regular) to a specific company or department
 export const addUser = async (req, res) => {
-  const { username, password, email, role_id, phone_number, companyId, departmentId } = req.body; // Accept role_id in body
+  const { username, password, email, roleId, phoneNumber, companyId, departmentId } = req.body;
 
-
-  if (role_id == '2') {
+  if (roleId == '2') {
     const adminCount = await User.count({
       where: {
-        role_id: '2', 
+        role_id: '2',
         company_id: companyId
       }
     });
@@ -32,16 +29,15 @@ export const addUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const userId = generateUserId(username);
 
-    // Create user using Sequelize
     const user = await User.create({
       user_id: userId,
       username,
       password: hashedPassword,
       email,
-      role_id,
+      role_id: roleId,
       department_id: departmentId,
       company_id: companyId,
-      phone_number, // Include phone number in the user creation
+      phone_number: phoneNumber,
     });
 
     const token = generateToken(userId);
@@ -57,28 +53,24 @@ export const addUser = async (req, res) => {
   }
 };
 
-// Update a user
 export const updateUser = async (req, res) => {
-  const { userId } = req.params; // Get user ID from the request parameters
-  const { username, email, role_id, departmentId, companyId, phone_number } = req.body; // Include phone_number
+  const { userId } = req.params;
+  const { username, email, roleId, departmentId, companyId, phoneNumber } = req.body;
 
   try {
-    // Find the user by user_id
     const user = await User.findOne({ where: { user_id: userId } });
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Update user fields if provided
     if (username) user.username = username;
     if (email) user.email = email;
-    if (role_id) user.role_id = role_id;
+    if (roleId) user.role_id = roleId;
     if (departmentId) user.department_id = departmentId;
     if (companyId) user.company_id = companyId;
-    if (phone_number) user.phone_number = phone_number; // Update phone number if provided
+    if (phoneNumber) user.phone_number = phoneNumber;
 
-    // Save the updated user
     await user.save();
 
     res.status(200).json({ success: true, message: 'User updated successfully', user });
@@ -88,12 +80,10 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// Delete a user
 export const deleteUser = async (req, res) => {
-  const { userId } = req.params; // Get user ID from the request parameters
+  const { userId } = req.params;
 
   try {
-    // Delete the user by user_id
     const deleted = await User.destroy({
       where: { user_id: userId },
     });
@@ -102,27 +92,23 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.status(204).json({ success: true, message: 'User deleted successfully' }); // Respond with success and message
+    res.status(204).json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
     res.status(500).json({ success: false, message: 'Error deleting user', error: error.message });
   }
 };
 
-
-// Get all users by department with optional role filter
 export const getUsersByDepartment = async (req, res) => {
-  const { departmentId } = req.params; // Get department ID from the request parameters
-  const { roleId } = req.query; // Get roleId from query parameters
+  const { departmentId } = req.params;
+  const { roleId } = req.query;
 
   try {
-    // Build the where clause for the query
-    const whereClause = { department_id: departmentId }; // Start with the department filter
+    const whereClause = { department_id: departmentId };
     if (roleId) {
-      whereClause.role_id = roleId; // Add role filter if provided
+      whereClause.role_id = roleId;
     }
 
-    // Fetch users belonging to the specified department and optional role
     const users = await User.findAll({ where: whereClause });
 
     if (users.length === 0) {
@@ -136,19 +122,16 @@ export const getUsersByDepartment = async (req, res) => {
   }
 };
 
-// Get all users by company with optional role filter
 export const getUsersByCompany = async (req, res) => {
-  const { companyId } = req.params; // Get company ID from the request parameters
-  const { roleId } = req.query; // Get roleId from query parameters
+  const { companyId } = req.params;
+  const { roleId } = req.query;
 
   try {
-    // Build the where clause for the query
-    const whereClause = { company_id: companyId }; // Start with the company filter
+    const whereClause = { company_id: companyId };
     if (roleId) {
-      whereClause.role_id = roleId; // Add role filter if provided
+      whereClause.role_id = roleId;
     }
 
-    // Fetch users belonging to the specified company and optional role
     const users = await User.findAll({ where: whereClause });
 
     if (users.length === 0) {
@@ -162,12 +145,10 @@ export const getUsersByCompany = async (req, res) => {
   }
 };
 
-// Get user by ID (unchanged)
 export const getUserById = async (req, res) => {
-  const { userId } = req.params; // Get user ID from the request parameters
+  const { userId } = req.params;
 
   try {
-    // Find the user by user_id
     const user = await User.findOne({ where: { user_id: userId } });
 
     if (!user) {
@@ -180,4 +161,3 @@ export const getUserById = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error fetching user', error: error.message });
   }
 };
-

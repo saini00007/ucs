@@ -1,15 +1,14 @@
-import { Assessment } from '../models/index.js'; // Adjust the path as needed
+import { Assessment } from '../models/index.js';
 
-// Mark an assessment as started
 export const markAssessmentAsStarted = async (req, res) => {
   const { assessmentId } = req.params;
 
   try {
     const [updatedCount, updatedAssessments] = await Assessment.update(
-      { assessment_started: true, updated_at: new Date() }, // Update fields
+      { assessment_started: true, updated_at: new Date() },
       {
         where: { assessment_id: assessmentId },
-        returning: true // This option allows us to retrieve the updated row
+        returning: true
       }
     );
 
@@ -20,7 +19,7 @@ export const markAssessmentAsStarted = async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Assessment marked as started',
-      data: updatedAssessments[0] // Access the updated row
+      data: updatedAssessments[0]
     });
   } catch (error) {
     console.error('Error marking assessment as started:', error);
@@ -28,7 +27,6 @@ export const markAssessmentAsStarted = async (req, res) => {
   }
 };
 
-// Get all assessments for a specific department
 export const getAllAssessments = async (req, res) => {
   const { departmentId } = req.params;
 
@@ -49,7 +47,6 @@ export const getAllAssessments = async (req, res) => {
   }
 };
 
-// Get an assessment by ID
 export const getAssessmentById = async (req, res) => {
   const { assessmentId } = req.params;
 

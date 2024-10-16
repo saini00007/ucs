@@ -1,9 +1,8 @@
 import { AssessmentQuestion, MasterQuestion } from '../models/index.js';
 
-// Add a question to an assessment
 export const addAssessmentQuestion = async (req, res) => {
-    const { assessmentId } = req.params; // Get assessmentId from the URL parameters
-    const { questionId } = req.body; // Use questionId from the request body
+    const { assessmentId } = req.params;
+    const { questionId } = req.body;
 
     try {
         const assessmentQuestion = await AssessmentQuestion.create({
@@ -22,7 +21,6 @@ export const addAssessmentQuestion = async (req, res) => {
     }
 };
 
-// Get a specific assessment question by ID
 export const getAssessmentQuestionById = async (req, res) => {
     const { assessmentQuestionId } = req.params;
 
@@ -31,7 +29,7 @@ export const getAssessmentQuestionById = async (req, res) => {
             where: { assessment_question_id: assessmentQuestionId },
             include: {
                 model: MasterQuestion,
-                attributes: ['question_text'] // Specify fields from MasterQuestion
+                attributes: ['question_text']
             }
         });
 
@@ -46,7 +44,6 @@ export const getAssessmentQuestionById = async (req, res) => {
     }
 };
 
-// Get all questions for a specific assessment
 export const getAssessmentQuestions = async (req, res) => {
     const { assessmentId } = req.params;
 
@@ -55,7 +52,7 @@ export const getAssessmentQuestions = async (req, res) => {
             where: { assessment_id: assessmentId },
             include: {
                 model: MasterQuestion,
-                attributes: ['question_text'] // Specify fields from MasterQuestion
+                attributes: ['question_text']
             }
         });
 
@@ -66,22 +63,23 @@ export const getAssessmentQuestions = async (req, res) => {
     }
 };
 
-// Delete an assessment question
-export const deleteAssessmentQuestion = async (req, res) => {
-    const { assessmentQuestionId } = req.params;
+export const deleteAssessmentQuestions = async (req, res) => {
+    const { questionIds } = req.body; // Get question IDs from the request body
 
     try {
         const result = await AssessmentQuestion.destroy({
-            where: { assessment_question_id: assessmentQuestionId }
+            where: {
+                assessment_question_id: questionIds
+            }
         });
 
         if (result === 0) {
-            return res.status(404).json({ success: false, message: 'Assessment question not found' });
+            return res.status(404).json({ success: false, message: 'No assessment questions found' });
         }
 
-        res.status(200).json({ success: true, message: 'Assessment question deleted successfully' });
+        res.status(200).json({ success: true, message: 'Assessment questions deleted successfully', deletedCount: result });
     } catch (error) {
-        console.error('Error deleting assessment question:', error);
+        console.error('Error deleting assessment questions:', error);
         res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 };

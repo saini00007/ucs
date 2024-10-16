@@ -2,71 +2,75 @@ import { validationResult } from 'express-validator';
 import Answer from '../models/Answer.js';
 import EvidenceFile from '../models/EvidenceFile.js';
 import AnswerEvidenceFile from '../models/AnswerEvidenceFile.js';
+import AssessmentQuestion from '../models/AssessmentQuestion.js';
 
 export const createAnswer = async (req, res) => {
-  const { assessmentQuestionId, assessmentId } = req.params; // Now we need both IDs
+  const { assessmentQuestionId } = req.params;
   const errors = validationResult(req);
 
-  // Validate the request
   if (!errors.isEmpty()) {
     return res.status(400).json({ success: false, errors: errors.array() });
   }
 
-  const { answerText } = req.body; // Get answer text from body
-  const userId = req.user.user_id; // Assuming user_id is set in the request
+  const { answerText } = req.body;
+  const userId = req.user.user_id; 
 
-  // Check if files are uploaded
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ success: false, message: 'No files uploaded.' });
   }
 
   try {
-    // Create Evidence Files and link them to the Assessment
-    const evidenceFiles = await Promise.all(req.files.map(async (file) => {
-      const evidenceFile = await EvidenceFile.create({
-        file_path: file.originalname, // Storing the original file name
-        pdf_data: file.buffer, // Assuming you are storing the PDF data in binary
-        uploaded_by_user_id: userId, // Link to the user who uploaded the file
-        assessment_id: assessmentId, // Link the evidence file to the assessment
-      });
-      return evidenceFile; // Return the created EvidenceFile
-    }));
-
-    // Create Answer
-    const answer = await Answer.create({
-      assessment_question_id: assessmentQuestionId, // Link to the specific assessment question
-      user_id: userId, // Link to the user answering
-      answer_text: answerText, // Save the answer text
+    const question = await AssessmentQuestion.findOne({
+      where: { assessment_question_id: assessmentQuestionId },
+      attributes: ['assessment_id'],
     });
 
-    // Link Evidence Files to the Answer
+    if (!question) {
+      return res.status(404).json({ success: false, message: 'Assessment question not found.' });
+    }
+
+    const assessmentId = question.assessment_id;
+
+    const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+      const evidenceFile = await EvidenceFile.create({
+        file_path: file.originalname,
+        pdf_data: file.buffer,
+        uploaded_by_user_id: userId,
+        assessment_id: assessmentId,
+      });
+      return evidenceFile;
+    }));
+
+    const answer = await Answer.create({
+      assessment_question_id: assessmentQuestionId,
+      user_id: userId,
+      answer_text: answerText, 
+    });
+
     await Promise.all(evidenceFiles.map(async (evidenceFile) => {
       await AnswerEvidenceFile.create({
-        answerId: answer.answer_id, // Use the answer's ID
-        evidenceFileId: evidenceFile.evidence_file_id, // Link to the evidence file
+        answerId: answer.answer_id, 
+        evidenceFileId: evidenceFile.evidence_file_id, 
       });
     }));
 
-    // Respond with success
     res.status(201).json({
       success: true,
       answer,
-      evidence_file_ids: evidenceFiles.map(file => file.evidence_file_id), // Return IDs of the linked evidence files
+      evidence_file_ids: evidenceFiles.map(file => file.evidence_file_id),
     });
   } catch (error) {
-    console.error('Error creating answer:', error); // Log the error for debugging
+    console.error('Error creating answer:', error);
     res.status(500).json({ success: false, message: 'Internal server error while creating answer.' });
   }
 };
 
-
-// Controller to retrieve all answers for a specific assessment question
 export const getAnswersByQuestion = async (req, res) => {
-  const { assessment_question_id } = req.params;
+  const { assessmentQuestionId } = req.params;
 
   try {
     const answers = await Answer.findAll({
-      where: { assessment_question_id },
+      where: { assessment_question_id: assessmentQuestionId },
       include: [{
         model: EvidenceFile,
         through: { model: AnswerEvidenceFile },
@@ -97,10 +101,10 @@ export const getAnswersByQuestion = async (req, res) => {
 };
 
 export const serveFile = async (req, res) => {
-  const { file_id } = req.params;
+  const { fileId } = req.params;
 
   try {
-    const evidenceFile = await EvidenceFile.findOne({ where: { evidence_file_id: file_id } });
+    const evidenceFile = await EvidenceFile.findOne({ where: { evidence_file_id: fileId } });
 
     if (!evidenceFile) {
       return res.status(404).json({ success: false, message: 'File not found.' });
@@ -117,7 +121,6 @@ export const serveFile = async (req, res) => {
   }
 };
 
-// Controller to delete an answer
 export const deleteAnswer = async (req, res) => {
   const { answer_id } = req.params;
 

@@ -2,28 +2,23 @@ import express from 'express';
 import { 
   addAssessmentQuestion, 
   getAssessmentQuestions,  
-  deleteAssessmentQuestion,
+  deleteAssessmentQuestions,
   getAssessmentQuestionById
 } from '../controllers/assessmentQuestion.js';
-import { authorizeAssessmentQuestion } from '../middleware/authorize/authorizeAssessmentQuestion.js';
 
 const router = express.Router();
 
-import mockAuthenticate from '../middleware/mockAuth.js';
-import { authenticate } from '../middleware/authenticate.js';
-const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
-router.use(authMiddleware);
 
 // Route to add a question to an assessment
-router.post('/assessments/:assessmentId/questions',authorizeAssessmentQuestion(['1']), addAssessmentQuestion);
+router.post('/assessments/:assessmentId/questions', addAssessmentQuestion);
 
 // Route to get a question by ID
-router.get('/assessments/:assessmentId/questions/:assessmentQuestionId',authorizeAssessmentQuestion(['1','2','3']), getAssessmentQuestionById);
+router.get('/assessments/:assessmentId/questions/:assessmentQuestionId', getAssessmentQuestionById);
 
 // Route to get all questions for a specific assessment
-router.get('/assessments/:assessmentId/questions',authorizeAssessmentQuestion(['1','2','3']),getAssessmentQuestions);
+router.get('/assessments/:assessmentId/questions', getAssessmentQuestions);
 
 // Route to delete an assessment question
-router.delete('/assessments/:assessmentId/questions/:assessmentQuestionId',authorizeAssessmentQuestion(['1']), deleteAssessmentQuestion);
+router.delete('/questions', deleteAssessmentQuestions);
 
 export default router;

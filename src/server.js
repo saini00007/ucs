@@ -12,6 +12,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000; 
 
+import mockAuthenticate from './middleware/mockAuth.js';
+import { authenticate } from './middleware/authenticate.js';
+const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
+
 
 import companyRoutes from './routes/company.js'; 
 import departmentRoutes from './routes/department.js'; 
@@ -38,6 +42,7 @@ const importModels = async () => {
 };
 
 app.use('/', authRoutes); // Routes for authentication operations
+app.use(authMiddleware);
 app.use('/', companyRoutes); // Routes for company operations
 app.use('/', departmentRoutes); // Routes for department operations
 app.use('/', userRoutes); // Routes for user operations

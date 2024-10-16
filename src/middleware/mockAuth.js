@@ -5,6 +5,7 @@ const mockUser = {
     user_id: '137131468915',
     username: 'superAdmin',
     role_id: 1,
+    company_id:1
 };
 
 const mockAuthenticate = (req, res, next) => {
@@ -12,4 +13,4 @@ const mockAuthenticate = (req, res, next) => {
     next(); 
 };
 
-export default mockAuthenticate; // Ensure this is correct
+export default mockAuthenticate;

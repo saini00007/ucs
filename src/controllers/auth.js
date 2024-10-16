@@ -1,11 +1,8 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { User, Otp } from '../models/index.js'; // Import the User and Otp models from the index file
-
-// Adjust import based on your project structure
+import { User, Otp } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
 
-// Reset Password
 export const resetPassword = async (req, res) => {
     const { token, newPassword } = req.body;
 
@@ -27,56 +24,46 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-// Login
 export const login = async (req, res) => {
     const { identifier, password } = req.body;
 
-    // Validate input
     if (!identifier || !password) {
         return res.status(400).json({ success: false, message: 'Identifier and password are required.' });
     }
 
     try {
-        // Check if identifier is in email format
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
         const user = await User.findOne({
-            where: isEmail ? { email: identifier } : { user_id: identifier } // Assuming user_id can be alphanumeric
+            where: isEmail ? { email: identifier } : { user_id: identifier }
         });
 
-        // Check if user exists
         if (!user) {
             return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
         }
 
-        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
         }
 
-        // Generate JWT token
         const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        // Generate and send OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const emailSubject = 'Your OTP Code';
         const emailText = `Hello ${user.username},\n\nYour OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
         
         await sendEmail(user.email, emailSubject, emailText);
 
-        // Set OTP expiration
-        const otpExpiration = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
-        await Otp.create({ user_id: user.user_id, otp_code: otp, expires_at: otpExpiration }); // Use otp_code instead of otp
+        const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
+        await Otp.create({ user_id: user.user_id, otp_code: otp, expires_at: otpExpiration });
 
-        // Send response with token
-        res.status(200).json({ success: true, message: 'OTP sent to email', token , otp:otp });
+        res.status(200).json({ success: true, message: 'OTP sent to email', token, otp: otp });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ success: false, message: 'Login failed', error: error.message });
     }
 };
 
-// Verify OTP
 export const verifyOtp = async (req, res) => {
     const { token, otp } = req.body;
 
