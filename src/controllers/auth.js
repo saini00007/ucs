@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { User, Otp } from '../models/index.js'; // Import the User and Otp models from the index file
 
- // Adjust import based on your project structure
+// Adjust import based on your project structure
 import sendEmail from '../utils/mailer.js';
 
 // Reset Password
@@ -18,17 +18,16 @@ export const resetPassword = async (req, res) => {
         const userId = decoded.userId;
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
-        
         await User.update({ password: hashedPassword }, { where: { user_id: userId } });
 
         res.status(200).json({ success: true, message: 'Password reset successfully' });
     } catch (error) {
         console.error('Error resetting password:', error);
-        res.status(500).json({ success: false, message: 'Failed to reset password' });
+        res.status(500).json({ success: false, message: 'Failed to reset password', error: error.message });
     }
 };
 
-
+// Login
 export const login = async (req, res) => {
     const { identifier, password } = req.body;
 
@@ -70,14 +69,12 @@ export const login = async (req, res) => {
         await Otp.create({ user_id: user.user_id, otp_code: otp, expires_at: otpExpiration }); // Use otp_code instead of otp
 
         // Send response with token
-        res.status(200).json({ success: true, message: 'OTP sent to email', token });
+        res.status(200).json({ success: true, message: 'OTP sent to email', token , otp:otp });
     } catch (error) {
         console.error('Error during login:', error);
-        res.status(500).json({ success: false, message: 'Login failed' });
+        res.status(500).json({ success: false, message: 'Login failed', error: error.message });
     }
 };
-
-
 
 // Verify OTP
 export const verifyOtp = async (req, res) => {
@@ -91,7 +88,7 @@ export const verifyOtp = async (req, res) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.userId;
 
-        const otpRecord = await Otp.findOne({ where: { user_id: userId, otp_code:otp } });
+        const otpRecord = await Otp.findOne({ where: { user_id: userId, otp_code: otp } });
 
         if (!otpRecord) {
             return res.status(400).json({ success: false, message: 'Invalid OTP' });
@@ -109,6 +106,6 @@ export const verifyOtp = async (req, res) => {
         res.status(200).json({ success: true, message: 'OTP verified successfully' });
     } catch (error) {
         console.error('Error verifying OTP:', error);
-        res.status(500).json({ success: false, message: 'Failed to verify OTP' });
+        res.status(500).json({ success: false, message: 'Failed to verify OTP', error: error.message });
     }
 };

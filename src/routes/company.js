@@ -6,26 +6,25 @@ import {
   deleteCompany,
   updateCompany
 } from '../controllers/company.js';
-import { authorize } from '../middleware/authorize.js';
-import { authenticate } from '../middleware/authenticate.js';
+import { authorizeCompany } from '../middleware/authorize/authorizeCompany.js';
 
 const router = express.Router();
 
-// Apply authentication middleware to all routes
-// router.use(authenticate);
+import mockAuthenticate from '../middleware/mockAuth.js';
+import { authenticate } from '../middleware/authenticate.js';
+const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
+router.use(authMiddleware);
 
-// Create a new company
-// router.post('/', authorize(['admin', 'superadmin']), createCompany); // Optional authorization
 router.post('/companies',  createCompany); // Optional authorization
 
 
 // Get all companies
-router.get('/companies', getAllCompanies);
+router.get('/companies',authorizeCompany(['1']),getAllCompanies);
 
 // Get a specific company by ID
-router.get('/companies/:id', getCompanyById);
-router.put('/companies/:id', updateCompany);
+router.get('/companies/:companyId',authorizeCompany(['1','2','3']), getCompanyById);
+router.put('/companies/:companyId',authorizeCompany(['1']), updateCompany);
 
-router.delete('/companies/:id',deleteCompany)
+router.delete('/companies/:companyId',authorizeCompany(['1']),deleteCompany)
 
 export default router;

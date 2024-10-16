@@ -16,10 +16,10 @@ export const getAllDepartmentsForCompany = async (req, res) => {
         const departments = await Department.findAll({
             where: { company_id: companyId },
         });
-        res.status(200).json(departments);
+        res.status(200).json({ success: true, departments });
     } catch (error) {
         console.error('Error fetching departments for company:', error);
-        res.status(500).json({ error: 'Failed to fetch departments' });
+        res.status(500).json({ success: false, error: 'Failed to fetch departments' });
     }
 };
 
@@ -34,13 +34,13 @@ export const getDepartmentById = async (req, res) => {
         });
 
         if (!department) {
-            return res.status(404).json({ error: 'Department not found' });
+            return res.status(404).json({ success: false, error: 'Department not found' });
         }
 
-        res.status(200).json(department);
+        res.status(200).json({ success: true, department });
     } catch (error) {
         console.error('Error fetching department:', error);
-        res.status(500).json({ error: 'Failed to fetch department' });
+        res.status(500).json({ success: false, error: 'Failed to fetch department' });
     }
 };
 
@@ -53,13 +53,13 @@ export const createDepartment = async (req, res) => {
         // Validate that companyId exists
         const company = await Company.findByPk(companyId);
         if (!company) {
-            return res.status(400).json({ error: 'Invalid company ID' });
+            return res.status(400).json({ success: false, error: 'Invalid company ID' });
         }
 
         // Validate that masterDepartmentId exists
         const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
         if (!masterDepartment) {
-            return res.status(400).json({ error: 'Invalid master department ID' });
+            return res.status(400).json({ success: false, error: 'Invalid master department ID' });
         }
 
         // Create the new department
@@ -67,6 +67,7 @@ export const createDepartment = async (req, res) => {
             department_name: departmentName,
             company_id: companyId,
             master_department_id: masterDepartmentId,
+            created_by: req.user.user_id
         });
 
         // Automatically create an assessment for the new department
@@ -99,10 +100,10 @@ export const createDepartment = async (req, res) => {
             }
         }));
 
-        res.status(201).json({ department: newDepartment, assessment: newAssessment });
+        res.status(201).json({ success: true, department: newDepartment, assessment: newAssessment });
     } catch (error) {
         console.error('Error creating department:', error);
-        res.status(500).json({ error: 'Failed to create department' });
+        res.status(500).json({ success: false, error: 'Failed to create department' });
     }
 };
 
@@ -114,7 +115,7 @@ export const updateDepartment = async (req, res) => {
     try {
         const department = await Department.findByPk(departmentId);
         if (!department) {
-            return res.status(404).json({ error: 'Department not found' });
+            return res.status(404).json({ success: false, error: 'Department not found' });
         }
 
         if (departmentName) {
@@ -124,17 +125,17 @@ export const updateDepartment = async (req, res) => {
         if (masterDepartmentId) {
             const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
             if (!masterDepartment) {
-                return res.status(400).json({ error: 'Invalid master department ID' });
+                return res.status(400).json({ success: false, error: 'Invalid master department ID' });
             }
             department.master_department_id = masterDepartmentId;
         }
 
         await department.save(); // Save the updated department
 
-        res.status(200).json({ message: 'Department updated successfully', department });
+        res.status(200).json({ success: true, message: 'Department updated successfully', department });
     } catch (error) {
         console.error('Error updating department:', error);
-        res.status(500).json({ error: 'Failed to update department' });
+        res.status(500).json({ success: false, error: 'Failed to update department' });
     }
 };
 
@@ -145,14 +146,14 @@ export const deleteDepartment = async (req, res) => {
     try {
         const department = await Department.findByPk(departmentId);
         if (!department) {
-            return res.status(404).json({ error: 'Department not found' });
+            return res.status(404).json({ success: false, error: 'Department not found' });
         }
 
         await department.destroy(); // Delete the department
 
-        res.status(200).json({ message: 'Department deleted successfully' });
+        res.status(200).json({ success: true, message: 'Department deleted successfully' });
     } catch (error) {
         console.error('Error deleting department:', error);
-        res.status(500).json({ error: 'Failed to delete department' });
+        res.status(500).json({ success: false, error: 'Failed to delete department' });
     }
 };

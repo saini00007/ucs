@@ -27,7 +27,12 @@ const Department = sequelize.define('Department', {
     },
   },
   created_by: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(12), // Assuming user_id is a STRING(12)
+    references: {
+      model: 'users', // Reference to the users table
+      key: 'user_id',
+    },
+    allowNull: true, // Set to false if a creator is mandatory
   },
 }, {
   tableName: 'departments',

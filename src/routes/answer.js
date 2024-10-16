@@ -6,19 +6,25 @@ import {
   deleteAnswer,
   serveFile
 } from '../controllers/answer.js';
+import { authorizeAnswer } from '../middleware/authorize/authorizeAnswer.js';
 
 const router = express.Router();
 
+import mockAuthenticate from '../middleware/mockAuth.js';
+import { authenticate } from '../middleware/authenticate.js';
+const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
+router.use(authMiddleware);
+
 // Route to create a new answer
-router.post('/assessments/:assessmentId/questions/:assessmentQuestionId/answers', uploadFiles, createAnswer);
+router.post('/assessments/:assessmentId/questions/:assessmentQuestionId/answers', authorizeAnswer(['1', '2', '3']), uploadFiles, createAnswer);
 
 // Route to get all answers for a specific assessment question
-router.get('/assessments/:assessmentId/questions/:assessment_question_id/answers', getAnswersByQuestion);
+router.get('/assessments/:assessmentId/questions/:assessmentQuestionId/answers', authorizeAnswer(['1', '2', '3']), getAnswersByQuestion);
 
-// Route to serve a specific uploaded file
-router.get('/evidence-files/:file_id', serveFile);
+// Route to serve evidence files
+router.get('/assessments/:assessmentId/answers/:answerId/evidence-files/:fileId', authorizeAnswer(['1', '2']), serveFile);
 
-// Route to delete a specific answer
-router.delete('/answers/:answer_id', deleteAnswer);
+// Route to delete an answer
+router.delete('/answers/:answerId', authorizeAnswer(['1', '2', '3']), deleteAnswer);
 
 export default router;

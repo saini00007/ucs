@@ -6,7 +6,6 @@ import fs from 'fs'; // Import fs for file system operations
 import url from 'url'; // Import url for converting paths to URLs
 import sequelize from './config/db.js'; // Import the Sequelize instance
 import initializeDatabase from './initializeDatabase.js'; // Import the database initialization function
-import mockAuthenticate from './middleware/mockAuth.js';
 // Load environment variables from .env file
 dotenv.config();
 
@@ -25,7 +24,6 @@ import answerRoutes from './routes/answer.js';
 // Middleware to parse JSON
 app.use(express.json());
 app.use(cookieParser());
-app.use(mockAuthenticate);
 
 // Dynamically import all models
 const importModels = async () => {
@@ -39,11 +37,10 @@ const importModels = async () => {
   }
 };
 
-
+app.use('/', authRoutes); // Routes for authentication operations
 app.use('/', companyRoutes); // Routes for company operations
 app.use('/', departmentRoutes); // Routes for department operations
 app.use('/', userRoutes); // Routes for user operations
-app.use('/', authRoutes); // Routes for authentication operations
 app.use('/',assessmentRoutes);
 app.use('/',assessmentQuestionRoutes);
 app.use('/',answerRoutes);

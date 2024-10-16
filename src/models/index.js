@@ -65,51 +65,55 @@ User.hasMany(Comment, { foreignKey: 'user_id' });
 EvidenceFile.belongsTo(User, { foreignKey: 'uploaded_by_user_id', targetKey: 'user_id' });
 User.hasMany(EvidenceFile, { foreignKey: 'uploaded_by_user_id' });
 
-// 14. AnswerEvidenceFile and Answer
+// 14. EvidenceFile and Assessment
+EvidenceFile.belongsTo(Assessment, { foreignKey: 'assessment_id', targetKey: 'assessment_id' });
+Assessment.hasMany(EvidenceFile, { foreignKey: 'assessment_id' });
+
+// 15. AnswerEvidenceFile and Answer
 AnswerEvidenceFile.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'answer_id' });
 Answer.hasMany(AnswerEvidenceFile, { foreignKey: 'answerId' });
 
-// 15. AnswerEvidenceFile and EvidenceFile
+// 16. AnswerEvidenceFile and EvidenceFile
 AnswerEvidenceFile.belongsTo(EvidenceFile, { foreignKey: 'evidenceFileId', targetKey: 'evidence_file_id' });
 EvidenceFile.hasMany(AnswerEvidenceFile, { foreignKey: 'evidenceFileId' });
 
-// 16. Answer and EvidenceFile (many-to-many relationship)
+// 17. Answer and EvidenceFile (many-to-many relationship)
 Answer.belongsToMany(EvidenceFile, {
-    through: AnswerEvidenceFile,
-    as: 'EvidenceFiles', // This alias should match the alias used in the query
-    foreignKey: 'answerId',
-    otherKey: 'evidenceFileId'
-  });
-  
-// 17. QuestionDepartmentLink and MasterQuestion
+  through: AnswerEvidenceFile,
+  as: 'EvidenceFiles', // This alias should match the alias used in the query
+  foreignKey: 'answerId',
+  otherKey: 'evidenceFileId'
+});
+
+// 18. QuestionDepartmentLink and MasterQuestion
 QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'question_id', targetKey: 'question_id' });
 MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'question_id' });
 
-// 18. QuestionDepartmentLink and MasterDepartment
+// 19. QuestionDepartmentLink and MasterDepartment
 QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'master_department_id', targetKey: 'department_id' });
 MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'master_department_id' });
 
-// 19. Department and MasterDepartment
+// 20. Department and MasterDepartment
 Department.belongsTo(MasterDepartment, { foreignKey: 'master_department_id', targetKey: 'department_id' });
 MasterDepartment.hasMany(Department, { foreignKey: 'master_department_id' });
 
-// 20. Otp and User
+// 21. Otp and User
 Otp.belongsTo(User, { foreignKey: 'user_id', targetKey: 'user_id' });
 User.hasMany(Otp, { foreignKey: 'user_id' });
 
- export {
-   User,
-   Company,
-   Department,
-   Role,
-   Assessment,
-   AssessmentQuestion,
-   Answer,
-   Comment,
-   EvidenceFile,
-   MasterDepartment,
-   MasterQuestion,
-   Otp,
-   AnswerEvidenceFile,
-   QuestionDepartmentLink,
- };
+export {
+  User,
+  Company,
+  Department,
+  Role,
+  Assessment,
+  AssessmentQuestion,
+  Answer,
+  Comment,
+  EvidenceFile,
+  MasterDepartment,
+  MasterQuestion,
+  Otp,
+  AnswerEvidenceFile,
+  QuestionDepartmentLink,
+};

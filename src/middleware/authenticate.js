@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
-import  User  from '../models/User.js'; // Import your User model
+import User from '../models/User.js'; // Import your User model
 
 export const authenticate = async (req, res, next) => {
-  // Log cookies in development mode only
   if (process.env.NODE_ENV === 'development') {
     console.log('Cookies:', req.cookies);
   }
@@ -10,7 +9,7 @@ export const authenticate = async (req, res, next) => {
   const token = req.cookies.token;
 
   if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+    return res.status(401).json({ success: false, message: 'No token provided' });
   }
 
   try {
@@ -25,19 +24,19 @@ export const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
 
-    req.user = user; // Attach the user object to the request
-    next();
+    req.user = user;
+    return next();
   } catch (error) {
     console.error('Authentication error:', error);
     if (error.name === 'TokenExpiredError') {
-      return res.status(403).json({ message: 'Token expired' });
+      return res.status(403).json({ success: false, message: 'Token expired' });
     } else if (error.name === 'JsonWebTokenError') {
-      return res.status(403).json({ message: 'Invalid token' });
+      return res.status(403).json({ success: false, message: 'Invalid token' });
     } else {
-      return res.status(500).json({ message: 'Failed to authenticate token' });
+      return res.status(500).json({ success: false, message: 'Failed to authenticate token' });
     }
   }
 };
