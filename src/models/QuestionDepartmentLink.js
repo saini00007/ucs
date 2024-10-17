@@ -5,7 +5,7 @@ import sequelize from '../config/db.js';
 class QuestionDepartmentLink extends Model {}
 
 QuestionDepartmentLink.init({
-  question_id: {
+  questionId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'master_questions', // This should match the table name
@@ -13,22 +13,23 @@ QuestionDepartmentLink.init({
     },
     allowNull: false,
     onDelete: 'CASCADE',
+    field: 'question_id', 
   },
-  master_department_id: {
+  masterDepartmentId: {
     type: DataTypes.INTEGER,
     references: {
-      model: 'master_departments', // This should match the table name
+      model: 'master_departments',
       key: 'department_id',
     },
     allowNull: false,
     onDelete: 'CASCADE',
+    field: 'master_department_id', 
   },
 }, {
   sequelize,
   modelName: 'QuestionDepartmentLink',
-  tableName: 'question_department_links', // Ensure the table name matches
-  timestamps: false, // Adjust this if you want timestamps
+  tableName: 'question_department_links', 
+  timestamps: false, 
 });
 
-// Export the model
 export default QuestionDepartmentLink;

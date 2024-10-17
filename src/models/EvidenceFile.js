@@ -1,40 +1,45 @@
-// models/EvidenceFile.js
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const EvidenceFile = sequelize.define('EvidenceFile', {
-  evidence_file_id: {
+  evidenceFileId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'evidence_file_id', 
   },
-  file_path: {
+  filePath: {
     type: DataTypes.TEXT,
     allowNull: false, // Required field
+    field: 'file_path', 
   },
-  pdf_data: {
+  pdfData: {
     type: DataTypes.BLOB,
     allowNull: false, // Optional: Required if you always want to store PDF data
+    field: 'pdf_data', 
   },
-  uploaded_by_user_id: {
+  uploadedByUserId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
       key: 'user_id',
     },
-    allowNull: false, // Required field
+    allowNull: false, 
+    field: 'uploaded_by_user_id', 
   },
-  uploaded_at: {
+  uploadedAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
+    field: 'uploaded_at', 
   },
-  assessment_id: {
+  assessmentId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'assessments',
       key: 'assessment_id',
     },
     allowNull: false,
+    field: 'assessment_id', 
   },
 }, {
   tableName: 'evidence_files',

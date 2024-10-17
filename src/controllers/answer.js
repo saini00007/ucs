@@ -13,7 +13,7 @@ export const createAnswer = async (req, res) => {
   }
 
   const { answerText } = req.body;
-  const userId = req.user.user_id; 
+  const userId = req.user.userId;
 
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ success: false, message: 'No files uploaded.' });
@@ -21,43 +21,43 @@ export const createAnswer = async (req, res) => {
 
   try {
     const question = await AssessmentQuestion.findOne({
-      where: { assessment_question_id: assessmentQuestionId },
-      attributes: ['assessment_id'],
+      where: { assessmentQuestionId },
+      attributes: ['assessmentId'],
     });
 
     if (!question) {
       return res.status(404).json({ success: false, message: 'Assessment question not found.' });
     }
 
-    const assessmentId = question.assessment_id;
+    const assessmentId = question.assessmentId;
 
     const evidenceFiles = await Promise.all(req.files.map(async (file) => {
       const evidenceFile = await EvidenceFile.create({
-        file_path: file.originalname,
-        pdf_data: file.buffer,
-        uploaded_by_user_id: userId,
-        assessment_id: assessmentId,
+        filePath: file.originalname,
+        pdfData: file.buffer,
+        uploadedByUserId: userId,
+        assessmentId,
       });
       return evidenceFile;
     }));
 
     const answer = await Answer.create({
-      assessment_question_id: assessmentQuestionId,
-      user_id: userId,
-      answer_text: answerText, 
+      assessmentQuestionId,
+      userId,
+      answerText, 
     });
 
     await Promise.all(evidenceFiles.map(async (evidenceFile) => {
       await AnswerEvidenceFile.create({
-        answerId: answer.answer_id, 
-        evidenceFileId: evidenceFile.evidence_file_id, 
+        answerId: answer.answerId,
+        evidenceFileId: evidenceFile.evidenceFileId,
       });
     }));
 
     res.status(201).json({
       success: true,
       answer,
-      evidence_file_ids: evidenceFiles.map(file => file.evidence_file_id),
+      evidenceFileIds: evidenceFiles.map(file => file.evidenceFileId),
     });
   } catch (error) {
     console.error('Error creating answer:', error);
@@ -70,7 +70,7 @@ export const getAnswersByQuestion = async (req, res) => {
 
   try {
     const answers = await Answer.findAll({
-      where: { assessment_question_id: assessmentQuestionId },
+      where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
         through: { model: AnswerEvidenceFile },
@@ -84,12 +84,12 @@ export const getAnswersByQuestion = async (req, res) => {
     }
 
     const answersWithEvidence = answers.map(answer => ({
-      answer_id: answer.answer_id,
-      user_id: answer.user_id,
-      answer_text: answer.answer_text,
-      evidence_files: answer.EvidenceFiles.map(evidence => ({
-        evidence_file_id: evidence.evidence_file_id,
-        file_path: evidence.file_path
+      answerId: answer.answerId,
+      userId: answer.userId,
+      answerText: answer.answerText,
+      evidenceFiles: answer.EvidenceFiles.map(evidence => ({
+        evidenceFileId: evidence.evidenceFileId,
+        filePath: evidence.filePath
       }))
     }));
 
@@ -104,17 +104,17 @@ export const serveFile = async (req, res) => {
   const { fileId } = req.params;
 
   try {
-    const evidenceFile = await EvidenceFile.findOne({ where: { evidence_file_id: fileId } });
+    const evidenceFile = await EvidenceFile.findOne({ where: { evidenceFileId: fileId } });
 
     if (!evidenceFile) {
       return res.status(404).json({ success: false, message: 'File not found.' });
     }
 
-    const { file_path, pdf_data } = evidenceFile;
+    const { filePath, pdfData } = evidenceFile;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${file_path}"`);
-    res.send(pdf_data);
+    res.setHeader('Content-Disposition', `attachment; filename="${filePath}"`);
+    res.send(pdfData);
   } catch (error) {
     console.error('Error retrieving file data:', error);
     res.status(500).json({ success: false, message: 'Error retrieving file.' });
@@ -122,10 +122,10 @@ export const serveFile = async (req, res) => {
 };
 
 export const deleteAnswer = async (req, res) => {
-  const { answer_id } = req.params;
+  const { answerId } = req.params;
 
   try {
-    const result = await Answer.destroy({ where: { answer_id } });
+    const result = await Answer.destroy({ where: { answerId } });
 
     if (result === 0) {
       return res.status(404).json({ success: false, message: 'Answer not found.' });

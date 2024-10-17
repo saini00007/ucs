@@ -9,14 +9,14 @@ import {
 
 const router = express.Router();
 
-router.post('/companies',  createCompany); // Optional authorization
-
+router.post('/companies',  createCompany);
 
 // Get all companies
 router.get('/companies',getAllCompanies);
 
 // Get a specific company by ID
 router.get('/companies/:companyId', getCompanyById);
+
 router.put('/companies/:companyId', updateCompany);
 
 router.delete('/companies/:companyId',deleteCompany)

@@ -1,11 +1,9 @@
-// src/middleware/mockAuth.js
 
-// Fake auth for development -- will change soon
 const mockUser = {
-    user_id: '137131468915',
+    userId: 'abcd12345678', 
     username: 'superAdmin',
-    role_id: 1,
-    company_id:1
+    roleId: 1, 
+    companyId: 1 
 };
 
 const mockAuthenticate = (req, res, next) => {

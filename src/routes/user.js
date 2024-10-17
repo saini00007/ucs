@@ -11,20 +11,17 @@ const router = express.Router();
 import { authorize } from '../middleware/authorize.js';
 
 
-// Route to add a new user
-router.post('/users',authorize([1,2]) ,addUser);
+router.post('/users',addUser);
 
-// Route to update an existing user
-router.put('/users/:userId',authorize([1,2]), updateUser);
+router.put('/users/:userId', updateUser);
 
-// Route to delete a user
 router.delete('/users/:userId', deleteUser);
 
 
-router.get('/departments/:departmentId/users', getUsersByDepartment);
+router.get('/users/departments/:departmentId/', getUsersByDepartment);
 
 
-router.get('/companies/:companyId/users',  getUsersByCompany);
+router.get('/users/companies/:companyId/',  getUsersByCompany);
 
 
 router.get('/users/:userId',  getUserById);

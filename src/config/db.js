@@ -1,7 +1,7 @@
 // src/config/db.js
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv'; // Use ES module import
-dotenv.config(); // Load environment variables
+import dotenv from 'dotenv';
+dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -11,10 +11,10 @@ const sequelize = new Sequelize(isProduction ? process.env.RENDER_DB_URL : proce
     dialectOptions: isProduction ? {
         ssl: {
             require: true,
-            rejectUnauthorized: false // This is important for Render
+            rejectUnauthorized: false
         }
     } : {},
-    logging: false, // Disable logging
+    logging: false,
 });
 
-export default sequelize; // Default export
+export default sequelize;

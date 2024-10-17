@@ -4,95 +4,95 @@ import { User, Otp } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
 
 export const resetPassword = async (req, res) => {
-    const { token, newPassword } = req.body;
+  const { token, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-        return res.status(400).json({ success: false, message: 'Token and new password are required.' });
-    }
+  if (!token || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+  }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.userId;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await User.update({ password: hashedPassword }, { where: { user_id: userId } });
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.update({ password: hashedPassword }, { where: { userId } }); // Updated to camelCase
 
-        res.status(200).json({ success: true, message: 'Password reset successfully' });
-    } catch (error) {
-        console.error('Error resetting password:', error);
-        res.status(500).json({ success: false, message: 'Failed to reset password', error: error.message });
-    }
+    res.status(200).json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ success: false, message: 'Failed to reset password', error: error.message });
+  }
 };
 
 export const login = async (req, res) => {
-    const { identifier, password } = req.body;
+  const { identifier, password } = req.body;
 
-    if (!identifier || !password) {
-        return res.status(400).json({ success: false, message: 'Identifier and password are required.' });
+  if (!identifier || !password) {
+    return res.status(400).json({ success: false, message: 'Identifier and password are required.' });
+  }
+
+  try {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const user = await User.findOne({
+      where: isEmail ? { email: identifier } : { userId: identifier }, // Updated to camelCase
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
     }
 
-    try {
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-        const user = await User.findOne({
-            where: isEmail ? { email: identifier } : { user_id: identifier }
-        });
-
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
-        }
-
-        const token = jwt.sign({ userId: user.user_id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const emailSubject = 'Your OTP Code';
-        const emailText = `Hello ${user.username},\n\nYour OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
-        
-        await sendEmail(user.email, emailSubject, emailText);
-
-        const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
-        await Otp.create({ user_id: user.user_id, otp_code: otp, expires_at: otpExpiration });
-
-        res.status(200).json({ success: true, message: 'OTP sent to email', token, otp: otp });
-    } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ success: false, message: 'Login failed', error: error.message });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID/email or password' });
     }
+
+    const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: '1h' }); // Updated to camelCase
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const emailSubject = 'Your OTP Code';
+    const emailText = `Hello ${user.username},\n\nYour OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
+
+    await sendEmail(user.email, emailSubject, emailText);
+
+    const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
+    await Otp.create({ userId: user.userId, otpCode: otp, expiresAt: otpExpiration }); // Updated to camelCase
+
+    res.status(200).json({ success: true, message: 'OTP sent to email', token, otp });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ success: false, message: 'Login failed', error: error.message });
+  }
 };
 
 export const verifyOtp = async (req, res) => {
-    const { token, otp } = req.body;
+  const { token, otp } = req.body;
 
-    if (!token || !otp) {
-        return res.status(400).json({ success: false, message: 'Token and OTP are required.' });
+  if (!token || !otp) {
+    return res.status(400).json({ success: false, message: 'Token and OTP are required.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const otpRecord = await Otp.findOne({ where: { userId, otpCode: otp } }); // Updated to camelCase
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
     }
 
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.userId;
-
-        const otpRecord = await Otp.findOne({ where: { user_id: userId, otp_code: otp } });
-
-        if (!otpRecord) {
-            return res.status(400).json({ success: false, message: 'Invalid OTP' });
-        }
-
-        if (new Date(otpRecord.expires_at) < new Date()) {
-            return res.status(400).json({ success: false, message: 'OTP expired' });
-        }
-
-        const finalToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        await Otp.destroy({ where: { user_id: userId } });
-
-        res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 3600000 });
-        res.status(200).json({ success: true, message: 'OTP verified successfully' });
-    } catch (error) {
-        console.error('Error verifying OTP:', error);
-        res.status(500).json({ success: false, message: 'Failed to verify OTP', error: error.message });
+    if (new Date(otpRecord.expiresAt) < new Date()) { // Updated to camelCase
+      return res.status(400).json({ success: false, message: 'OTP expired' });
     }
+
+    const finalToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    await Otp.destroy({ where: { userId } }); // Updated to camelCase
+
+    res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 3600000 });
+    res.status(200).json({ success: true, message: 'OTP verified successfully' });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ success: false, message: 'Failed to verify OTP', error: error.message });
+  }
 };

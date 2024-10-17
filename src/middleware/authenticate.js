@@ -15,12 +15,11 @@ export const authenticate = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Use Sequelize to find the user by userId
     const user = await User.findOne({
       where: {
-        user_id: decoded.userId,
+        userId: decoded.userId, // Updated to camelCase
       },
-      attributes: ['user_id', 'username', 'email', 'role_id'], // Specify attributes to retrieve
+      attributes: ['userId', 'username', 'email', 'roleId'], // Specify attributes to retrieve in camelCase
     });
 
     if (!user) {

@@ -3,46 +3,55 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Company = sequelize.define('Company', {
-  company_id: {
+  companyId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'company_id',
   },
-  company_name: {
+  companyName: {
     type: DataTypes.TEXT,
     allowNull: false,
+    field: 'company_name',
   },
-  postal_address: {
-    type: DataTypes.TEXT, // Registered office address
-    allowNull: false,
-  },
-  gst_number: {
-    type: DataTypes.TEXT,
-    allowNull: true, // Optional field
-  },
-  primary_email: {
+  postalAddress: {
     type: DataTypes.TEXT,
     allowNull: false,
+    field: 'postal_address',
   },
-  secondary_email: {
+  gstNumber: {
     type: DataTypes.TEXT,
-    allowNull: true, // Optional field
+    allowNull: true,
+    field: 'gst_number',
   },
-  primary_phone: {
+  primaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
+    field: 'primary_email',
   },
-  secondary_phone: {
+  secondaryEmail: {
     type: DataTypes.TEXT,
-    allowNull: true, // Optional field
+    allowNull: true,
+    field: 'secondary_email',
   },
-  created_by: {
-    type: DataTypes.STRING(12), // Assuming user_id is a STRING(12)
+  primaryPhone: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    field: 'primary_phone',
+  },
+  secondaryPhone: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'secondary_phone',
+  },
+  createdBy: {
+    type: DataTypes.STRING(12),
     references: {
-      model: 'users', // Reference to the users table
+      model: 'users',
       key: 'user_id',
     },
-    allowNull: true, // Set to false if a creator is mandatory
+    allowNull: true,
+    field: 'created_by',
   },
 }, {
   tableName: 'companies',

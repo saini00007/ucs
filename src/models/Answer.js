@@ -2,28 +2,32 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Answer = sequelize.define('Answer', {
-  answer_id: {
+  answerId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'answer_id',
   },
-  assessment_question_id: {
+  assessmentQuestionId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'assessment_questions',
       key: 'assessment_question_id',
     },
     onDelete: 'CASCADE',
+    field: 'assessment_question_id',
   },
-  user_id: {
+  userId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
       key: 'user_id',
     },
+    field: 'user_id',
   },
-  answer_text: {
+  answerText: {
     type: DataTypes.TEXT,
+    field: 'answer_text',
   },
 }, {
   tableName: 'answers',

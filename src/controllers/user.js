@@ -1,163 +1,188 @@
-import { User } from '../models/index.js'; 
-import sendEmail from '../utils/mailer.js'; 
+import { User } from '../models/index.js';
+import sendEmail from '../utils/mailer.js';
 import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 const generateUserId = (username) => {
-  const prefix = username.substring(0, 4).toLowerCase();
-  const randomDigits = Math.random().toString().slice(2, 10);
-  return `${prefix}${randomDigits}`;
+    const prefix = username.substring(0, 4).toLowerCase();
+    const randomDigits = Math.random().toString().slice(2, 10);
+    return `${prefix}${randomDigits}`;
 };
 
 export const addUser = async (req, res) => {
-  const { username, password, email, roleId, phoneNumber, companyId, departmentId } = req.body;
+    const { username, password, email, roleId, phoneNumber, companyId, departmentId } = req.body;
 
-  if (roleId == '2') {
-    const adminCount = await User.count({
-      where: {
-        role_id: '2',
-        company_id: companyId
-      }
-    });
-
-    if (adminCount >= 2) {
-      return res.status(400).json({ success: false, message: 'A company can have a maximum of two admins.' });
+    if (!(req.user.roleId == 1 || req.user.roleId == 2)) {
+        return res.status(400).json({ success: false, message: 'Sorry, cannot perform this action' });
     }
-  }
 
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = generateUserId(username);
+    if (roleId == 2) {
+        const adminCount = await User.count({
+            where: {
+                role_id: 2,
+                company_id: companyId
+            }
+        });
 
-    const user = await User.create({
-      user_id: userId,
-      username,
-      password: hashedPassword,
-      email,
-      role_id: roleId,
-      department_id: departmentId,
-      company_id: companyId,
-      phone_number: phoneNumber,
-    });
+        if (adminCount >= 2) {
+            return res.status(400).json({ success: false, message: 'A company can have a maximum of two admins.' });
+        }
+    }
 
-    const token = generateToken(userId);
-    const emailSubject = 'Set Your Account Password';
-    const emailText = `Hello ${username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:3000/set-password?token=${token}\n\nPlease keep this information secure.`;
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const userId = generateUserId(username);
 
-    await sendEmail(email, emailSubject, emailText);
+        const user = await User.create({
+            userId,
+            username,
+            password: hashedPassword,
+            email,
+            roleId,
+            departmentId,
+            companyId,
+            phoneNumber,
+        });
+        console.log(user);
 
-    res.status(201).json({ success: true, message: 'User added successfully, password setup email sent', userId });
-  } catch (error) {
-    console.error('Error adding user:', error);
-    res.status(500).json({ success: false, message: 'Error adding user', error: error.message });
-  }
+        const token = generateToken(userId);
+        const emailSubject = 'Set Your Account Password';
+        const emailText = `Hello ${username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:3000/set-password?token=${token}\n\nPlease keep this information secure.`;
+
+        await sendEmail(email, emailSubject, emailText);
+
+        res.status(201).json({ success: true, message: 'User added successfully, password setup email sent', userId });
+    } catch (error) {
+        console.error('Error adding user:', error);
+        res.status(500).json({ success: false, message: 'Error adding user', error: error.message });
+    }
 };
 
 export const updateUser = async (req, res) => {
-  const { userId } = req.params;
-  const { username, email, roleId, departmentId, companyId, phoneNumber } = req.body;
+    const { userId } = req.params;
+    const { username, email, roleId, departmentId, companyId, phoneNumber } = req.body;
 
-  try {
-    const user = await User.findOne({ where: { user_id: userId } });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if (!(req.user.roleId == 1 || req.user.roleId == 2)) {
+        return res.status(400).json({ success: false, message: 'Sorry, cannot perform this action' });
     }
 
-    if (username) user.username = username;
-    if (email) user.email = email;
-    if (roleId) user.role_id = roleId;
-    if (departmentId) user.department_id = departmentId;
-    if (companyId) user.company_id = companyId;
-    if (phoneNumber) user.phone_number = phoneNumber;
+    try {
+        const user = await User.findOne({ where: { user_id: userId } });
 
-    await user.save();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
 
-    res.status(200).json({ success: true, message: 'User updated successfully', user });
-  } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ success: false, message: 'Error updating user', error: error.message });
-  }
+        if (username) user.username = username;
+        if (email) user.email = email;
+        if (roleId) user.roleId = roleId;
+        if (departmentId) user.departmentId = departmentId;
+        if (companyId) user.companyId = companyId;
+        if (phoneNumber) user.phoneNumber = phoneNumber;
+
+        await user.save();
+
+        res.status(200).json({ success: true, message: 'User updated successfully', user });
+    } catch (error) {
+        console.error('Error updating user:', error);
+        res.status(500).json({ success: false, message: 'Error updating user', error: error.message });
+    }
 };
 
 export const deleteUser = async (req, res) => {
-  const { userId } = req.params;
+    const { userId } = req.params;
 
-  try {
-    const deleted = await User.destroy({
-      where: { user_id: userId },
-    });
-
-    if (!deleted) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if (!(req.user.roleId == 1 || req.user.roleId == 2)) {
+        return res.status(400).json({ success: false, message: 'Sorry, cannot perform this action' });
     }
 
-    res.status(204).json({ success: true, message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ success: false, message: 'Error deleting user', error: error.message });
-  }
+    try {
+        const deleted = await User.destroy({
+            where: { user_id: userId },
+        });
+
+        if (!deleted) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.status(204).json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        res.status(500).json({ success: false, message: 'Error deleting user', error: error.message });
+    }
 };
 
 export const getUsersByDepartment = async (req, res) => {
-  const { departmentId } = req.params;
-  const { roleId } = req.query;
+    const { departmentId } = req.params;
+    const { roleId } = req.query;
 
-  try {
-    const whereClause = { department_id: departmentId };
-    if (roleId) {
-      whereClause.role_id = roleId;
+    if ((req.user.roleId != 1 && req.user.roleId != 2) && req.user.departmentId != departmentId) {
+        return res.status(400).json({ success: false, message: 'Cannot access other department users' });
     }
 
-    const users = await User.findAll({ where: whereClause });
+    try {
+        const whereClause = { departmentId };
+        if (roleId) {
+            whereClause.roleId = roleId;
+        }
 
-    if (users.length === 0) {
-      return res.status(404).json({ success: false, message: 'No users found in this department' });
+        const users = await User.findAll({ where: whereClause });
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: 'No users found in this department' });
+        }
+
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error('Error fetching users by department:', error);
+        res.status(500).json({ success: false, message: 'Error fetching users', error: error.message });
     }
-
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    console.error('Error fetching users by department:', error);
-    res.status(500).json({ success: false, message: 'Error fetching users', error: error.message });
-  }
 };
 
 export const getUsersByCompany = async (req, res) => {
-  const { companyId } = req.params;
-  const { roleId } = req.query;
+    const { companyId } = req.params;
+    const { roleId } = req.query;
 
-  try {
-    const whereClause = { company_id: companyId };
-    if (roleId) {
-      whereClause.role_id = roleId;
+    if (req.user.roleId != 1 && req.user.companyId != companyId) {
+        return res.status(400).json({ success: false, message: 'Cannot access other company users' });
     }
 
-    const users = await User.findAll({ where: whereClause });
+    try {
+        const whereClause = { companyId };
+        if (roleId) {
+            whereClause.roleId = roleId;
+        }
 
-    if (users.length === 0) {
-      return res.status(404).json({ success: false, message: 'No users found in this company' });
+        const users = await User.findAll({ where: whereClause });
+
+        if (users.length === 0) {
+            return res.status(404).json({ success: false, message: 'No users found in this company' });
+        }
+
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error('Error fetching users by company:', error);
+        res.status(500).json({ success: false, message: 'Error fetching users', error: error.message });
     }
-
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    console.error('Error fetching users by company:', error);
-    res.status(500).json({ success: false, message: 'Error fetching users', error: error.message });
-  }
 };
 
 export const getUserById = async (req, res) => {
-  const { userId } = req.params;
+    const { userId } = req.params;
 
-  try {
-    const user = await User.findOne({ where: { user_id: userId } });
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if ((req.user.roleId != 1 && req.user.roleId != 2) && req.user.userId != userId) {
+        return res.status(400).json({ success: false, message: 'Sorry, cannot access this user' });
     }
 
-    res.status(200).json({ success: true, user });
-  } catch (error) {
-    console.error('Error fetching user by ID:', error);
-    res.status(500).json({ success: false, message: 'Error fetching user', error: error.message });
-  }
+    try {
+        const user = await User.findOne({ where: { user_id: userId } });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.status(200).json({ success: true, user });
+    } catch (error) {
+        console.error('Error fetching user by ID:', error);
+        res.status(500).json({ success: false, message: 'Error fetching user', error: error.message });
+    }
 };

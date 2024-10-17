@@ -14,92 +14,92 @@ import AnswerEvidenceFile from './AnswerEvidenceFile.js';
 import QuestionDepartmentLink from './QuestionDepartmentLink.js';
 
 // 1. User and Company
-User.belongsTo(Company, { foreignKey: 'company_id', targetKey: 'company_id' });
-Company.hasMany(User, { foreignKey: 'company_id' });
+User.belongsTo(Company, { foreignKey: 'companyId', targetKey: 'companyId' });
+Company.hasMany(User, { foreignKey: 'companyId' });
 
 // 2. User and Department
-User.belongsTo(Department, { foreignKey: 'department_id', targetKey: 'department_id' });
-Department.hasMany(User, { foreignKey: 'department_id' });
+User.belongsTo(Department, { foreignKey: 'departmentId', targetKey: 'departmentId' });
+Department.hasMany(User, { foreignKey: 'departmentId' });
 
 // 3. User and Role
-User.belongsTo(Role, { foreignKey: 'role_id', targetKey: 'role_id' });
-Role.hasMany(User, { foreignKey: 'role_id' });
+User.belongsTo(Role, { foreignKey: 'roleId', targetKey: 'roleId' });
+Role.hasMany(User, { foreignKey: 'roleId' });
 
 // 4. Department and Company
-Department.belongsTo(Company, { foreignKey: 'company_id', targetKey: 'company_id' });
-Company.hasMany(Department, { foreignKey: 'company_id' });
+Department.belongsTo(Company, { foreignKey: 'companyId', targetKey: 'companyId' });
+Company.hasMany(Department, { foreignKey: 'companyId' });
 
 // 5. Assessment and Company
-Assessment.belongsTo(Company, { foreignKey: 'company_id', targetKey: 'company_id' });
-Company.hasMany(Assessment, { foreignKey: 'company_id' });
+Assessment.belongsTo(Company, { foreignKey: 'companyId', targetKey: 'companyId' });
+Company.hasMany(Assessment, { foreignKey: 'companyId' });
 
 // 6. Assessment and Department
-Assessment.belongsTo(Department, { foreignKey: 'department_id', targetKey: 'department_id' });
-Department.hasMany(Assessment, { foreignKey: 'department_id' });
+Assessment.belongsTo(Department, { foreignKey: 'departmentId', targetKey: 'departmentId' });
+Department.hasMany(Assessment, { foreignKey: 'departmentId' });
 
 // 7. AssessmentQuestion and Assessment
-AssessmentQuestion.belongsTo(Assessment, { foreignKey: 'assessment_id', targetKey: 'assessment_id' });
-Assessment.hasMany(AssessmentQuestion, { foreignKey: 'assessment_id' });
+AssessmentQuestion.belongsTo(Assessment, { foreignKey: 'assessmentId', targetKey: 'assessmentId' });
+Assessment.hasMany(AssessmentQuestion, { foreignKey: 'assessmentId' });
 
 // 8. AssessmentQuestion and MasterQuestion
-AssessmentQuestion.belongsTo(MasterQuestion, { foreignKey: 'question_id', targetKey: 'question_id' });
-MasterQuestion.hasMany(AssessmentQuestion, { foreignKey: 'question_id' });
+AssessmentQuestion.belongsTo(MasterQuestion, { foreignKey: 'questionId', targetKey: 'questionId' });
+MasterQuestion.hasMany(AssessmentQuestion, { foreignKey: 'questionId' });
 
 // 9. Answer and AssessmentQuestion
-Answer.belongsTo(AssessmentQuestion, { foreignKey: 'assessment_question_id', targetKey: 'assessment_question_id' });
-AssessmentQuestion.hasMany(Answer, { foreignKey: 'assessment_question_id' });
+Answer.belongsTo(AssessmentQuestion, { foreignKey: 'assessmentQuestionId', targetKey: 'assessmentQuestionId' });
+AssessmentQuestion.hasMany(Answer, { foreignKey: 'assessmentQuestionId' });
 
 // 10. Answer and User
-Answer.belongsTo(User, { foreignKey: 'user_id', targetKey: 'user_id' });
-User.hasMany(Answer, { foreignKey: 'user_id' });
+Answer.belongsTo(User, { foreignKey: 'userId', targetKey: 'userId' });
+User.hasMany(Answer, { foreignKey: 'userId' });
 
 // 11. Comment and AssessmentQuestion
-Comment.belongsTo(AssessmentQuestion, { foreignKey: 'assessment_question_id', targetKey: 'assessment_question_id' });
-AssessmentQuestion.hasMany(Comment, { foreignKey: 'assessment_question_id' });
+Comment.belongsTo(AssessmentQuestion, { foreignKey: 'assessmentQuestionId', targetKey: 'assessmentQuestionId' });
+AssessmentQuestion.hasMany(Comment, { foreignKey: 'assessmentQuestionId' });
 
 // 12. Comment and User
-Comment.belongsTo(User, { foreignKey: 'user_id', targetKey: 'user_id' });
-User.hasMany(Comment, { foreignKey: 'user_id' });
+Comment.belongsTo(User, { foreignKey: 'userId', targetKey: 'userId' });
+User.hasMany(Comment, { foreignKey: 'userId' });
 
 // 13. EvidenceFile and User
-EvidenceFile.belongsTo(User, { foreignKey: 'uploaded_by_user_id', targetKey: 'user_id' });
-User.hasMany(EvidenceFile, { foreignKey: 'uploaded_by_user_id' });
+EvidenceFile.belongsTo(User, { foreignKey: 'uploadedByUserId', targetKey: 'userId' });
+User.hasMany(EvidenceFile, { foreignKey: 'uploadedByUserId' });
 
 // 14. EvidenceFile and Assessment
-EvidenceFile.belongsTo(Assessment, { foreignKey: 'assessment_id', targetKey: 'assessment_id' });
-Assessment.hasMany(EvidenceFile, { foreignKey: 'assessment_id' });
+EvidenceFile.belongsTo(Assessment, { foreignKey: 'assessmentId', targetKey: 'assessmentId' });
+Assessment.hasMany(EvidenceFile, { foreignKey: 'assessmentId' });
 
 // 15. AnswerEvidenceFile and Answer
-AnswerEvidenceFile.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'answer_id' });
+AnswerEvidenceFile.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'answerId' });
 Answer.hasMany(AnswerEvidenceFile, { foreignKey: 'answerId' });
 
 // 16. AnswerEvidenceFile and EvidenceFile
-AnswerEvidenceFile.belongsTo(EvidenceFile, { foreignKey: 'evidenceFileId', targetKey: 'evidence_file_id' });
+AnswerEvidenceFile.belongsTo(EvidenceFile, { foreignKey: 'evidenceFileId', targetKey: 'evidenceFileId' });
 EvidenceFile.hasMany(AnswerEvidenceFile, { foreignKey: 'evidenceFileId' });
 
 // 17. Answer and EvidenceFile (many-to-many relationship)
 Answer.belongsToMany(EvidenceFile, {
   through: AnswerEvidenceFile,
-  as: 'EvidenceFiles', // This alias should match the alias used in the query
+  as: 'EvidenceFiles',
   foreignKey: 'answerId',
   otherKey: 'evidenceFileId'
 });
 
 // 18. QuestionDepartmentLink and MasterQuestion
-QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'question_id', targetKey: 'question_id' });
-MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'question_id' });
+QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'questionId', targetKey: 'questionId' });
+MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'questionId' });
 
 // 19. QuestionDepartmentLink and MasterDepartment
-QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'master_department_id', targetKey: 'department_id' });
-MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'master_department_id' });
+QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'departmentId', targetKey: 'departmentId' });
+MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'departmentId' });
 
 // 20. Department and MasterDepartment
-Department.belongsTo(MasterDepartment, { foreignKey: 'master_department_id', targetKey: 'department_id' });
-MasterDepartment.hasMany(Department, { foreignKey: 'master_department_id' });
+Department.belongsTo(MasterDepartment, { foreignKey: 'departmentId', targetKey: 'departmentId' });
+MasterDepartment.hasMany(Department, { foreignKey: 'departmentId' });
 
 // 21. Otp and User
-Otp.belongsTo(User, { foreignKey: 'user_id', targetKey: 'user_id' });
-User.hasMany(Otp, { foreignKey: 'user_id' });
+Otp.belongsTo(User, { foreignKey: 'userId', targetKey: 'userId' });
+User.hasMany(Otp, { foreignKey: 'userId' });
 
 export {
   User,

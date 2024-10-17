@@ -13,7 +13,7 @@ export const getAllDepartmentsForCompany = async (req, res) => {
 
     try {
         const departments = await Department.findAll({
-            where: { company_id: companyId },
+            where: { companyId: companyId },
         });
         res.status(200).json({ success: true, departments });
     } catch (error) {
@@ -27,8 +27,8 @@ export const getDepartmentById = async (req, res) => {
 
     try {
         const department = await Department.findOne({
-            where: { department_id: departmentId },
-            include: [{ model: Company, attributes: ['company_name', 'company_id'] }],
+            where: { departmentId: departmentId },
+            include: [{ model: Company, attributes: ['companyName', 'companyId'] }],
         });
 
         if (!department) {
@@ -58,19 +58,19 @@ export const createDepartment = async (req, res) => {
         }
 
         const newDepartment = await Department.create({
-            department_name: departmentName,
-            company_id: companyId,
-            master_department_id: masterDepartmentId,
-            created_by: req.user.user_id
+            departmentName: departmentName,
+            companyId: companyId,
+            masterDepartmentId: masterDepartmentId,
+            createdBy: req.user.userId,
         });
 
         const newAssessment = await Assessment.create({
-            company_id: companyId,
-            department_id: newDepartment.department_id,
+            companyId: companyId,
+            departmentId: newDepartment.departmentId,
         });
 
         const questions = await QuestionDepartmentLink.findAll({
-            where: { master_department_id: masterDepartmentId },
+            where: { masterDepartmentId: masterDepartmentId },
             include: [{ model: MasterQuestion, required: true }],
         });
 
@@ -81,12 +81,12 @@ export const createDepartment = async (req, res) => {
         await Promise.all(questions.map(async (qdl) => {
             try {
                 await AssessmentQuestion.create({
-                    assessment_id: newAssessment.assessment_id,
-                    question_id: qdl.question_id,
+                    assessmentId: newAssessment.assessmentId,
+                    questionId: qdl.questionId,
                 });
-                console.log(`Assessment question created for question_id: ${qdl.question_id}`);
+                console.log(`Assessment question created for questionId: ${qdl.questionId}`);
             } catch (err) {
-                console.error(`Failed to create assessment question for question_id: ${qdl.question_id}`, err);
+                console.error(`Failed to create assessment question for questionId: ${qdl.questionId}`, err);
             }
         }));
 
@@ -108,7 +108,7 @@ export const updateDepartment = async (req, res) => {
         }
 
         if (departmentName) {
-            department.department_name = departmentName;
+            department.departmentName = departmentName;
         }
 
         if (masterDepartmentId) {
@@ -116,7 +116,7 @@ export const updateDepartment = async (req, res) => {
             if (!masterDepartment) {
                 return res.status(400).json({ success: false, error: 'Invalid master department ID' });
             }
-            department.master_department_id = masterDepartmentId;
+            department.masterDepartmentId = masterDepartmentId;
         }
 
         await department.save();

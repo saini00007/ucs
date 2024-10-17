@@ -2,37 +2,42 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Department = sequelize.define('Department', {
-  department_id: {
+  departmentId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'department_id', 
   },
-  department_name: {
+  departmentName: {
     type: DataTypes.TEXT,
     allowNull: false,
+    field: 'department_name', 
   },
-  company_id: {
+  companyId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'companies',
       key: 'company_id',
     },
     onDelete: 'CASCADE',
+    field: 'company_id', 
   },
-  master_department_id: {
+  masterDepartmentId: {
     type: DataTypes.INTEGER,
     references: {
       model: 'master_departments',
       key: 'department_id',
     },
+    field: 'master_department_id', 
   },
-  created_by: {
+  createdBy: {
     type: DataTypes.STRING(12), // Assuming user_id is a STRING(12)
     references: {
-      model: 'users', // Reference to the users table
+      model: 'users',
       key: 'user_id',
     },
-    allowNull: true, // Set to false if a creator is mandatory
+    allowNull: true,
+    field: 'created_by', 
   },
 }, {
   tableName: 'departments',

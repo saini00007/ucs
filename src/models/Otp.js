@@ -2,28 +2,33 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Otp = sequelize.define('Otp', {
-  otp_id: {
+  otpId: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: 'otp_id',
   },
-  user_id: {
+  userId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
       key: 'user_id',
     },
+    field: 'user_id',
   },
-  otp_code: {
+  otpCode: {
     type: DataTypes.TEXT,
     allowNull: false,
+    field: 'otp_code',
   },
-  created_at: {
+  createdAt: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,
+    field: 'created_at',
   },
-  expires_at: {
+  expiresAt: {
     type: DataTypes.DATE,
+    field: 'expires_at',
   },
 }, {
   tableName: 'otp',
