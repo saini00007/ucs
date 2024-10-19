@@ -3,9 +3,9 @@ import sequelize from '../config/db.js';
 
 const EvidenceFile = sequelize.define('EvidenceFile', {
   evidenceFileId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'evidence_file_id', 
   },
   filePath: {
@@ -33,7 +33,7 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
     field: 'uploaded_at', 
   },
   assessmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'assessments',
       key: 'assessment_id',

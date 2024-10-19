@@ -1,21 +1,21 @@
 // seeds/masterDepartments.js
-import MasterDepartment from '../models/MasterDepartment'; 
+import MasterDepartment from '../models/MasterDepartment';
 
 const seedMasterDepartments = async () => {
   try {
     const departments = [
-      { departmentId: 1, departmentName: 'Network Security' },
-      { departmentId: 2, departmentName: 'Application Security' },
-      { departmentId: 3, departmentName: 'Compliance and Risk Management' },
-      { departmentId: 4, departmentName: 'Incident Response Team' },
-      { departmentId: 5, departmentName: 'Cybersecurity Training and Awareness' },
-      { departmentId: 6, departmentName: 'Security Operations Center (SOC)' },
-      { departmentId: 7, departmentName: 'Human Resources' },
+      { departmentName: 'Network Security' },
+      { departmentName: 'Application Security' },
+      { departmentName: 'Compliance and Risk Management' },
+      { departmentName: 'Incident Response Team' },
+      { departmentName: 'Cybersecurity Training and Awareness' },
+      { departmentName: 'Security Operations Center (SOC)' },
+      { departmentName: 'Human Resources' },
     ];
 
     for (const dept of departments) {
-      await MasterDepartment.create(dept);
-      console.log(`Department ${dept.departmentName} inserted.`);
+      const deptInfo=await MasterDepartment.create(dept);
+      console.log(`Department ${deptInfo.departmentName} inserted with Department id ${deptInfo.departmentId}`);
     }
   } catch (error) {
     console.error('Error seeding master departments:', error);

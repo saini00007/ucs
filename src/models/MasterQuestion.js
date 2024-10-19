@@ -3,9 +3,9 @@ import sequelize from '../config/db.js';
 
 const MasterQuestion = sequelize.define('MasterQuestion', {
   questionId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'question_id', 
   },
   srNo: {

@@ -3,9 +3,9 @@ import sequelize from '../config/db.js';
 
 const Otp = sequelize.define('Otp', {
   otpId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'otp_id',
   },
   userId: {

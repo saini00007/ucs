@@ -6,9 +6,9 @@ class QuestionDepartmentLink extends Model {}
 
 QuestionDepartmentLink.init({
   questionId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
-      model: 'master_questions', // This should match the table name
+      model: 'master_questions',
       key: 'question_id',
     },
     allowNull: false,
@@ -16,7 +16,7 @@ QuestionDepartmentLink.init({
     field: 'question_id', 
   },
   masterDepartmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'master_departments',
       key: 'department_id',

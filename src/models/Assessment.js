@@ -3,13 +3,13 @@ import sequelize from '../config/db.js';
 
 const Assessment = sequelize.define('Assessment', {
   assessmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'assessment_id', 
   },
   companyId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'companies',
       key: 'company_id',
@@ -18,7 +18,7 @@ const Assessment = sequelize.define('Assessment', {
     field: 'company_id', 
   },
   departmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'departments',
       key: 'department_id',

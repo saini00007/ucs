@@ -1,6 +1,19 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
+const generateUserId = async (username) => {
+  const prefix = username.slice(0, 4).toLowerCase();
+  let uniqueId = prefix;
+  uniqueId += Math.floor(Math.random() * 9000 + 1000).toString();
+  
+  const existingUser = await User.findOne({ where: { userId: uniqueId } });
+  if (existingUser) {
+    return generateUserId(username);
+  }
+
+  return uniqueId;
+};
+
 const User = sequelize.define('User', {
   userId: {
     type: DataTypes.STRING(12),
@@ -20,7 +33,7 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   roleId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
     references: {
       model: 'roles',
       key: 'role_id',
@@ -28,7 +41,7 @@ const User = sequelize.define('User', {
     field: 'role_id', 
   },
   departmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'departments',
       key: 'department_id',
@@ -37,7 +50,7 @@ const User = sequelize.define('User', {
     field: 'department_id', 
   },
   companyId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'companies',
       key: 'company_id',
@@ -45,14 +58,21 @@ const User = sequelize.define('User', {
     onDelete: 'CASCADE',
     field: 'company_id', 
   },
-  phoneNumber: {  // New field added
-    type: DataTypes.STRING(15),  // Adjust length as necessary
-    allowNull: true,  // Allow null values if not required
+  phoneNumber: {
+    type: DataTypes.STRING(10),
+    allowNull: true,  
     field: 'phone_number',  
   },
 }, {
   tableName: 'users',
   timestamps: false,
+  hooks: {
+    beforeValidate: async (user, options) => {
+      if (user.username) {
+        user.userId = await generateUserId(user.username);
+      }
+    },
+  },
 });
 
 export default User;

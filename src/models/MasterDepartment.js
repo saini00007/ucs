@@ -3,9 +3,9 @@ import sequelize from '../config/db.js';
 
 const MasterDepartment = sequelize.define('MasterDepartment', {
   departmentId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'department_id', 
   },
   departmentName: {

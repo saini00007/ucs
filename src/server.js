@@ -30,16 +30,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Dynamically import all models
-const importModels = async () => {
-  const modelsDir = path.join(process.cwd(), 'src/models'); // Adjust the path as necessary
-  const modelFiles = fs.readdirSync(modelsDir).filter(file => file.endsWith('.js'));
 
-  for (const file of modelFiles) {
-    const filePath = path.join(modelsDir, file);
-    const fileUrl = url.pathToFileURL(filePath).href; // Convert to file:// URL
-    await import(fileUrl); // Import each model file
-  }
-};
 
 app.use('/', authRoutes); // Routes for authentication operations
 app.use(authMiddleware);
@@ -52,8 +43,7 @@ app.use('/',answerRoutes);
 
 const startServer = async () => {
   try {
-    await importModels(); // Import all models
-    await initializeDatabase(); // Initialize and sync database models
+    await initializeDatabase();
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });

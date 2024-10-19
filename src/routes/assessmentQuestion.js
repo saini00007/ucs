@@ -13,7 +13,7 @@ const router = express.Router();
 router.post('/assessments/:assessmentId/questions', addAssessmentQuestion);
 
 // Route to get a question by ID
-router.get('/assessments/:assessmentId/questions/:assessmentQuestionId', getAssessmentQuestionById);
+router.get('/questions/:assessmentQuestionId', getAssessmentQuestionById);
 
 // Route to get all questions for a specific assessment
 router.get('/assessments/:assessmentId/questions', getAssessmentQuestions);

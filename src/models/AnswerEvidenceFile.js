@@ -3,7 +3,7 @@ import sequelize from '../config/db.js';
 
 const AnswerEvidenceFile = sequelize.define('AnswerEvidenceFile', {
   answerId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'answers',
       key: 'answer_id',
@@ -13,7 +13,7 @@ const AnswerEvidenceFile = sequelize.define('AnswerEvidenceFile', {
     field: 'answer_id',
   },
   evidenceFileId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     references: {
       model: 'evidence_files',
       key: 'evidence_file_id',

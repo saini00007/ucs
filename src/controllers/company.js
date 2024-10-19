@@ -34,10 +34,10 @@ export const createCompany = async (req, res) => {
 };
 
 export const getAllCompanies = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1 } = req.query;
 
   const pageNumber = parseInt(page, 10);
-  const limitNumber = parseInt(limit, 10);
+  const limitNumber = 10;
 
   try {
     const { count, rows: companies } = await Company.findAndCountAll({
@@ -138,9 +138,11 @@ export const deleteCompany = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Company not found' });
     }
 
-    res.status(204).json({ success: true, message: 'Company deleted successfully' });
+    // Send a 200 OK status with a message instead of 204 No Content
+    res.status(200).json({ success: true, message: 'Company deleted successfully' });
   } catch (error) {
     console.error('Error deleting company:', error);
     res.status(500).json({ success: false, message: 'Error deleting company', error: error.message });
   }
 };
+

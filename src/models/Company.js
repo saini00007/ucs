@@ -4,9 +4,9 @@ import sequelize from '../config/db.js';
 
 const Company = sequelize.define('Company', {
   companyId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataTypes.UUIDV4,
     field: 'company_id',
   },
   companyName: {
