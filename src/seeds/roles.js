@@ -1,4 +1,3 @@
-// seeds/roles.js
 import Role from '../models/Role';
 
 const seedRoles = async () => {
@@ -14,8 +13,15 @@ const seedRoles = async () => {
     ];
 
     for (const role of roles) {
-      const roleInfo = await Role.create(role); // Use create instead of upsert
-      console.log(`Role ${roleInfo.roleName} inserted with ID: ${roleInfo.roleId}`);
+      const [roleInfo, created] = await Role.findOrCreate({
+        where: { roleName: role.roleName },
+        defaults: role,
+      });
+      if (created) {
+        console.log(`Role ${roleInfo.roleName} inserted with ID: ${roleInfo.roleId}`);
+      } else {
+        console.log(`Role ${roleInfo.roleName} already exists.`);
+      }
     }
 
   } catch (error) {

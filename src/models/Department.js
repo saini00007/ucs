@@ -31,7 +31,7 @@ const Department = sequelize.define('Department', {
     field: 'master_department_id', 
   },
   createdBy: {
-    type: DataTypes.STRING(12), // Assuming user_id is a STRING(12)
+    type: DataTypes.STRING(12), 
     references: {
       model: 'users',
       key: 'user_id',

@@ -1,6 +1,6 @@
 import express from 'express';
 import { 
-  addAssessmentQuestion, 
+  addAssessmentQuestions, 
   getAssessmentQuestions,  
   deleteAssessmentQuestions,
   getAssessmentQuestionById
@@ -10,7 +10,7 @@ const router = express.Router();
 
 
 // Route to add a question to an assessment
-router.post('/assessments/:assessmentId/questions', addAssessmentQuestion);
+router.post('/assessments/:assessmentId/questions', addAssessmentQuestions);
 
 // Route to get a question by ID
 router.get('/questions/:assessmentQuestionId', getAssessmentQuestionById);

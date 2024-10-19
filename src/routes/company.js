@@ -6,19 +6,19 @@ import {
   deleteCompany,
   updateCompany
 } from '../controllers/company.js';
+import validate from '../middleware/validate.js'; 
+import companyValidation from '../joi/company.js'; 
 
 const router = express.Router();
 
-router.post('/companies',  createCompany);
+router.post('/companies', validate(companyValidation), createCompany);
+router.put('/companies/:companyId', validate(companyValidation), updateCompany); 
 
-// Get all companies
-router.get('/companies',getAllCompanies);
 
-// Get a specific company by ID
+router.get('/companies', getAllCompanies);
+
 router.get('/companies/:companyId', getCompanyById);
 
-router.put('/companies/:companyId', updateCompany);
-
-router.delete('/companies/:companyId',deleteCompany)
+router.delete('/companies/:companyId', deleteCompany);
 
 export default router;

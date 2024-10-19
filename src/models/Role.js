@@ -18,8 +18,8 @@ const Role = sequelize.define('Role', {
   timestamps: false,
   hooks: {
     beforeValidate: (role, options) => {
-      const namePart = role.roleName.replace(/_/g, '').toLowerCase();
-      role.roleId = `role_${namePart}_${Date.now()}`;
+      const name = role.roleName.replace(/_/g, '').toLowerCase();
+      role.roleId = name;
     },
   },
 });

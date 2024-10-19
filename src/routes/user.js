@@ -7,24 +7,16 @@ import {
   getUsersByCompany,
   getUserById
 } from '../controllers/user.js';
+import validate from '../middleware/validate.js';
+import {userSchema,userUpdateSchema} from '../joi/user.js';
+
 const router = express.Router();
-import { authorize } from '../middleware/authorize.js';
 
-
-router.post('/users',addUser);
-
-router.put('/users/:userId', updateUser);
-
+router.post('/users', validate(userSchema), addUser);
+router.put('/users/:userId', validate(userUpdateSchema), updateUser);
 router.delete('/users/:userId', deleteUser);
-
-
-router.get('/users/departments/:departmentId/', getUsersByDepartment);
-
-
-router.get('/users/companies/:companyId/',  getUsersByCompany);
-
-
-router.get('/users/:userId',  getUserById);
-
+router.get('/departments/:departmentId/users', getUsersByDepartment);
+router.get('/companies/:companyId/users', getUsersByCompany);
+router.get('/users/:userId', getUserById);
 
 export default router;

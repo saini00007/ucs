@@ -1,85 +1,107 @@
 import { AssessmentQuestion, MasterQuestion } from '../models/index.js';
 
-export const addAssessmentQuestion = async (req, res) => {
+export const addAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
-  const { questionId } = req.body;
+  const { questionIds } = req.body; 
 
   try {
-    const assessmentQuestion = await AssessmentQuestion.create({
-      assessmentId, // Updated to camelCase
-      questionId, // Updated to camelCase
-    });
+    const assessmentQuestions = await Promise.all(
+      questionIds.map(async (questionId) => {
+        return await AssessmentQuestion.create({
+          assessmentId,
+          questionId,
+        });
+      })
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Assessment question added successfully',
-      data: assessmentQuestion,
+      messages: ['Assessment questions added successfully'],
+      assessmentQuestions,
     });
   } catch (error) {
-    console.error('Error adding assessment question:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    console.error('Error adding assessment questions:', error);
+    res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
+
 
 export const getAssessmentQuestionById = async (req, res) => {
   const { assessmentQuestionId } = req.params;
 
   try {
     const assessmentQuestion = await AssessmentQuestion.findOne({
-      where: { assessmentQuestionId }, // Updated to camelCase
+      where: { assessmentQuestionId },
       include: {
         model: MasterQuestion,
-        attributes: ['questionText'], // Updated to camelCase
+        attributes: ['questionText'],
       },
     });
 
     if (!assessmentQuestion) {
-      return res.status(404).json({ success: false, message: 'Assessment question not found' });
+      return res.status(404).json({ success: false, messages: ['Assessment question not found'] });
     }
 
-    res.status(200).json({ success: true, data: assessmentQuestion });
+    res.status(200).json({ success: true, assessmentQuestion });
   } catch (error) {
     console.error('Error fetching assessment question:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
 
 export const getAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
+  const { page = 1 } = req.query;
 
   try {
-    const assessmentQuestions = await AssessmentQuestion.findAll({
-      where: { assessmentId }, // Updated to camelCase
+    const { count, rows: assessmentQuestions } = await AssessmentQuestion.findAndCountAll({
+      where: { assessmentId },
       include: {
         model: MasterQuestion,
-        attributes: ['questionText'], // Updated to camelCase
+        attributes: ['questionText'],
       },
+      limit: 10,
+      offset: (page - 1) * 10,
     });
 
-    res.status(200).json({ success: true, data: assessmentQuestions });
+    const totalPages = Math.ceil(count / 10);
+
+    if (page > totalPages) {
+      return res.status(404).json({ success: false, messages: ['Page not found'] });
+    }
+
+    res.status(200).json({
+      success: true,
+      assessmentQuestions,
+      pagination: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+      },
+    });
   } catch (error) {
     console.error('Error retrieving assessment questions:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
 
 export const deleteAssessmentQuestions = async (req, res) => {
-  const { questionIds } = req.body; // Get question IDs from the request body
+  const { questionIds } = req.body;
 
   try {
     const result = await AssessmentQuestion.destroy({
       where: {
-        assessmentQuestionId: questionIds, // Updated to camelCase
+        assessmentQuestionId: questionIds,
       },
     });
 
     if (result === 0) {
-      return res.status(404).json({ success: false, message: 'No assessment questions found' });
+      return res.status(404).json({ success: false, messages: ['No assessment questions found'] });
     }
 
-    res.status(200).json({ success: true, message: 'Assessment questions deleted successfully', deletedCount: result });
+    res.status(200).json({ success: true, messages: ['Assessment questions deleted successfully'], deletedCount: result });
   } catch (error) {
     console.error('Error deleting assessment questions:', error);
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+    res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };

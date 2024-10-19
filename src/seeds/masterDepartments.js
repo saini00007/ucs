@@ -1,4 +1,3 @@
-// seeds/masterDepartments.js
 import MasterDepartment from '../models/MasterDepartment';
 
 const seedMasterDepartments = async () => {
@@ -14,8 +13,15 @@ const seedMasterDepartments = async () => {
     ];
 
     for (const dept of departments) {
-      const deptInfo=await MasterDepartment.create(dept);
-      console.log(`Department ${deptInfo.departmentName} inserted with Department id ${deptInfo.departmentId}`);
+      const [deptInfo, created] = await MasterDepartment.findOrCreate({
+        where: { departmentName: dept.departmentName },
+        defaults: dept,
+      });
+      if (created) {
+        console.log(`Department ${deptInfo.departmentName} inserted with Department ID ${deptInfo.departmentId}`);
+      } else {
+        console.log(`Department ${deptInfo.departmentName} already exists.`);
+      }
     }
   } catch (error) {
     console.error('Error seeding master departments:', error);

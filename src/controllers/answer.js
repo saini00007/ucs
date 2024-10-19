@@ -9,14 +9,14 @@ export const createAnswer = async (req, res) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+    return res.status(400).json({ success: false, messages: errors.array() });
   }
 
   const { answerText } = req.body;
   const userId = req.user.userId;
 
   if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ success: false, message: 'No files uploaded.' });
+    return res.status(400).json({ success: false, messages: ['No files uploaded.'] });
   }
 
   try {
@@ -26,7 +26,7 @@ export const createAnswer = async (req, res) => {
     });
 
     if (!question) {
-      return res.status(404).json({ success: false, message: 'Assessment question not found.' });
+      return res.status(404).json({ success: false, messages: ['Assessment question not found.'] });
     }
 
     const assessmentId = question.assessmentId;
@@ -56,31 +56,37 @@ export const createAnswer = async (req, res) => {
 
     res.status(201).json({
       success: true,
+      messages: ['Answer created successfully'],
       answer,
       evidenceFileIds: evidenceFiles.map(file => file.evidenceFileId),
     });
   } catch (error) {
     console.error('Error creating answer:', error);
-    res.status(500).json({ success: false, message: 'Internal server error while creating answer.' });
+    res.status(500).json({ success: false, messages: ['Internal server error while creating answer.'] });
   }
 };
 
 export const getAnswersByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
+  const { page = 1 } = req.query;
 
   try {
-    const answers = await Answer.findAll({
+    const { count, rows: answers } = await Answer.findAndCountAll({
       where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
         through: { model: AnswerEvidenceFile },
         as: 'EvidenceFiles',
         required: false
-      }]
+      }],
+      limit: 10,
+      offset: (page - 1) * 10,
     });
 
-    if (answers.length === 0) {
-      return res.status(404).json({ success: false, message: 'No answers found for this question.' });
+    const totalPages = Math.ceil(count / 10);
+
+    if (page > totalPages) {
+      return res.status(404).json({ success: false, messages: ['Page not found'] });
     }
 
     const answersWithEvidence = answers.map(answer => ({
@@ -93,10 +99,18 @@ export const getAnswersByQuestion = async (req, res) => {
       }))
     }));
 
-    res.status(200).json({ success: true, answers: answersWithEvidence });
+    res.status(200).json({
+      success: true,
+      answers: answersWithEvidence,
+      pagination: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+      },
+    });
   } catch (error) {
     console.error('Error retrieving answers:', error);
-    res.status(500).json({ success: false, message: 'Error retrieving answers.', error: error.message });
+    res.status(500).json({ success: false, messages: ['Error retrieving answers.'], error: error.message });
   }
 };
 
@@ -107,7 +121,7 @@ export const serveFile = async (req, res) => {
     const evidenceFile = await EvidenceFile.findOne({ where: { evidenceFileId: fileId } });
 
     if (!evidenceFile) {
-      return res.status(404).json({ success: false, message: 'File not found.' });
+      return res.status(404).json({ success: false, messages: ['File not found.'] });
     }
 
     const { filePath, pdfData } = evidenceFile;
@@ -117,7 +131,7 @@ export const serveFile = async (req, res) => {
     res.send(pdfData);
   } catch (error) {
     console.error('Error retrieving file data:', error);
-    res.status(500).json({ success: false, message: 'Error retrieving file.' });
+    res.status(500).json({ success: false, messages: ['Error retrieving file.'] });
   }
 };
 
@@ -128,12 +142,12 @@ export const deleteAnswer = async (req, res) => {
     const result = await Answer.destroy({ where: { answerId } });
 
     if (result === 0) {
-      return res.status(404).json({ success: false, message: 'Answer not found.' });
+      return res.status(404).json({ success: false, messages: ['Answer not found.'] });
     }
 
-    res.status(200).json({ success: true, message: 'Answer deleted successfully.' });
+    res.status(200).json({ success: true, messages: ['Answer deleted successfully.'] });
   } catch (error) {
     console.error('Error deleting answer:', error);
-    res.status(500).json({ success: false, message: 'Error deleting answer.' });
+    res.status(500).json({ success: false, messages: ['Error deleting answer.'] });
   }
 };
