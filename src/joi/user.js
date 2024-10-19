@@ -68,7 +68,6 @@ const userSchema = Joi.object({
         }),
 });
 
-// User Update Schema
 const userUpdateSchema = Joi.object({
     username: Joi.string()
         .min(1)

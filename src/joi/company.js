@@ -68,14 +68,7 @@ const companySchema = Joi.object({
         'any.required': 'Secondary phone phone is required',
         'string.length': 'Secondary phone phone must be exactly 10 digits',
         'string.pattern.base': 'Secondary phone phone must contain only digits',
-    }),
-
-  createdBy: Joi.string()
-    .max(12)
-    .optional()
-    .messages({
-      'string.max': 'Created by field must be less than or equal to 12 characters',
-    }),
+    })
 });
 
 export default companySchema;
