@@ -10,7 +10,7 @@ import initializeDatabase from './initializeDatabase.js'; // Import the database
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000; 
+const PORT = process.env.PORT || 443; 
 
 import mockAuthenticate from './middleware/mockAuth.js';
 import { authenticate } from './middleware/authenticate.js';
