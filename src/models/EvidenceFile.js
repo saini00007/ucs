@@ -10,12 +10,12 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
   },
   filePath: {
     type: DataTypes.TEXT,
-    allowNull: false, // Required field
+    allowNull: false,
     field: 'file_path', 
   },
   pdfData: {
     type: DataTypes.BLOB,
-    allowNull: false, // Optional: Required if you always want to store PDF data
+    allowNull: false, 
     field: 'pdf_data', 
   },
   uploadedByUserId: {

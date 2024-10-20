@@ -9,7 +9,7 @@ export const addAssessmentQuestions = async (req, res) => {
       questionIds.map(async (questionId) => {
         return await AssessmentQuestion.create({
           assessmentId,
-          questionId,
+          masterQuestionId:questionId,///////////////////
         });
       })
     );

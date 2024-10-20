@@ -5,7 +5,7 @@ import sequelize from '../config/db.js';
 class QuestionDepartmentLink extends Model {}
 
 QuestionDepartmentLink.init({
-  questionId: {
+  masterQuestionId: {//
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
@@ -13,7 +13,7 @@ QuestionDepartmentLink.init({
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'question_id', 
+    field: 'master_question_id', 
   },
   masterDepartmentId: {
     type: DataTypes.UUID,

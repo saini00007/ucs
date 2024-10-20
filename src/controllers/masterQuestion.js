@@ -32,7 +32,7 @@ const getMasterQuestions = async (req, res) => {
     }
     return res.status(200).json({
       success: true,
-      data: rows,
+      masterQuestions: rows,
       meta: {
         totalItems: count,
         totalPages: totalPages,

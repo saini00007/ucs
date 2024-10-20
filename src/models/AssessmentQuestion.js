@@ -17,13 +17,13 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
     onDelete: 'CASCADE',
     field: 'assessment_id', 
   },
-  questionId: {
+  masterQuestionId: {//
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
       key: 'question_id',
     },
-    field: 'question_id', 
+    field: 'master_question_id', 
   },
 }, {
   tableName: 'assessment_questions',

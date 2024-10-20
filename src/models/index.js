@@ -41,9 +41,9 @@ Department.hasMany(Assessment, { foreignKey: 'departmentId' });
 AssessmentQuestion.belongsTo(Assessment, { foreignKey: 'assessmentId', targetKey: 'assessmentId' });
 Assessment.hasMany(AssessmentQuestion, { foreignKey: 'assessmentId' });
 
-// 8. AssessmentQuestion and MasterQuestion
-AssessmentQuestion.belongsTo(MasterQuestion, { foreignKey: 'questionId', targetKey: 'questionId' });
-MasterQuestion.hasMany(AssessmentQuestion, { foreignKey: 'questionId' });
+///////////////////////////// 8. AssessmentQuestion and MasterQuestion
+AssessmentQuestion.belongsTo(MasterQuestion, { foreignKey: 'masterQuestionId', targetKey: 'questionId' });
+MasterQuestion.hasMany(AssessmentQuestion, { foreignKey: 'masterQuestionId' });
 
 // 9. Answer and AssessmentQuestion
 Answer.belongsTo(AssessmentQuestion, { foreignKey: 'assessmentQuestionId', targetKey: 'assessmentQuestionId' });
@@ -85,13 +85,13 @@ Answer.belongsToMany(EvidenceFile, {
   otherKey: 'evidenceFileId'
 });
 
-// 18. QuestionDepartmentLink and MasterQuestion
-QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'questionId', targetKey: 'questionId' });
-MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'questionId' });
+////////////////////////////// 18. QuestionDepartmentLink and MasterQuestion
+QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'masterQuestionId', targetKey: 'questionId' });
+MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'masterQuestionId' });
 
-// 19. QuestionDepartmentLink and MasterDepartment
-QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'departmentId', targetKey: 'departmentId' });
-MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'departmentId' });
+////////////////////// 19. QuestionDepartmentLink and MasterDepartment
+QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'masterDepartmentId', targetKey: 'departmentId' });
+MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'masterDepartmentId' });
 
 // 20. Department and MasterDepartment
 Department.belongsTo(MasterDepartment, { foreignKey: 'departmentId', targetKey: 'departmentId' });

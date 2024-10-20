@@ -82,7 +82,7 @@ const seedMasterQuestions = async (count = 50) => {
 
         if (departmentRecord) {
           const questionDepartmentLink = {
-            questionId: question.questionId,
+            masterQuestionId: question.questionId,
             masterDepartmentId: departmentRecord.departmentId,
           };
 

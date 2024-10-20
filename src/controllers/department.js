@@ -110,7 +110,7 @@ export const createDepartment = async (req, res) => {
             try {
                 await AssessmentQuestion.create({
                     assessmentId: newAssessment.assessmentId,
-                    questionId: qdl.questionId,
+                    masterQuestionId: qdl.questionId,
                 });
                 console.log(`Assessment question created for questionId: ${qdl.questionId}`);
             } catch (err) {
