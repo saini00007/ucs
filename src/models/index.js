@@ -10,7 +10,7 @@ import EvidenceFile from './EvidenceFile.js';
 import MasterDepartment from './MasterDepartment.js';
 import MasterQuestion from './MasterQuestion.js';
 import Otp from './Otp.js';
-import AnswerEvidenceFile from './AnswerEvidenceFile.js';
+import AnswerEvidenceFileLink from './AnswerEvidenceFileLink.js';
 import QuestionDepartmentLink from './QuestionDepartmentLink.js';
 
 // 1. User and Company
@@ -70,16 +70,16 @@ EvidenceFile.belongsTo(Assessment, { foreignKey: 'assessmentId', targetKey: 'ass
 Assessment.hasMany(EvidenceFile, { foreignKey: 'assessmentId' });
 
 // 15. AnswerEvidenceFile and Answer
-AnswerEvidenceFile.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'answerId' });
-Answer.hasMany(AnswerEvidenceFile, { foreignKey: 'answerId' });
+AnswerEvidenceFileLink.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'answerId' });
+Answer.hasMany(AnswerEvidenceFileLink, { foreignKey: 'answerId' });
 
 // 16. AnswerEvidenceFile and EvidenceFile
-AnswerEvidenceFile.belongsTo(EvidenceFile, { foreignKey: 'evidenceFileId', targetKey: 'evidenceFileId' });
-EvidenceFile.hasMany(AnswerEvidenceFile, { foreignKey: 'evidenceFileId' });
+AnswerEvidenceFileLink.belongsTo(EvidenceFile, { foreignKey: 'evidenceFileId', targetKey: 'evidenceFileId' });
+EvidenceFile.hasMany(AnswerEvidenceFileLink, { foreignKey: 'evidenceFileId' });
 
 // 17. Answer and EvidenceFile (many-to-many relationship)
 Answer.belongsToMany(EvidenceFile, {
-  through: AnswerEvidenceFile,
+  through: AnswerEvidenceFileLink,
   as: 'EvidenceFiles',
   foreignKey: 'answerId',
   otherKey: 'evidenceFileId'
@@ -114,6 +114,6 @@ export {
   MasterDepartment,
   MasterQuestion,
   Otp,
-  AnswerEvidenceFile,
+  AnswerEvidenceFileLink,
   QuestionDepartmentLink,
 };

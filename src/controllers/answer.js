@@ -1,7 +1,7 @@
 import { validationResult } from 'express-validator';
 import Answer from '../models/Answer.js';
 import EvidenceFile from '../models/EvidenceFile.js';
-import AnswerEvidenceFile from '../models/AnswerEvidenceFile.js';
+import AnswerEvidenceFileLink from '../models/AnswerEvidenceFileLink.js';
 import AssessmentQuestion from '../models/AssessmentQuestion.js';
 
 export const createAnswer = async (req, res) => {
@@ -48,7 +48,7 @@ export const createAnswer = async (req, res) => {
     });
 
     await Promise.all(evidenceFiles.map(async (evidenceFile) => {
-      await AnswerEvidenceFile.create({
+      await AnswerEvidenceFileLink.create({
         answerId: answer.answerId,
         evidenceFileId: evidenceFile.evidenceFileId,
       });
@@ -76,7 +76,7 @@ export const getAnswersByQuestion = async (req, res) => {
       where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
-        through: { model: AnswerEvidenceFile },
+        through: { model: AnswerEvidenceFileLink },
         as: 'EvidenceFiles',
         required: false
       }],

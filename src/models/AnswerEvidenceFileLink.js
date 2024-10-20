@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
-const AnswerEvidenceFile = sequelize.define('AnswerEvidenceFile', {
+const AnswerEvidenceFileLink = sequelize.define('AnswerEvidenceFileLink', {
   answerId: {
     type: DataTypes.UUID,
     references: {
@@ -23,8 +23,8 @@ const AnswerEvidenceFile = sequelize.define('AnswerEvidenceFile', {
     field: 'evidence_file_id',
   }
 }, {
-  tableName: 'answer_evidence_files',
+  tableName: 'answer_evidence_file_links',
   timestamps: false,
 });
 
-export default AnswerEvidenceFile;
+export default AnswerEvidenceFileLink;
