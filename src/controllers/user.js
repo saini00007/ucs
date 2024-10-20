@@ -48,7 +48,7 @@ export const updateUser = async (req, res) => {
     const { username, email, roleId, departmentId, phoneNumber } = req.body;
 
     try {
-        const user = await User.findOne({ where: { user_id: userId } });
+        const user = await User.findOne({ where: { userId: userId } });
 
         if (!user) {
             return res.status(404).json({ success: false, messages: ['User not found'] });
@@ -62,7 +62,7 @@ export const updateUser = async (req, res) => {
 
         await user.save();
 
-        res.status(200).json({ success: true, messages: ['User updated successfully']});
+        res.status(200).json({ success: true, messages: ['User updated successfully'] });
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ success: false, messages: ['Error updating user'], error: error.message });
@@ -74,7 +74,7 @@ export const deleteUser = async (req, res) => {
 
     try {
         const deleted = await User.destroy({
-            where: { user_id: userId },
+            where: { userId: userId },
         });
 
         if (!deleted) {
@@ -90,25 +90,37 @@ export const deleteUser = async (req, res) => {
 
 export const getUsersByDepartment = async (req, res) => {
     const { departmentId } = req.params;
-    const { page = 1, limit = 10 } = req.query; // Pagination parameters
-
-    const offset = (page - 1) * limit; // Calculate offset for pagination
+    const { page = 1 } = req.query;
+    const limit = 10;
 
     try {
         const { count, rows: users } = await User.findAndCountAll({
             where: { departmentId },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            attributes: ['user_id', 'username', 'roleId'], // Select only user ID, username, and role ID
+            limit: limit,
+            offset: (page - 1) * limit,
+            attributes: ['userId', 'username', 'roleId'],
         });
 
-        if (users.length === 0) {
-            return res.status(404).json({ success: false, messages: ['No users found in this department'] });
+        const totalPages = Math.ceil(count / limit);
+
+        if (count === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No Users found'],
+                users: [],
+                pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    itemsPerPage: limit
+                },
+            });
+        }
+        if (page > totalPages) {
+            return res.status(404).json({ success: false, messages: ['Page not found'] });
         }
 
-        const totalPages = Math.ceil(count / limit); // Calculate total pages
-
-        res.status(200).json({ success: true, users, totalPages, currentPage: page });
+        res.status(200).json({ success: true, users, totalPages, currentPage: page, itemsPerPage: limit });
     } catch (error) {
         console.error('Error fetching users by department:', error);
         res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
@@ -117,25 +129,37 @@ export const getUsersByDepartment = async (req, res) => {
 
 export const getUsersByCompany = async (req, res) => {
     const { companyId } = req.params;
-    const { page = 1, limit = 10 } = req.query; // Pagination parameters
-
-    const offset = (page - 1) * limit; // Calculate offset for pagination
+    const { page = 1 } = req.query;
+    const limit = 10;
 
     try {
         const { count, rows: users } = await User.findAndCountAll({
             where: { companyId },
-            limit: parseInt(limit),
-            offset: parseInt(offset),
-            attributes: ['user_id', 'username', 'roleId'], // Select only user ID, username, and role ID
+            limit: limit,
+            offset: (page - 1) * limit,
+            attributes: ['userId', 'username', 'roleId'], // Select only user ID, username, and role ID
         });
 
-        if (users.length === 0) {
-            return res.status(404).json({ success: false, messages: ['No users found in this company'] });
+        if (count === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No Users found'],
+                users: [],
+                pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    itemsPerPage: limit
+                },
+            });
+        }
+        if (page > totalPages) {
+            return res.status(404).json({ success: false, messages: ['Page not found'] });
         }
 
-        const totalPages = Math.ceil(count / limit); // Calculate total pages
+        const totalPages = Math.ceil(count / limit);
 
-        res.status(200).json({ success: true, users, totalPages, currentPage: page });
+        res.status(200).json({ success: true, users, totalPages, currentPage: page, itemsPerPage: limit });
     } catch (error) {
         console.error('Error fetching users by company:', error);
         res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });

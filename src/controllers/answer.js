@@ -69,6 +69,7 @@ export const createAnswer = async (req, res) => {
 export const getAnswersByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
   const { page = 1 } = req.query;
+  const limit=10;
 
   try {
     const { count, rows: answers } = await Answer.findAndCountAll({
@@ -79,11 +80,25 @@ export const getAnswersByQuestion = async (req, res) => {
         as: 'EvidenceFiles',
         required: false
       }],
-      limit: 10,
-      offset: (page - 1) * 10,
+      limit: limit,
+      offset: (page - 1) * limit,
     });
 
-    const totalPages = Math.ceil(count / 10);
+    if (count === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No Answers found'],
+        answers: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit
+        },
+      });
+    }
+
+    const totalPages = Math.ceil(count / limit);
 
     if (page > totalPages) {
       return res.status(404).json({ success: false, messages: ['Page not found'] });
@@ -106,6 +121,7 @@ export const getAnswersByQuestion = async (req, res) => {
         totalItems: count,
         totalPages,
         currentPage: page,
+        itemsPerPage: limit
       },
     });
   } catch (error) {

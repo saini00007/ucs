@@ -16,12 +16,6 @@ const Role = sequelize.define('Role', {
 }, {
   tableName: 'roles',
   timestamps: false,
-  hooks: {
-    beforeValidate: (role, options) => {
-      const name = role.roleName.replace(/_/g, '').toLowerCase();
-      role.roleId = name;
-    },
-  },
 });
 
 export default Role;

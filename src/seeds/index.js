@@ -12,25 +12,27 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const runSeeds = async () => {
-    await seedRoles();
+     await seedRoles();
     await seedSuperAdmins();
-    await seedMasterDepartments();
-    await seedMasterQuestions('./final2.xlsx');
+   await seedMasterDepartments();
+    const useFakeData = true;
+    const fakeDataCount = 20;
+   await seedMasterQuestions();
 };
 
 const startServerAndSeed = async () => {
     try {
-        await initializeDatabase(); 
+        await initializeDatabase();
 
         app.listen(PORT, async () => {
             console.log(`Server is running on port ${PORT}`);
-            await runSeeds(); 
+            await runSeeds();
             console.log('Seeding completed successfully!');
             process.exit(0);
         });
     } catch (error) {
         console.error('Failed to start server or seed data:', error);
-        process.exit(1); // Terminate the process with an error
+        process.exit(1);
     }
 };
 

@@ -3,27 +3,29 @@ import Role from '../models/Role';
 const seedRoles = async () => {
   try {
     const roles = [
-      { roleName: 'superadmin' },
+      { roleName: 'superAdmin' },
       { roleName: 'admin' },
-      { roleName: 'department_manager' },
+      { roleName: 'departmentManager' },
       { roleName: 'assessor' },
       { roleName: 'reviewer' },
-      { roleName: 'report_viewer' },
-      { roleName: 'guest_user' },
+      { roleName: 'reportViewer' },
+      { roleName: 'guestUser' },
     ];
 
     for (const role of roles) {
-      const [roleInfo, created] = await Role.findOrCreate({
-        where: { roleName: role.roleName },
-        defaults: role,
-      });
-      if (created) {
-        console.log(`Role ${roleInfo.roleName} inserted with ID: ${roleInfo.roleId}`);
+      const roleId = role.roleName.toLowerCase();
+      console.log(`Checking for existing role with roleId: ${roleId}`);
+
+
+      const existingRole = await Role.findOne({ where: { roleId } });
+
+      if (!existingRole) {
+        const newRole = await Role.create({ roleId, roleName: role.roleName });
+        console.log(`Role ${newRole.roleName} inserted with ID: ${newRole.roleId}`);
       } else {
-        console.log(`Role ${roleInfo.roleName} already exists.`);
+        console.log(`Role ${existingRole.roleName} already exists with ID: ${existingRole.roleId}`);
       }
     }
-
   } catch (error) {
     console.error('Error seeding roles:', error);
   }

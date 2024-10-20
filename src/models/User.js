@@ -34,6 +34,7 @@ const User = sequelize.define('User', {
   },
   roleId: {
     type: DataTypes.STRING,
+    
     references: {
       model: 'roles',
       key: 'role_id',
@@ -42,6 +43,7 @@ const User = sequelize.define('User', {
   },
   departmentId: {
     type: DataTypes.UUID,
+    allowNull: true,
     references: {
       model: 'departments',
       key: 'department_id',
@@ -51,6 +53,7 @@ const User = sequelize.define('User', {
   },
   companyId: {
     type: DataTypes.UUID,
+    allowNull: true,
     references: {
       model: 'companies',
       key: 'company_id',

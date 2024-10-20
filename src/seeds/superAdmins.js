@@ -4,30 +4,39 @@ import Role from '../models/Role';
 
 const seedSuperAdmins = async () => {
   try {
-const hashedPassword = await bcrypt.hash("blabla", 10);    
-    // Fetch the roleId for superadmin from the roles table
-    const superAdminRole = await Role.findOne({ where: { roleName: 'superadmin' } });
+    const hashedPassword = await bcrypt.hash("root", 10);    
+    const superAdminRole = await Role.findOne({ where: { roleName: 'superAdmin' } });
     
+    console.log(superAdminRole.dataValues.roleId); 
+
+    if (!superAdminRole) {
+      console.error('Superadmin role not found');
+      return;
+    }
+
+    // Extract roleId from the superAdminRole object
     const superAdminData = {
-      userId: 'abcd12345678',
+      userId: 'abcd12345678', // Ensure this is unique for each super admin
       username: 'root',
-      password: hashedPassword, // Use the hashed password
-      email: 'sarjeetsingh4680@gmail.com',
-      roleId: superAdminRole ? superAdminRole.roleId : null,
+      password: hashedPassword,
+      email: 'testingbygeek@gmail.com',
+      roleId: superAdminRole.dataValues.roleId, // Extract the roleId as a string
       departmentId: null,
       companyId: null,
+      phoneNumber: '1234567890'
     };
 
-    const [superAdmin, created] = await User.findOrCreate({
-      where: { username: superAdminData.username }, // Check for existing user by username
-      defaults: superAdminData,
-    });
+    const existingSuperAdmin = await User.findOne({ where: { username: superAdminData.username } });
 
-    if (created) {
-      console.log('Super admin inserted with user ID:', superAdmin.userId);
-    } else {
-      console.log('Super admin already exists with username:', superAdmin.username);
+    if (existingSuperAdmin) {
+      console.log('Super admin already exists with username:', existingSuperAdmin.username);
+      return;
     }
+
+    // Create the super admin if not found
+    const superAdmin = await User.create(superAdminData);
+    console.log('Super admin inserted with user ID:', superAdmin.userId);
+
   } catch (error) {
     console.error('Error seeding super admins:', error.message || error);
   }

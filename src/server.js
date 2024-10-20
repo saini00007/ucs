@@ -25,6 +25,7 @@ import assessmentRoutes from'./routes/assessment.js';
 import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
 import masterRoutes from './routes/master.js'
+import masterQuestionRoute from './routes/masterQuestion.js';
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -42,6 +43,7 @@ app.use('/',assessmentRoutes);
 app.use('/',assessmentQuestionRoutes);
 app.use('/',answerRoutes);
 app.use('/',masterRoutes);
+app.use('/',masterQuestionRoute);
 
 const startServer = async () => {
   try {

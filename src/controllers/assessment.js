@@ -30,23 +30,34 @@ export const markAssessmentAsStarted = async (req, res) => {
 export const getAllAssessments = async (req, res) => {
   const { departmentId } = req.params;
   const { page = 1 } = req.query;
+  const limit=10
 
   try {
     const { count, rows: assessments } = await Assessment.findAndCountAll({
       where: { departmentId },
       attributes: ['assessmentId', 'companyId', 'departmentId', 'createdAt', 'updatedAt', 'assessmentStarted'],
-      limit: 10,
-      offset: (page - 1) * 10,
+      limit: limit,
+      offset: (page - 1) * limit,
     });
 
-    const totalPages = Math.ceil(count / 10);
+    if (count === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No Assessments found'],
+        assessments: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit
+        },
+      });
+    }
+
+    const totalPages = Math.ceil(count / limit);
 
     if (page > totalPages) {
       return res.status(404).json({ success: false, message: ['Page not found'] });
-    }
-
-    if (assessments.length === 0) {
-      return res.status(404).json({ success: false, message: ['No assessments found for this department'] });
     }
 
     res.status(200).json({
@@ -57,6 +68,7 @@ export const getAllAssessments = async (req, res) => {
         totalItems: count,
         totalPages,
         currentPage: page,
+        itemsPerPage: limit
       },
     });
   } catch (error) {

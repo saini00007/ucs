@@ -34,25 +34,37 @@ export const createCompany = async (req, res) => {
 
 export const getAllCompanies = async (req, res) => {
   const { page = 1 } = req.query;
-  const pageNumber = parseInt(page, 10);
-  const limitNumber = 10;
+  const limit = 10;
 
   try {
     const { count, rows: companies } = await Company.findAndCountAll({
       attributes: ['companyId', 'companyName'],
-      limit: limitNumber,
-      offset: (pageNumber - 1) * limitNumber,
+      limit: limit,
+      offset: (page - 1) * limit,
     });
 
-    const totalPages = Math.ceil(count / limitNumber);
+    if (count === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No companies found'],
+        companies: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit
+        },
+      });
+    }
 
-    if (pageNumber > totalPages) {
+    const totalPages = Math.ceil(count / limit);
+
+    if (page > totalPages) {
       return res.status(404).json({
         success: false,
         messages: ['Page not found'],
       });
     }
-
     res.status(200).json({
       success: true,
       messages: ['Companies retrieved successfully'],
@@ -60,7 +72,8 @@ export const getAllCompanies = async (req, res) => {
       pagination: {
         totalItems: count,
         totalPages,
-        currentPage: pageNumber,
+        currentPage: page,
+        itemsPerPage: limit
       },
     });
   } catch (error) {

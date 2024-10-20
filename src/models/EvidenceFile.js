@@ -40,6 +40,7 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
     },
     allowNull: false,
     field: 'assessment_id', 
+    onDelete: 'CASCADE',
   },
 }, {
   tableName: 'evidence_files',
