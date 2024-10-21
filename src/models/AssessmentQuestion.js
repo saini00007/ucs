@@ -2,17 +2,17 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
-  assessmentQuestionId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'assessment_question_id', 
+    field: 'id', 
   },
   assessmentId: {
     type: DataTypes.UUID,
     references: {
       model: 'assessments',
-      key: 'assessment_id',
+      key: 'id',
     },
     onDelete: 'CASCADE',
     field: 'assessment_id', 
@@ -21,7 +21,7 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
-      key: 'question_id',
+      key: 'id',
     },
     field: 'master_question_id', 
   },

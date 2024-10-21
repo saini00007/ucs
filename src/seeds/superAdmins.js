@@ -16,7 +16,7 @@ const seedSuperAdmins = async () => {
 
     // Extract roleId from the superAdminRole object
     const superAdminData = {
-      userId: 'abcd12345678', // Ensure this is unique for each super admin
+      id: 'abcd12345678', // Ensure this is unique for each super admin
       username: 'root',
       password: hashedPassword,
       email: 'testingbygeek@gmail.com',
@@ -35,7 +35,7 @@ const seedSuperAdmins = async () => {
 
     // Create the super admin if not found
     const superAdmin = await User.create(superAdminData);
-    console.log('Super admin inserted with user ID:', superAdmin.userId);
+    console.log('Super admin inserted with user ID:', superAdmin.id);
 
   } catch (error) {
     console.error('Error seeding super admins:', error.message || error);

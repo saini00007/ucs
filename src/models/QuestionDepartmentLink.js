@@ -9,7 +9,7 @@ QuestionDepartmentLink.init({
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
-      key: 'question_id',
+      key: 'id',
     },
     allowNull: false,
     onDelete: 'CASCADE',
@@ -19,7 +19,7 @@ QuestionDepartmentLink.init({
     type: DataTypes.UUID,
     references: {
       model: 'master_departments',
-      key: 'department_id',
+      key: 'id',
     },
     allowNull: false,
     onDelete: 'CASCADE',

@@ -7,7 +7,7 @@ const getMasterQuestions = async (req, res) => {
 
   try {
     const { count, rows } = await MasterQuestion.findAndCountAll({
-      attributes: ['questionId', 'questionText'],
+      attributes: ['id', 'questionText'],
       limit: limit,
       offset: (page - 1) * limit,
     });

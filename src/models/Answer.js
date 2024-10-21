@@ -2,28 +2,28 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Answer = sequelize.define('Answer', {
-  answerId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'answer_id',
+    field: 'id',
   },
   assessmentQuestionId: {
     type: DataTypes.UUID,
     references: {
       model: 'assessment_questions',
-      key: 'assessment_question_id',
+      key: 'id',
     },
     onDelete: 'CASCADE',
     field: 'assessment_question_id',
   },
-  userId: {
+  createdByUserId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
-      key: 'user_id',
+      key: 'id',
     },
-    field: 'user_id',
+    field: 'created_by_user_id',
   },
   answerText: {
     type: DataTypes.TEXT,

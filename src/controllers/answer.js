@@ -13,7 +13,7 @@ export const createAnswer = async (req, res) => {
   }
 
   const { answerText } = req.body;
-  const userId = req.user.userId;
+  const userId = req.user.id;
 
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ success: false, messages: ['No files uploaded.'] });
@@ -21,7 +21,7 @@ export const createAnswer = async (req, res) => {
 
   try {
     const question = await AssessmentQuestion.findOne({
-      where: { assessmentQuestionId },
+      where: { id:assessmentQuestionId },
       attributes: ['assessmentId'],
     });
 
@@ -35,7 +35,7 @@ export const createAnswer = async (req, res) => {
       const evidenceFile = await EvidenceFile.create({
         filePath: file.originalname,
         pdfData: file.buffer,
-        uploadedByUserId: userId,
+        createdByUserId: userId,
         assessmentId,
       });
       return evidenceFile;
@@ -43,14 +43,15 @@ export const createAnswer = async (req, res) => {
 
     const answer = await Answer.create({
       assessmentQuestionId,
-      userId,
+      createdByUserId:userId,
       answerText, 
     });
-
+console.log(evidenceFiles);
     await Promise.all(evidenceFiles.map(async (evidenceFile) => {
       await AnswerEvidenceFileLink.create({
-        answerId: answer.answerId,
-        evidenceFileId: evidenceFile.evidenceFileId,
+        answerId: answer.id,
+        evidenceFileId: evidenceFile.dataValues.id,
+        
       });
     }));
 
@@ -58,7 +59,7 @@ export const createAnswer = async (req, res) => {
       success: true,
       messages: ['Answer created successfully'],
       answer,
-      evidenceFileIds: evidenceFiles.map(file => file.evidenceFileId),
+      evidenceFileIds: evidenceFiles.map(file => file.id),
     });
   } catch (error) {
     console.error('Error creating answer:', error);
@@ -106,7 +107,7 @@ export const getAnswersByQuestion = async (req, res) => {
 
     const answersWithEvidence = answers.map(answer => ({
       answerId: answer.answerId,
-      userId: answer.userId,
+      createdByUserId: answer.createdByUserId,
       answerText: answer.answerText,
       evidenceFiles: answer.EvidenceFiles.map(evidence => ({
         evidenceFileId: evidence.evidenceFileId,
@@ -134,7 +135,7 @@ export const serveFile = async (req, res) => {
   const { fileId } = req.params;
 
   try {
-    const evidenceFile = await EvidenceFile.findOne({ where: { evidenceFileId: fileId } });
+    const evidenceFile = await EvidenceFile.findOne({ where: { id: fileId } });
 
     if (!evidenceFile) {
       return res.status(404).json({ success: false, messages: ['File not found.'] });
@@ -155,7 +156,7 @@ export const deleteAnswer = async (req, res) => {
   const { answerId } = req.params;
 
   try {
-    const result = await Answer.destroy({ where: { answerId } });
+    const result = await Answer.destroy({ where: { id:answerId } });
 
     if (result === 0) {
       return res.status(404).json({ success: false, messages: ['Answer not found.'] });

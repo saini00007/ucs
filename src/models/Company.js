@@ -3,11 +3,11 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Company = sequelize.define('Company', {
-  companyId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'company_id',
+    field: 'id',
   },
   companyName: {
     type: DataTypes.TEXT,
@@ -44,14 +44,14 @@ const Company = sequelize.define('Company', {
     allowNull: true,
     field: 'secondary_phone',
   },
-  createdBy: {
+  createdByUserId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
-      key: 'user_id',
+      key: 'id',
     },
     allowNull: true,
-    field: 'created_by',
+    field: 'created_by_user_id',
   },
 }, {
   tableName: 'companies',

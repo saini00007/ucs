@@ -2,17 +2,17 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Comment = sequelize.define('Comment', {
-  commentId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'comment_id', 
+    field: 'id', 
   },
   assessmentQuestionId: {
     type: DataTypes.UUID,
     references: {
       model: 'assessment_questions',
-      key: 'assessment_question_id',
+      key: 'id',
     },
     field: 'assessment_question_id', 
   },
@@ -20,7 +20,7 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
-      key: 'user_id',
+      key: 'id',
     },
     field: 'user_id', 
   },

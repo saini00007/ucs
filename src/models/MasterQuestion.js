@@ -2,11 +2,11 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const MasterQuestion = sequelize.define('MasterQuestion', {
-  questionId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'question_id', 
+    field: 'id', 
   },
   srNo: {
     type: DataTypes.INTEGER,

@@ -7,7 +7,7 @@ export const markAssessmentAsStarted = async (req, res) => {
     const [updatedCount, updatedAssessments] = await Assessment.update(
       { assessmentStarted: true, updatedAt: new Date() },
       {
-        where: { assessmentId },
+        where: { id:assessmentId },
         returning: true
       }
     );
@@ -35,7 +35,7 @@ export const getAllAssessments = async (req, res) => {
   try {
     const { count, rows: assessments } = await Assessment.findAndCountAll({
       where: { departmentId },
-      attributes: ['assessmentId', 'companyId', 'departmentId', 'createdAt', 'updatedAt', 'assessmentStarted'],
+      attributes: ['id', 'companyId', 'departmentId', 'createdAt', 'updatedAt', 'assessmentStarted'],
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -82,7 +82,7 @@ export const getAssessmentById = async (req, res) => {
 
   try {
     const assessment = await Assessment.findOne({
-      where: { assessmentId }
+      where: { id:assessmentId }
     });
 
     if (!assessment) {

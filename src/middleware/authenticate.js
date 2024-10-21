@@ -17,9 +17,9 @@ export const authenticate = async (req, res, next) => {
 
     const user = await User.findOne({
       where: {
-        userId: decoded.userId, // Updated to camelCase
+        id: decoded.userId,
       },
-      attributes: ['userId', 'username', 'email', 'roleId'], // Specify attributes to retrieve in camelCase
+      attributes: ['id', 'username', 'email', 'roleId'], // Specify attributes to retrieve in camelCase
     });
 
     if (!user) {

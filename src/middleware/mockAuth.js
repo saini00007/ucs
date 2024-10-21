@@ -1,6 +1,6 @@
 
 const mockUser = {
-    userId: 'abcd12345678', 
+    id: 'abcd12345678', 
     username: 'superAdmin',
     roleId: 1, 
     companyId: 1 

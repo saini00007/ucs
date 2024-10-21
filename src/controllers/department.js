@@ -52,8 +52,8 @@ export const getDepartmentById = async (req, res) => {
 
     try {
         const department = await Department.findOne({
-            where: { departmentId: departmentId },
-            include: [{ model: Company, attributes: ['companyName', 'companyId'] }],
+            where: { id: departmentId },
+            include: [{ model: Company, attributes: ['companyName', 'id'] }],
         });
 
         if (!department) {
@@ -85,14 +85,14 @@ export const createDepartment = async (req, res) => {
             departmentName,
             companyId,
             masterDepartmentId,
-            createdBy: req.user.userId,
+            createdByUserId: req.user.id,
         });
 
         const assessments = [];
 
         const newAssessment = await Assessment.create({
             companyId,
-            departmentId: newDepartment.departmentId,
+            departmentId: newDepartment.id,
         });
 
         assessments.push(newAssessment);
@@ -105,11 +105,10 @@ export const createDepartment = async (req, res) => {
         if (questions.length === 0) {
             console.warn('No questions found for the master department');
         }
- console.log(questions);
         await Promise.all(questions.map(async (qdl) => {
             try {
                 await AssessmentQuestion.create({
-                    assessmentId: newAssessment.assessmentId,
+                    assessmentId: newAssessment.id,
                     masterQuestionId: qdl.dataValues.masterQuestionId,
                 });
                 console.log(`Assessment question created for questionId: ${qdl.dataValues.masterQuestionId}`);

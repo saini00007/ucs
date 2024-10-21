@@ -32,7 +32,7 @@ export const getAssessmentQuestionById = async (req, res) => {
 
   try {
     const assessmentQuestion = await AssessmentQuestion.findOne({
-      where: { assessmentQuestionId },
+      where: { id:assessmentQuestionId },
       include: {
         model: MasterQuestion,
         attributes: ['questionText'],
@@ -108,7 +108,7 @@ export const deleteAssessmentQuestions = async (req, res) => {
   try {
     const result = await AssessmentQuestion.destroy({
       where: {
-        assessmentQuestionId: questionIds,
+        id: questionIds,
       },
     });
 

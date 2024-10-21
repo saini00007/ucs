@@ -2,17 +2,17 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Otp = sequelize.define('Otp', {
-  otpId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'otp_id',
+    field: 'id',
   },
   userId: {
     type: DataTypes.STRING(12),
     references: {
       model: 'users',
-      key: 'user_id',
+      key: 'id',
     },
     field: 'user_id',
   },

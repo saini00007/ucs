@@ -2,11 +2,11 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Department = sequelize.define('Department', {
-  departmentId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'department_id', 
+    field: 'id', 
   },
   departmentName: {
     type: DataTypes.TEXT,
@@ -17,7 +17,7 @@ const Department = sequelize.define('Department', {
     type: DataTypes.UUID,
     references: {
       model: 'companies',
-      key: 'company_id',
+      key: 'id',
     },
     onDelete: 'CASCADE',
     field: 'company_id', 
@@ -26,18 +26,18 @@ const Department = sequelize.define('Department', {
     type: DataTypes.UUID,
     references: {
       model: 'master_departments',
-      key: 'department_id',
+      key: 'id',
     },
     field: 'master_department_id', 
   },
-  createdBy: {
+  createdByUserId: {
     type: DataTypes.STRING(12), 
     references: {
       model: 'users',
-      key: 'user_id',
+      key: 'id',
     },
     allowNull: true,
-    field: 'created_by', 
+    field: 'created_by_user_id', 
   },
 }, {
   tableName: 'departments',

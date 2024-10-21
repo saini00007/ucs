@@ -2,10 +2,10 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const Role = sequelize.define('Role', {
-  roleId: {
+  id: {
     type: DataTypes.STRING,
     primaryKey: true,
-    field: 'role_id',
+    field: 'id',
   },
   roleName: {
     type: DataTypes.STRING,

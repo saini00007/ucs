@@ -2,11 +2,11 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
 const MasterDepartment = sequelize.define('MasterDepartment', {
-  departmentId: {
+  id: {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'department_id', 
+    field: 'id', 
   },
   departmentName: {
     type: DataTypes.TEXT,

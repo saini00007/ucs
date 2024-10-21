@@ -6,7 +6,7 @@ const generateUserId = async (username) => {
   let uniqueId = prefix;
   uniqueId += Math.floor(Math.random() * 9000 + 1000).toString();
   
-  const existingUser = await User.findOne({ where: { userId: uniqueId } });
+  const existingUser = await User.findOne({ where: { id: uniqueId } });
   if (existingUser) {
     return generateUserId(username);
   }
@@ -15,10 +15,10 @@ const generateUserId = async (username) => {
 };
 
 const User = sequelize.define('User', {
-  userId: {
+  id: {
     type: DataTypes.STRING(12),
     primaryKey: true,
-    field: 'user_id', 
+    field: 'id', 
   },
   username: {
     type: DataTypes.TEXT,
@@ -37,7 +37,7 @@ const User = sequelize.define('User', {
     
     references: {
       model: 'roles',
-      key: 'role_id',
+      key: 'id',
     },
     field: 'role_id', 
   },
@@ -46,7 +46,7 @@ const User = sequelize.define('User', {
     allowNull: true,
     references: {
       model: 'departments',
-      key: 'department_id',
+      key: 'id',
     },
     onDelete: 'CASCADE',
     field: 'department_id', 
@@ -56,7 +56,7 @@ const User = sequelize.define('User', {
     allowNull: true,
     references: {
       model: 'companies',
-      key: 'company_id',
+      key: 'id',
     },
     onDelete: 'CASCADE',
     field: 'company_id', 

@@ -6,7 +6,7 @@ const AnswerEvidenceFileLink = sequelize.define('AnswerEvidenceFileLink', {
     type: DataTypes.UUID,
     references: {
       model: 'answers',
-      key: 'answer_id',
+      key: 'id',
     },
     primaryKey: true,
     onDelete: 'CASCADE',
@@ -16,7 +16,7 @@ const AnswerEvidenceFileLink = sequelize.define('AnswerEvidenceFileLink', {
     type: DataTypes.UUID,
     references: {
       model: 'evidence_files',
-      key: 'evidence_file_id',
+      key: 'id',
     },
     primaryKey: true,
     onDelete: 'CASCADE',

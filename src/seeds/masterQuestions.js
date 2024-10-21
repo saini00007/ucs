@@ -73,7 +73,7 @@ const seedMasterQuestions = async (count = 50) => {
       console.log(`Processing Question: ${trimmedData.questionText}, Department: ${trimmedData.department}`);
 
       const question = await MasterQuestion.create(trimmedData);
-      console.log(`Question inserted with ID: ${question.questionId}`);
+      console.log(`Question inserted with ID: ${question.id}`);
 
       if (trimmedData.department) {
         const departmentRecord = await MasterDepartment.findOne({
@@ -82,17 +82,17 @@ const seedMasterQuestions = async (count = 50) => {
 
         if (departmentRecord) {
           const questionDepartmentLink = {
-            masterQuestionId: question.questionId,
-            masterDepartmentId: departmentRecord.departmentId,
+            masterQuestionId: question.id,
+            masterDepartmentId: departmentRecord.id,
           };
 
           await QuestionDepartmentLink.create(questionDepartmentLink);
-          console.log(`Link created for Question ID: ${question.questionId} and Department ID: ${departmentRecord.departmentId}`);
+          console.log(`Link created for Question ID: ${question.id} and Department ID: ${departmentRecord.id}`);
         } else {
-          console.warn(`Department not found for Question ID: ${question.questionId}`);
+          console.warn(`Department not found for Question ID: ${question.id}`);
         }
       } else {
-        console.warn(`Department name is missing for Question ID: ${question.questionId}`);
+        console.warn(`Department name is missing for Question ID: ${question.id}`);
       }
     }
   } catch (error) {

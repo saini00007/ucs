@@ -3,7 +3,7 @@ import { Company } from '../models/index.js';
 export const createCompany = async (req, res) => {
   console.log('Creating company...');
   const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
-  const createdBy = req.user.userId;
+  const createdBy = req.user.id;
 
   try {
     const newCompany = await Company.create({
@@ -14,7 +14,7 @@ export const createCompany = async (req, res) => {
       secondaryEmail,
       primaryPhone,
       secondaryPhone,
-      createdBy,
+      createdByUserId:createdBy,
     });
 
     res.status(201).json({
@@ -22,7 +22,6 @@ export const createCompany = async (req, res) => {
       messages: ['Company created successfully!'],
       company: newCompany,
     });
-    console.log("done!");
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -38,7 +37,7 @@ export const getAllCompanies = async (req, res) => {
 
   try {
     const { count, rows: companies } = await Company.findAndCountAll({
-      attributes: ['companyId', 'companyName'],
+      attributes: ['id', 'companyName'],
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -89,7 +88,7 @@ export const getCompanyById = async (req, res) => {
   const { companyId } = req.params;
 
   try {
-    const company = await Company.findOne({ where: { companyId } });
+    const company = await Company.findOne({ where: { id:companyId } });
 
     if (!company) {
       return res.status(404).json({
@@ -117,7 +116,7 @@ export const updateCompany = async (req, res) => {
   const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
 
   try {
-    const company = await Company.findOne({ where: { companyId } });
+    const company = await Company.findOne({ where: { id:companyId } });
 
     if (!company) {
       return res.status(404).json({
@@ -155,7 +154,7 @@ export const deleteCompany = async (req, res) => {
 
   try {
     const deleted = await Company.destroy({
-      where: { companyId },
+      where: { id:companyId },
     });
 
     if (!deleted) {

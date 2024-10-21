@@ -17,13 +17,13 @@ const seedRoles = async () => {
       console.log(`Checking for existing role with roleId: ${roleId}`);
 
 
-      const existingRole = await Role.findOne({ where: { roleId } });
+      const existingRole = await Role.findOne({ where: { id:roleId } });
 
       if (!existingRole) {
-        const newRole = await Role.create({ roleId, roleName: role.roleName });
-        console.log(`Role ${newRole.roleName} inserted with ID: ${newRole.roleId}`);
+        const newRole = await Role.create({ id:roleId, roleName: role.roleName });
+        console.log(`Role ${newRole.roleName} inserted with ID: ${newRole.id}`);
       } else {
-        console.log(`Role ${existingRole.roleName} already exists with ID: ${existingRole.roleId}`);
+        console.log(`Role ${existingRole.roleName} already exists with ID: ${existingRole.id}`);
       }
     }
   } catch (error) {

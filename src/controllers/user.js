@@ -8,7 +8,7 @@ export const addUser = async (req, res) => {
 
     const currentUser = req.user;
 
-    const department = await Department.findOne({ where: { departmentId: departmentId } });
+    const department = await Department.findOne({ where: { id: departmentId } });
     if (!department) {
         return res.status(404).json({ success: false, messages: ['Department not found.'] });
     }
@@ -30,13 +30,13 @@ export const addUser = async (req, res) => {
             phoneNumber,
         });
 
-        const token = generateToken(user.userId);
+        const token = generateToken(user.id);
         const emailSubject = 'Set Your Account Password';
         const emailText = `Hello ${username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:3000/set-password?token=${token}\n\nPlease keep this information secure.`;
 
         await sendEmail(email, emailSubject, emailText);
 
-        res.status(201).json({ success: true, messages: ['User added successfully, password setup email sent'], userId: user.userId });
+        res.status(201).json({ success: true, messages: ['User added successfully, password setup email sent'], userId: user.id });
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ success: false, messages: ['Error adding user'], error: error.message });
@@ -48,7 +48,7 @@ export const updateUser = async (req, res) => {
     const { username, email, roleId, departmentId, phoneNumber } = req.body;
 
     try {
-        const user = await User.findOne({ where: { userId: userId } });
+        const user = await User.findOne({ where: { id: userId } });
 
         if (!user) {
             return res.status(404).json({ success: false, messages: ['User not found'] });
@@ -74,7 +74,7 @@ export const deleteUser = async (req, res) => {
 
     try {
         const deleted = await User.destroy({
-            where: { userId: userId },
+            where: { id: userId },
         });
 
         if (!deleted) {
@@ -98,7 +98,7 @@ export const getUsersByDepartment = async (req, res) => {
             where: { departmentId },
             limit: limit,
             offset: (page - 1) * limit,
-            attributes: ['userId', 'username', 'roleId'],
+            attributes: ['id', 'username', 'roleId'],
         });
 
         const totalPages = Math.ceil(count / limit);
@@ -137,9 +137,11 @@ export const getUsersByCompany = async (req, res) => {
             where: { companyId },
             limit: limit,
             offset: (page - 1) * limit,
-            attributes: ['userId', 'username', 'roleId'], // Select only user ID, username, and role ID
+            attributes: ['id', 'username', 'roleId'], // Select only user ID, username, and role ID
         });
 
+        
+        const totalPages = Math.ceil(count / limit);
         if (count === 0) {
             return res.status(200).json({
                 success: true,
@@ -157,7 +159,6 @@ export const getUsersByCompany = async (req, res) => {
             return res.status(404).json({ success: false, messages: ['Page not found'] });
         }
 
-        const totalPages = Math.ceil(count / limit);
 
         res.status(200).json({ success: true, users, totalPages, currentPage: page, itemsPerPage: limit });
     } catch (error) {
@@ -170,7 +171,7 @@ export const getUserById = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const user = await User.findOne({ where: { userId } });
+        const user = await User.findOne({ where: { id:userId } });
 
         if (!user) {
             return res.status(404).json({ success: false, messages: ['User not found'] });

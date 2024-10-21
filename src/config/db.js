@@ -3,7 +3,7 @@ import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'Production';
 
 const sequelize = new Sequelize(isProduction ? process.env.RENDER_DB_URL : process.env.LOCAL_DB_URL, {
     dialect: 'postgres',

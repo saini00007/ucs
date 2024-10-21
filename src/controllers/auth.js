@@ -15,7 +15,7 @@ export const resetPassword = async (req, res) => {
     const userId = decoded.userId;
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.update({ password: hashedPassword }, { where: { userId } });
+    await User.update({ password: hashedPassword }, { where: { id:userId } });
 
     res.status(200).json({ success: true, messages: ['Password reset successfully'] });
   } catch (error) {
@@ -36,7 +36,7 @@ export const login = async (req, res) => {
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
         
         const user = await User.findOne({
-            where: isEmail ? { email: identifier } : { userId: identifier },
+            where: isEmail ? { email: identifier } : { id: identifier },
         });
 
         if (!user) {
@@ -48,7 +48,7 @@ export const login = async (req, res) => {
             return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
         }
 
-        const token = jwt.sign({ userId: user.userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const emailSubject = 'Your OTP Code';
@@ -57,7 +57,7 @@ export const login = async (req, res) => {
         await sendEmail(user.email, emailSubject, emailText);
 
         const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
-        await Otp.create({ userId: user.userId, otpCode: otp, expiresAt: otpExpiration });
+        await Otp.create({ userId: user.id, otpCode: otp, expiresAt: otpExpiration });
 
         res.status(200).json({ success: true, messages: ['OTP sent to email'], token });
     } catch (error) {
