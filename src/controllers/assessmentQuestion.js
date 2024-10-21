@@ -9,7 +9,7 @@ export const addAssessmentQuestions = async (req, res) => {
       questionIds.map(async (questionId) => {
         return await AssessmentQuestion.create({
           assessmentId,
-          masterQuestionId:questionId,///////////////////
+          masterQuestionId:questionId,
         });
       })
     );
@@ -21,6 +21,7 @@ export const addAssessmentQuestions = async (req, res) => {
     });
   } catch (error) {
     console.error('Error adding assessment questions:', error);
+    console.log(error);
     res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };

@@ -105,16 +105,16 @@ export const createDepartment = async (req, res) => {
         if (questions.length === 0) {
             console.warn('No questions found for the master department');
         }
-
+ console.log(questions);
         await Promise.all(questions.map(async (qdl) => {
             try {
                 await AssessmentQuestion.create({
                     assessmentId: newAssessment.assessmentId,
-                    masterQuestionId: qdl.questionId,
+                    masterQuestionId: qdl.dataValues.masterQuestionId,
                 });
-                console.log(`Assessment question created for questionId: ${qdl.questionId}`);
+                console.log(`Assessment question created for questionId: ${qdl.dataValues.masterQuestionId}`);
             } catch (err) {
-                console.error(`Failed to create assessment question for questionId: ${qdl.questionId}`, err);
+                console.error(`Failed to create assessment question for questionId: ${qdl.dataValues.masterQuestionId}`, err);
             }
         }));
 
