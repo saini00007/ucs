@@ -14,7 +14,7 @@ export const createCompany = async (req, res) => {
       secondaryEmail,
       primaryPhone,
       secondaryPhone,
-      createdByUserId:createdBy,
+      createdByUserId:req.user.id,
     });
 
     res.status(201).json({
@@ -88,7 +88,7 @@ export const getCompanyById = async (req, res) => {
   const { companyId } = req.params;
 
   try {
-    const company = await Company.findOne({ where: { id:companyId } });
+    const company=await Company.findByPk(companyId);
 
     if (!company) {
       return res.status(404).json({
@@ -156,14 +156,12 @@ export const deleteCompany = async (req, res) => {
     const deleted = await Company.destroy({
       where: { id:companyId },
     });
-
-    if (!deleted) {
+    if (deleted === 0) {
       return res.status(404).json({
         success: false,
         messages: ['Company not found'],
       });
     }
-
     res.status(200).json({
       success: true,
       messages: ['Company deleted successfully'],

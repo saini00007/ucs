@@ -137,7 +137,7 @@ export const getUsersByCompany = async (req, res) => {
             where: { companyId },
             limit: limit,
             offset: (page - 1) * limit,
-            attributes: ['id', 'username', 'roleId'], // Select only user ID, username, and role ID
+            attributes: ['id', 'username', 'roleId'],
         });
 
         
@@ -171,13 +171,13 @@ export const getUserById = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const user = await User.findOne({ where: { id:userId } });
+        const user = await User.findByPk(userId);
 
         if (!user) {
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
 
-        const { password, ...userWithoutPassword } = user.get();
+        const { password, ...userWithoutPassword } = user.get({ plain: true });
 
         res.status(200).json({
             success: true,

@@ -1,74 +1,127 @@
 import Joi from 'joi';
 
-const companySchema = Joi.object({
-  companyName: Joi.string()
-    .min(1)
-    .max(255)
-    .required()
-    .messages({
-      'string.empty': 'Company name is required',
-      'any.required': 'Company name is required',
-      'string.max': 'Company name must be less than or equal to 255 characters',
-    }),
+const baseCompanySchema = Joi.object({
+    companyName: Joi.string()
+        .min(1)
+        .max(255)
+        .required()
+        .messages({
+            'string.empty': 'Company name cannot be empty',
+            'string.max': 'Company name must be less than or equal to 255 characters',
+            'any.required': 'Company name is required',
+        }),
 
-  postalAddress: Joi.string()
-    .min(1)
-    .max(255)
-    .required()
-    .messages({
-      'string.empty': 'Postal address is required',
-      'any.required': 'Postal address is required',
-      'string.max': 'Postal address must be less than or equal to 255 characters',
-    }),
+    postalAddress: Joi.string()
+        .min(1)
+        .max(255)
+        .required()
+        .messages({
+            'string.empty': 'Postal address cannot be empty',
+            'string.max': 'Postal address must be less than or equal to 255 characters',
+            'any.required': 'Postal address is required',
+        }),
 
-  gstNumber: Joi.string()
-    .length(15)
-    .pattern(/^\d+$/)
-    .optional()
-    .messages({
-      'string.length': 'GST number must be exactly 15 digits',
-      'string.pattern.base': 'GST number must contain only digits',
-    }),
+    gstNumber: Joi.string()
+        .length(15)
+        .pattern(/^\d+$/)
+        .required()
+        .messages({
+            'string.length': 'GST number must be exactly 15 digits',
+            'string.pattern.base': 'GST number must contain only digits',
+            'any.required': 'GST number is required',
+        }),
 
-  primaryEmail: Joi.string()
-    .email()
-    .required()
-    .messages({
-        'string.empty': 'Primary email is required',
-        'any.required': 'Primary email is required',
-        'string.email': 'Primary email must be a valid email address',
-    }),
+    primaryEmail: Joi.string()
+        .email()
+        .required()
+        .messages({
+            'string.email': 'Primary email must be a valid email address',
+            'any.required': 'Primary email is required',
+        }),
 
-  secondaryEmail: Joi.string()
-    .email()
-    .required()
-    .messages({
-        'string.empty': 'Secondary email is required',
-        'any.required': 'Secondary email is required',
-        'string.email': 'Secondary email must be a valid email address',
-    }),
+    secondaryEmail: Joi.string()
+        .email()
+        .optional()
+        .messages({
+            'string.email': 'Secondary email must be a valid email address',
+        }),
 
-  primaryPhone: Joi.string()
-    .length(10)
-    .pattern(/^\d+$/)
-    .required()
-    .messages({
-      'string.empty': 'Primary phone is required',
-      'any.required': 'Primary phone is required',
-      'string.length': 'Primary phone must be exactly 10 digits',
-      'string.pattern.base': 'Primary phone must contain only digits',
-    }),
+    primaryPhone: Joi.string()
+        .length(10)
+        .pattern(/^\d+$/)
+        .required()
+        .messages({
+            'string.length': 'Primary phone must be exactly 10 digits',
+            'string.pattern.base': 'Primary phone must contain only digits',
+            'any.required': 'Primary phone is required',
+        }),
 
-  secondaryPhone: Joi.string()
-    .length(10)
-    .pattern(/^\d+$/)
-    .optional()
-    .messages({
-        'string.empty': 'Secondary phone is required',
-        'any.required': 'Secondary phone phone is required',
-        'string.length': 'Secondary phone phone must be exactly 10 digits',
-        'string.pattern.base': 'Secondary phone phone must contain only digits',
-    })
+    secondaryPhone: Joi.string()
+        .length(10)
+        .pattern(/^\d+$/)
+        .optional()
+        .messages({
+            'string.length': 'Secondary phone must be exactly 10 digits',
+            'string.pattern.base': 'Secondary phone must contain only digits',
+        }),
 });
 
-export default companySchema;
+// Create schema for creating a company
+const createCompanySchema = baseCompanySchema;
+
+// Create schema for updating a company
+const updateCompanySchema = Joi.object({
+    companyName: Joi.string()
+        .min(1)
+        .max(255)
+        .messages({
+            'string.min': 'Company name must be at least 5 characters long',
+            'string.max': 'Company name must be less than or equal to 255 characters',
+        }),
+
+    postalAddress: Joi.string()
+        .max(255)
+        .messages({
+            'string.max': 'Postal address must be less than or equal to 255 characters',
+        }),
+
+    gstNumber: Joi.string()
+        .length(15)
+        .pattern(/^\d+$/)
+        .messages({
+            'string.length': 'GST number must be exactly 15 digits',
+            'string.pattern.base': 'GST number must contain only digits',
+        }),
+
+    primaryEmail: Joi.string()
+        .email()
+        .messages({
+            'string.email': 'Primary email must be a valid email address',
+        }),
+
+    secondaryEmail: Joi.string()
+        .email()
+        .optional()
+        .messages({
+            'string.email': 'Secondary email must be a valid email address',
+        }),
+
+    primaryPhone: Joi.string()
+        .length(10)
+        .pattern(/^\d+$/)
+        .messages({
+            'string.length': 'Primary phone must be exactly 10 digits',
+            'string.pattern.base': 'Primary phone must contain only digits',
+        }),
+
+    secondaryPhone: Joi.string()
+        .length(10)
+        .pattern(/^\d+$/)
+        .optional()
+        .messages({
+            'string.length': 'Secondary phone must be exactly 10 digits',
+            'string.pattern.base': 'Secondary phone must contain only digits',
+        }),
+});
+
+export { createCompanySchema, updateCompanySchema };

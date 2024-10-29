@@ -135,7 +135,7 @@ export const serveFile = async (req, res) => {
   const { fileId } = req.params;
 
   try {
-    const evidenceFile = await EvidenceFile.findOne({ where: { id: fileId } });
+    const evidenceFile = await EvidenceFile.findByPk(fileId);
 
     if (!evidenceFile) {
       return res.status(404).json({ success: false, messages: ['File not found.'] });
@@ -144,7 +144,7 @@ export const serveFile = async (req, res) => {
     const { filePath, pdfData } = evidenceFile;
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filePath}"`);
+    res.setHeader('Content-Disposition', `inline; filename="${filePath}"`);
     res.send(pdfData);
   } catch (error) {
     console.error('Error retrieving file data:', error);

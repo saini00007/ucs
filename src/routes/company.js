@@ -7,12 +7,12 @@ import {
   updateCompany
 } from '../controllers/company.js';
 import validate from '../middleware/validate.js'; 
-import companyValidation from '../joi/company.js'; 
+import {createCompanySchema, updateCompanySchema}from '../joi/company.js'; 
 
 const router = express.Router();
 
-router.post('/companies', validate(companyValidation), createCompany);
-router.put('/companies/:companyId', validate(companyValidation), updateCompany); 
+router.post('/companies', validate(createCompanySchema), createCompany);
+router.put('/companies/:companyId', validate(updateCompanySchema), updateCompany); 
 
 
 router.get('/companies', getAllCompanies);

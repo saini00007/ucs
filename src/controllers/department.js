@@ -51,10 +51,9 @@ export const getDepartmentById = async (req, res) => {
     const { departmentId } = req.params;
 
     try {
-        const department = await Department.findOne({
-            where: { id: departmentId },
+        const department = await Department.findByPk(departmentId, {
             include: [{ model: Company, attributes: ['companyName', 'id'] }],
-        });
+        });        
 
         if (!department) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
@@ -101,7 +100,6 @@ export const createDepartment = async (req, res) => {
             where: { masterDepartmentId },
             include: [{ model: MasterQuestion, required: true }],
         });
-
         if (questions.length === 0) {
             console.warn('No questions found for the master department');
         }
@@ -138,7 +136,6 @@ export const updateDepartment = async (req, res) => {
         if (departmentName) {
             department.departmentName = departmentName;
         }
-
         if (masterDepartmentId) {
             const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
             if (!masterDepartment) {
@@ -149,23 +146,31 @@ export const updateDepartment = async (req, res) => {
 
         await department.save();
 
-        res.status(200).json({ success: true, messages: ['Department updated successfully'], department });
+        res.status(200).json({
+            success: true,
+            messages: ['Department updated successfully'],
+            department,
+        });
     } catch (error) {
         console.error('Error updating department:', error);
-        res.status(500).json({ success: false, messages: ['Failed to update department'] });
+        res.status(500).json({
+            success: false,
+            messages: ['Failed to update department'],
+        });
     }
 };
+
 
 export const deleteDepartment = async (req, res) => {
     const { departmentId } = req.params;
 
     try {
-        const department = await Department.findByPk(departmentId);
-        if (!department) {
+        const deleted = await Department.destroy({
+            where: { id: departmentId }
+        });
+        if (deleted === 0) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
         }
-
-        await department.destroy();
 
         res.status(200).json({ success: true, messages: ['Department deleted successfully'] });
     } catch (error) {
