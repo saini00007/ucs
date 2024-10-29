@@ -26,12 +26,12 @@ import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
 import masterRoutes from './routes/master.js'
 import masterQuestionRoute from './routes/masterQuestion.js';
+import commentRoutes from './routes/comment.js';
 
-// Middleware to parse JSON
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
-// Dynamically import all models
 
 
 app.use('/', authRoutes); // Routes for authentication operations
@@ -44,6 +44,7 @@ app.use('/',assessmentQuestionRoutes);
 app.use('/',answerRoutes);
 app.use('/',masterRoutes);
 app.use('/',masterQuestionRoute);
+app.use('/',commentRoutes);
 
 const startServer = async () => {
   try {

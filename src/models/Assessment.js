@@ -44,6 +44,7 @@ const Assessment = sequelize.define('Assessment', {
 }, {
   tableName: 'assessments',
   timestamps: false,
+  underscored: true,
 });
 
 export default Assessment;

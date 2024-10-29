@@ -3,8 +3,7 @@ import sequelize from '../config/db.js';
 
 const generateUserId = async (username) => {
   const prefix = username.slice(0, 4).toLowerCase();
-  let uniqueId = prefix;
-  uniqueId += Math.floor(Math.random() * 9000 + 1000).toString();
+  let uniqueId = prefix + Math.floor(Math.random() * 9000 + 1000).toString();
   
   const existingUser = await User.findOne({ where: { id: uniqueId } });
   if (existingUser) {
@@ -34,7 +33,6 @@ const User = sequelize.define('User', {
   },
   roleId: {
     type: DataTypes.STRING,
-    
     references: {
       model: 'roles',
       key: 'id',
@@ -71,8 +69,8 @@ const User = sequelize.define('User', {
   timestamps: false,
   hooks: {
     beforeValidate: async (user, options) => {
-      if (user.username) {
-        user.userId = await generateUserId(user.username);
+      if (!user.id && user.username) {
+        user.id = await generateUserId(user.username);
       }
     },
   },

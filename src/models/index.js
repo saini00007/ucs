@@ -58,8 +58,8 @@ Comment.belongsTo(AssessmentQuestion, { foreignKey: 'assessmentQuestionId', targ
 AssessmentQuestion.hasMany(Comment, { foreignKey: 'assessmentQuestionId' });
 
 // 12. Comment and User
-Comment.belongsTo(User, { foreignKey: 'userId', targetKey: 'id' });
-User.hasMany(Comment, { foreignKey: 'userId' });
+Comment.belongsTo(User, { foreignKey: 'createdByUserId', targetKey: 'id' });
+User.hasMany(Comment, { foreignKey: 'createdByUserId' });
 
 // 13. EvidenceFile and User
 EvidenceFile.belongsTo(User, { foreignKey: 'createdByUserId', targetKey: 'id' });
@@ -80,7 +80,6 @@ EvidenceFile.hasMany(AnswerEvidenceFileLink, { foreignKey: 'evidenceFileId' });
 // 17. Answer and EvidenceFile (many-to-many relationship)
 Answer.belongsToMany(EvidenceFile, {
   through: AnswerEvidenceFileLink,
-  as: 'EvidenceFiles',
   foreignKey: 'answerId',
   otherKey: 'evidenceFileId'
 });

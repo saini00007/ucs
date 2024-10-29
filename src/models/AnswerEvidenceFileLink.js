@@ -25,6 +25,7 @@ const AnswerEvidenceFileLink = sequelize.define('AnswerEvidenceFileLink', {
 }, {
   tableName: 'answer_evidence_file_links',
   timestamps: false,
+  underscored: true,
 });
 
 export default AnswerEvidenceFileLink;

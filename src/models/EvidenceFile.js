@@ -27,11 +27,6 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
     allowNull: false, 
     field: 'created_by_user_id',
   },
-  uploadedAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'uploaded_at', 
-  },
   assessmentId: {
     type: DataTypes.UUID,
     references: {

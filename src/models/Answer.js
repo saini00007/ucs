@@ -32,6 +32,7 @@ const Answer = sequelize.define('Answer', {
 }, {
   tableName: 'answers',
   timestamps: false,
+  underscored: true,
 });
 
 export default Answer;

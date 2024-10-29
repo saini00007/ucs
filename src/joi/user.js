@@ -1,6 +1,6 @@
 import Joi from 'joi';
 
-const userSchema = Joi.object({
+const baseUserSchema = Joi.object({
     username: Joi.string()
         .min(1)
         .max(255)
@@ -59,19 +59,24 @@ const userSchema = Joi.object({
         }),
     phoneNumber: Joi.string()
         .length(10)
+        .pattern(/^\d+$/)
         .required()
         .messages({
             'string.base': 'Phone number must be a string.',
             'string.empty': 'Phone number is required.',
-            'string.length': 'Phone number must be exactly 10 characters long.',
+            'string.length': 'Phone number must be exactly 10 digits long.',
+            'string.pattern.base': 'Phone number must contain only digits.',
             'any.required': 'Phone number is required.'
         }),
 });
 
-const userUpdateSchema = Joi.object({
+const createUserSchema = baseUserSchema;
+
+const updateUserSchema = Joi.object({
     username: Joi.string()
         .min(1)
         .max(255)
+        .allow('')
         .optional()
         .messages({
             'string.base': 'Username must be a string.',
@@ -79,10 +84,10 @@ const userUpdateSchema = Joi.object({
             'string.min': 'Username must be at least 1 character long.',
             'string.max': 'Username must be at most 255 characters long.',
         }),
-
     email: Joi.string()
         .email()
         .max(100)
+        .allow('')
         .optional()
         .messages({
             'string.base': 'Email must be a string.',
@@ -91,6 +96,7 @@ const userUpdateSchema = Joi.object({
             'string.max': 'Email must be at most 100 characters long.',
         }),
     roleId: Joi.string()
+        .allow('')
         .optional()
         .messages({
             'string.base': 'Role ID must be a string.',
@@ -98,20 +104,23 @@ const userUpdateSchema = Joi.object({
         }),
     departmentId: Joi.string()
         .uuid()
+        .allow('')
         .optional()
         .messages({
             'string.base': 'Department ID must be a string.',
             'string.uuid': 'Department ID must be a valid UUID.',
         }),
-
     phoneNumber: Joi.string()
         .length(10)
+        .pattern(/^\d+$/)
+        .allow('')
         .optional()
         .messages({
             'string.base': 'Phone number must be a string.',
             'string.empty': 'Phone number cannot be empty.',
-            'string.length': 'Phone number must be exactly 10 characters long.',
+            'string.length': 'Phone number must be exactly 10 digits long.',
+            'string.pattern.base': 'Phone number must contain only digits.',
         }),
 });
 
-export { userSchema, userUpdateSchema };
+export { createUserSchema, updateUserSchema };

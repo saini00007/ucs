@@ -1,4 +1,4 @@
-import { Assessment } from '../models/index.js';
+import { Assessment, Company, Department } from '../models/index.js';
 
 export const markAssessmentAsStarted = async (req, res) => {
   const { assessmentId } = req.params;
@@ -7,7 +7,7 @@ export const markAssessmentAsStarted = async (req, res) => {
     const [updatedCount, updatedAssessments] = await Assessment.update(
       { assessmentStarted: true, updatedAt: new Date() },
       {
-        where: { id:assessmentId },
+        where: { id: assessmentId },
         returning: true
       }
     );
@@ -29,13 +29,21 @@ export const markAssessmentAsStarted = async (req, res) => {
 
 export const getAllAssessments = async (req, res) => {
   const { departmentId } = req.params;
-  const { page = 1 } = req.query;
-  const limit=10
+  const { page = 1, limit = 10 } = req.query;
 
   try {
     const { count, rows: assessments } = await Assessment.findAndCountAll({
       where: { departmentId },
       attributes: ['id', 'companyId', 'departmentId', 'createdAt', 'updatedAt', 'assessmentStarted'],
+      include:
+        [
+          { model: Department },
+          {
+            model: Company,
+            attributes: ['id', 'companyName']
+          }
+        ]
+      ,
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -82,7 +90,16 @@ export const getAssessmentById = async (req, res) => {
 
   try {
     const assessment = await Assessment.findOne({
-      where: { id:assessmentId }
+      where: { id: assessmentId },
+      include:
+        [
+          { model: Department },
+          {
+            model: Company,
+            attributes: ['id', 'companyName']
+          }
+        ]
+      ,
     });
 
     if (!assessment) {
@@ -96,6 +113,6 @@ export const getAssessmentById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching assessment:', error);
-    res.status(500).json({ success: false, message: ['Error fetching assessment']});
+    res.status(500).json({ success: false, message: ['Error fetching assessment'] });
   }
 };

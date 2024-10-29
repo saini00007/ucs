@@ -14,7 +14,6 @@ const router = express.Router();
 router.post('/companies', validate(createCompanySchema), createCompany);
 router.put('/companies/:companyId', validate(updateCompanySchema), updateCompany); 
 
-
 router.get('/companies', getAllCompanies);
 
 router.get('/companies/:companyId', getCompanyById);

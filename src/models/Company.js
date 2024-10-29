@@ -56,6 +56,7 @@ const Company = sequelize.define('Company', {
 }, {
   tableName: 'companies',
   timestamps: false,
+  underscored: true,
 });
 
 export default Company;

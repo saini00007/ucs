@@ -17,7 +17,7 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
     onDelete: 'CASCADE',
     field: 'assessment_id', 
   },
-  masterQuestionId: {//
+  masterQuestionId: {
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
@@ -28,6 +28,7 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
 }, {
   tableName: 'assessment_questions',
   timestamps: false,
+  underscored: true,
 });
 
 export default AssessmentQuestion;

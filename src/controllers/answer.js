@@ -6,22 +6,12 @@ import AssessmentQuestion from '../models/AssessmentQuestion.js';
 
 export const createAnswer = async (req, res) => {
   const { assessmentQuestionId } = req.params;
-  const errors = validationResult(req);
-
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, messages: errors.array() });
-  }
-
   const { answerText } = req.body;
   const userId = req.user.id;
 
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ success: false, messages: ['No files uploaded.'] });
-  }
-
   try {
     const question = await AssessmentQuestion.findOne({
-      where: { id:assessmentQuestionId },
+      where: { id: assessmentQuestionId },
       attributes: ['assessmentId'],
     });
 
@@ -31,35 +21,59 @@ export const createAnswer = async (req, res) => {
 
     const assessmentId = question.assessmentId;
 
-    const evidenceFiles = await Promise.all(req.files.map(async (file) => {
-      const evidenceFile = await EvidenceFile.create({
-        filePath: file.originalname,
-        pdfData: file.buffer,
-        createdByUserId: userId,
-        assessmentId,
-      });
-      return evidenceFile;
-    }));
+    const existingAnswer = await Answer.findOne({
+      where: { assessmentQuestionId, createdByUserId: userId },
+    });
+
+    if (existingAnswer) {
+      return res.status(400).json({ success: false, messages: ['Answer already exists for this question.'] });
+    }
+
+    if (!answerText) {
+      return res.status(400).json({ success: false, messages: ['Answer text is required.'] });
+    }
+
+    const isAnswerYes = answerText.toLowerCase() === "yes";
+
+    if (isAnswerYes) {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ success: false, messages: ['Evidence files are required when the answer is "yes".'] });
+      }
+    }
 
     const answer = await Answer.create({
       assessmentQuestionId,
-      createdByUserId:userId,
-      answerText, 
+      createdByUserId: userId,
+      answerText,
     });
-console.log(evidenceFiles);
-    await Promise.all(evidenceFiles.map(async (evidenceFile) => {
-      await AnswerEvidenceFileLink.create({
-        answerId: answer.id,
-        evidenceFileId: evidenceFile.dataValues.id,
-        
-      });
-    }));
+
+    let evidenceFileIds = [];
+
+    if (isAnswerYes) {
+      const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+        const evidenceFile = await EvidenceFile.create({
+          filePath: file.originalname,
+          pdfData: file.buffer,
+          createdByUserId: userId,
+          assessmentId,
+        });
+        evidenceFileIds.push(evidenceFile.dataValues.id);
+        return evidenceFile;
+      }));
+
+      await Promise.all(evidenceFiles.map(async (evidenceFile) => {
+        await AnswerEvidenceFileLink.create({
+          answerId: answer.id,
+          evidenceFileId: evidenceFile.dataValues.id,
+        });
+      }));
+    }
 
     res.status(201).json({
       success: true,
       messages: ['Answer created successfully'],
       answer,
-      evidenceFileIds: evidenceFiles.map(file => file.id),
+      evidenceFileIds,
     });
   } catch (error) {
     console.error('Error creating answer:', error);
@@ -67,67 +81,124 @@ console.log(evidenceFiles);
   }
 };
 
-export const getAnswersByQuestion = async (req, res) => {
-  const { assessmentQuestionId } = req.params;
-  const { page = 1 } = req.query;
-  const limit=10;
+export const updateAnswer = async (req, res) => {
+  const { answerId } = req.params;
+  const { answerText } = req.body;
+  const userId = req.user.id;
 
   try {
-    const { count, rows: answers } = await Answer.findAndCountAll({
+    const answer = await Answer.findOne({
+      where: { id: answerId },
+      include: [
+        {
+          model: AssessmentQuestion,
+          attributes: ['assessmentId'],
+        },
+        {
+          model: EvidenceFile,
+          attributes: ['id']
+        }
+      ],
+    });
+
+
+    if (!answer) {
+      return res.status(404).json({ success: false, messages: ['Answer not found.'] });
+    }
+
+    const isUpdatingToYes = answerText === "yes";
+    const hasExistingEvidenceFiles = answer.EvidenceFiles.length > 0;
+
+
+    if (isUpdatingToYes && !hasExistingEvidenceFiles && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        messages: ['You must upload evidence files when updating the answer to "yes".'],
+      });
+    }
+
+    if (answerText) {
+      answer.answerText = answerText;
+      await answer.save();
+    }
+
+    let evidenceFileIds = [];
+
+    if (isUpdatingToYes) {
+      if (req.files && req.files.length > 0) {
+        const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+          const evidenceFile = await EvidenceFile.create({
+            filePath: file.originalname,
+            pdfData: file.buffer,
+            createdByUserId: userId,
+            assessmentId: answer.AssessmentQuestion.assessmentId,
+          });
+          evidenceFileIds.push(evidenceFile.dataValues.id);
+          return evidenceFile;
+        }));
+
+        await Promise.all(evidenceFiles.map(async (evidenceFile) => {
+          await AnswerEvidenceFileLink.create({
+            answerId: answer.id,
+            evidenceFileId: evidenceFile.dataValues.id,
+          });
+        }));
+      }
+    }
+
+    // Respond without including the answer's evidence files
+    res.status(200).json({
+      success: true,
+      messages: ['Answer updated successfully'],
+      answer,
+      updatedFiles:evidenceFileIds,
+    });
+  } catch (error) {
+    console.error('Error updating answer:', error);
+    res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
+  }
+};
+
+
+export const getAnswerByQuestion = async (req, res) => {
+  const { assessmentQuestionId } = req.params;
+
+  try {
+    const answer = await Answer.findOne({
       where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
         through: { model: AnswerEvidenceFileLink },
         as: 'EvidenceFiles',
         required: false
-      }],
-      limit: limit,
-      offset: (page - 1) * limit,
+      }]
     });
 
-    if (count === 0) {
+    if (!answer) {
       return res.status(200).json({
         success: true,
-        messages: ['No Answers found'],
-        answers: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit
-        },
+        messages: ['No Answer found'],
+        answer: null,
       });
     }
 
-    const totalPages = Math.ceil(count / limit);
-
-    if (page > totalPages) {
-      return res.status(404).json({ success: false, messages: ['Page not found'] });
-    }
-
-    const answersWithEvidence = answers.map(answer => ({
-      answerId: answer.answerId,
+    const answerWithEvidence = {
+      answerId: answer.id,  // Ensure this references the correct ID field
       createdByUserId: answer.createdByUserId,
       answerText: answer.answerText,
       evidenceFiles: answer.EvidenceFiles.map(evidence => ({
-        evidenceFileId: evidence.evidenceFileId,
+        evidenceFileId: evidence.id,  // Ensure this references the correct ID field
         filePath: evidence.filePath
       }))
-    }));
+    };
 
     res.status(200).json({
       success: true,
-      answers: answersWithEvidence,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: page,
-        itemsPerPage: limit
-      },
+      answer: answerWithEvidence,
     });
   } catch (error) {
-    console.error('Error retrieving answers:', error);
-    res.status(500).json({ success: false, messages: ['Error retrieving answers.'], error: error.message });
+    console.error('Error retrieving answer:', error);
+    res.status(500).json({ success: false, messages: ['Error retrieving answer.'], error: error.message });
   }
 };
 
@@ -156,7 +227,7 @@ export const deleteAnswer = async (req, res) => {
   const { answerId } = req.params;
 
   try {
-    const result = await Answer.destroy({ where: { id:answerId } });
+    const result = await Answer.destroy({ where: { id: answerId } });
 
     if (result === 0) {
       return res.status(404).json({ success: false, messages: ['Answer not found.'] });

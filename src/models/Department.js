@@ -42,6 +42,6 @@ const Department = sequelize.define('Department', {
 }, {
   tableName: 'departments',
   timestamps: false,
-});
+  underscored: true,});
 
 export default Department;

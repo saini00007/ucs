@@ -5,9 +5,8 @@ import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
     const { username, password, email, roleId, phoneNumber, companyId, departmentId } = req.body;
-
+    console.log(req.body);
     const currentUser = req.user;
-
     const department = await Department.findOne({ where: { id: departmentId } });
     if (!department) {
         return res.status(404).json({ success: false, messages: ['Department not found.'] });
@@ -90,8 +89,8 @@ export const deleteUser = async (req, res) => {
 
 export const getUsersByDepartment = async (req, res) => {
     const { departmentId } = req.params;
-    const { page = 1 } = req.query;
-    const limit = 10;
+    const { page = 1,limit=10 } = req.query;
+
 
     try {
         const { count, rows: users } = await User.findAndCountAll({
@@ -129,8 +128,8 @@ export const getUsersByDepartment = async (req, res) => {
 
 export const getUsersByCompany = async (req, res) => {
     const { companyId } = req.params;
-    const { page = 1 } = req.query;
-    const limit = 10;
+    const { page = 1,limit=10 } = req.query;
+
 
     try {
         const { count, rows: users } = await User.findAndCountAll({

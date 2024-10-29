@@ -1,15 +1,15 @@
-import { AssessmentQuestion, MasterQuestion } from '../models/index.js';
+import { Assessment, AssessmentQuestion, Department, MasterQuestion } from '../models/index.js';
 
 export const addAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
-  const { questionIds } = req.body; 
+  const { questionIds } = req.body;
 
   try {
     const assessmentQuestions = await Promise.all(
       questionIds.map(async (questionId) => {
         return await AssessmentQuestion.create({
           assessmentId,
-          masterQuestionId:questionId,
+          masterQuestionId: questionId,
         });
       })
     );
@@ -32,11 +32,11 @@ export const getAssessmentQuestionById = async (req, res) => {
 
   try {
     const assessmentQuestion = await AssessmentQuestion.findOne({
-      where: { id:assessmentQuestionId },
-      include: {
+      where: { id: assessmentQuestionId },
+      include: [{
         model: MasterQuestion,
         attributes: ['questionText'],
-      },
+      }],
     });
 
     if (!assessmentQuestion) {
@@ -52,16 +52,15 @@ export const getAssessmentQuestionById = async (req, res) => {
 
 export const getAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
-  const { page = 1 } = req.query;
-  const limit=10;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
     const { count, rows: assessmentQuestions } = await AssessmentQuestion.findAndCountAll({
       where: { assessmentId },
-      include: {
+      include: [{
         model: MasterQuestion,
         attributes: ['questionText'],
-      },
+      }],
       limit: limit,
       offset: (page - 1) * limit,
     });

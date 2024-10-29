@@ -1,10 +1,8 @@
 import { Company } from '../models/index.js';
 
 export const createCompany = async (req, res) => {
-  console.log('Creating company...');
-  const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
-  const createdBy = req.user.id;
 
+  const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
   try {
     const newCompany = await Company.create({
       companyName,
@@ -14,7 +12,7 @@ export const createCompany = async (req, res) => {
       secondaryEmail,
       primaryPhone,
       secondaryPhone,
-      createdByUserId:req.user.id,
+      createdByUserId: req.user.id,
     });
 
     res.status(201).json({
@@ -32,12 +30,10 @@ export const createCompany = async (req, res) => {
 };
 
 export const getAllCompanies = async (req, res) => {
-  const { page = 1 } = req.query;
-  const limit = 10;
+  const { page = 1, limit = 10 } = req.query;
 
   try {
     const { count, rows: companies } = await Company.findAndCountAll({
-      attributes: ['id', 'companyName'],
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -86,9 +82,17 @@ export const getAllCompanies = async (req, res) => {
 
 export const getCompanyById = async (req, res) => {
   const { companyId } = req.params;
+  
+  //ABAC -- 
+if (req.user.roleId === 'admin' && req.user.companyId !== companyId) {
+    return res.status(403).json({
+        success: false,
+        message: 'Access denied: Admins can only manage their own company.'
+    });
+ }
 
   try {
-    const company=await Company.findByPk(companyId);
+    const company = await Company.findByPk(companyId);
 
     if (!company) {
       return res.status(404).json({
@@ -114,9 +118,9 @@ export const getCompanyById = async (req, res) => {
 export const updateCompany = async (req, res) => {
   const { companyId } = req.params;
   const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone } = req.body;
-
+  console.log('hello');
   try {
-    const company = await Company.findOne({ where: { id:companyId } });
+    const company = await Company.findOne({ where: { id: companyId } });
 
     if (!company) {
       return res.status(404).json({
@@ -154,7 +158,7 @@ export const deleteCompany = async (req, res) => {
 
   try {
     const deleted = await Company.destroy({
-      where: { id:companyId },
+      where: { id: companyId },
     });
     if (deleted === 0) {
       return res.status(404).json({

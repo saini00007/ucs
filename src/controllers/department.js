@@ -10,14 +10,28 @@ import {
 
 export const getAllDepartmentsForCompany = async (req, res) => {
     const { companyId } = req.params;
-    const { page = 1 } = req.query;
-    const limit = 10;
-
+    const { page = 1, limit = 10 } = req.query;
+    if (req.user.roleId === "admin" && req.user.companyId !== companyId) {
+        return res.status(403).json({
+            success: false,
+            message: 'Access denied: Admins can only manage their own company.',
+        });
+    }
     try {
         const { count, rows: departments } = await Department.findAndCountAll({
             where: { companyId: companyId },
             limit: limit,
             offset: (page - 1) * limit,
+            include: [
+                {
+                    model: Company,
+                    attributes:['companyName']
+                },
+                {
+                    model: MasterDepartment,
+                    attributes:['departmentName']
+                },
+            ],
         });
 
         if (count === 0) {
@@ -45,15 +59,37 @@ export const getAllDepartmentsForCompany = async (req, res) => {
         console.error('Error fetching departments for company:', error);
         res.status(500).json({ success: false, messages: ['Failed to fetch departments'] });
     }
+
 };
 
 export const getDepartmentById = async (req, res) => {
     const { departmentId } = req.params;
 
+
+    const userDepartmentId = req.user.departmentId;
+
+    if (req.user.roleId !== 'admin' && req.user.roleId !== 'superadmin') {
+        if (userDepartmentId !== departmentId) {
+            return res.status(403).json({
+                success: false,
+                messages: ['Access denied: You do not have permission to view this department.'],
+            });
+        }
+    }
+
     try {
         const department = await Department.findByPk(departmentId, {
-            include: [{ model: Company, attributes: ['companyName', 'id'] }],
-        });        
+            include: [
+                {
+                    model: Company,
+                    attributes: ['companyName']
+                },
+                {
+                    model: MasterDepartment,
+                    attributes: ['departmentName']
+                },
+            ],
+        });
 
         if (!department) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
@@ -66,11 +102,12 @@ export const getDepartmentById = async (req, res) => {
     }
 };
 
+
 export const createDepartment = async (req, res) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
     try {
         const company = await Company.findByPk(companyId);
-        
+
         if (!company) {
             return res.status(400).json({ success: false, messages: ['Invalid company ID'] });
         }
