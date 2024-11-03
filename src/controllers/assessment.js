@@ -27,59 +27,36 @@ export const markAssessmentAsStarted = async (req, res) => {
   }
 };
 
-export const getAllAssessments = async (req, res) => {
+export const getAssessmentByDepartmentId = async (req, res) => {
   const { departmentId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const { count, rows: assessments } = await Assessment.findAndCountAll({
+    const assessment = await Assessment.findOne({
       where: { departmentId },
-      attributes: ['id', 'departmentId','assessmentName', 'createdAt', 'updatedAt', 'assessmentStarted'],
-      include:
-        [
-          { model: Department }
-        ]
-      ,
-      limit: limit,
-      offset: (page - 1) * limit,
+      attributes: ['id', 'departmentId', 'assessmentName', 'createdAt', 'updatedAt', 'assessmentStarted'],
+      include: [
+        { model: Department }
+      ]
     });
 
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No Assessments found'],
-        assessments: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit
-        },
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        message: ['Assessment not found for the given department'],
       });
-    }
-
-    const totalPages = Math.ceil(count / limit);
-
-    if (page > totalPages) {
-      return res.status(404).json({ success: false, message: ['Page not found'] });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Assessments retrieved successfully'],
-      assessments,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: page,
-        itemsPerPage: limit
-      },
+      message: ['Assessment retrieved successfully'],
+      assessment,
     });
   } catch (error) {
-    console.error('Error fetching assessments:', error);
-    res.status(500).json({ success: false, message: ['Error fetching assessments'] });
+    console.error('Error fetching assessment:', error);
+    res.status(500).json({ success: false, message: ['Error fetching assessment'] });
   }
 };
+
 
 export const getAssessmentById = async (req, res) => {
   const { assessmentId } = req.params;

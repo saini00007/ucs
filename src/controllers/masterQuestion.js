@@ -11,7 +11,6 @@ const getMasterQuestions = async (req, res) => {
       limit: limit,
       offset: (page - 1) * limit,
     });
-
     if (count === 0) {
       return res.status(200).json({
         success: true,
@@ -25,6 +24,7 @@ const getMasterQuestions = async (req, res) => {
         },
       });
     }
+    
     const totalPages = Math.ceil(count / limit);
 
     if (page > totalPages) {

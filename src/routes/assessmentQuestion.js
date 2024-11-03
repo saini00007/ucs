@@ -26,7 +26,7 @@ router.get('/questions/:assessmentQuestionId',
 
 // Route to get all questions for a specific assessment
 router.get('/assessments/:assessmentId/questions', 
-    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'read'), 
+    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'list'), 
     checkAccess, 
     getAssessmentQuestions
 );

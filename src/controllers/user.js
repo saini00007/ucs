@@ -4,16 +4,13 @@ import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
-    const { username, password, email, roleId, phoneNumber, companyId, departmentId } = req.body;
+    const { departmentId } = req.params;
+    const { username, password, email, roleId, phoneNumber } = req.body;
     console.log(req.body);
     const currentUser = req.user;
     const department = await Department.findOne({ where: { id: departmentId } });
     if (!department) {
         return res.status(404).json({ success: false, messages: ['Department not found.'] });
-    }
-
-    if (department.companyId !== companyId) {
-        return res.status(403).json({ success: false, messages: ['Department does not belong to the specified company.'] });
     }
 
     try {
@@ -25,13 +22,13 @@ export const addUser = async (req, res) => {
             email,
             roleId,
             departmentId,
-            companyId,
+            companyId: department.companyId,
             phoneNumber,
         });
 
         const token = generateToken(user.id);
         const emailSubject = 'Set Your Account Password';
-        const emailText = `Hello ${username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:3000/set-password?token=${token}\n\nPlease keep this information secure.`;
+        const emailText = `Hello ${username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:4000/set-password?token=${token}\n\nPlease keep this information secure.`;
 
         await sendEmail(email, emailSubject, emailText);
 
@@ -89,37 +86,22 @@ export const deleteUser = async (req, res) => {
 
 export const getUsersByDepartment = async (req, res) => {
     const { departmentId } = req.params;
-    const { page = 1,limit=10 } = req.query;
-
 
     try {
-        const { count, rows: users } = await User.findAndCountAll({
+        const users = await User.findAll({
             where: { departmentId },
-            limit: limit,
-            offset: (page - 1) * limit,
             attributes: ['id', 'username', 'roleId'],
         });
 
-        const totalPages = Math.ceil(count / limit);
-
-        if (count === 0) {
+        if (users.length === 0) {
             return res.status(200).json({
                 success: true,
-                messages: ['No Users found'],
+                messages: ['No users found'],
                 users: [],
-                pagination: {
-                    totalItems: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    itemsPerPage: limit
-                },
             });
         }
-        if (page > totalPages) {
-            return res.status(404).json({ success: false, messages: ['Page not found'] });
-        }
 
-        res.status(200).json({ success: true, users, totalPages, currentPage: page, itemsPerPage: limit });
+        res.status(200).json({ success: true, users });
     } catch (error) {
         console.error('Error fetching users by department:', error);
         res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
@@ -128,40 +110,51 @@ export const getUsersByDepartment = async (req, res) => {
 
 export const getUsersByCompany = async (req, res) => {
     const { companyId } = req.params;
-    const { page = 1,limit=10 } = req.query;
-
 
     try {
-        const { count, rows: users } = await User.findAndCountAll({
+        const users = await User.findAll({
             where: { companyId },
-            limit: limit,
-            offset: (page - 1) * limit,
             attributes: ['id', 'username', 'roleId'],
         });
 
-        
-        const totalPages = Math.ceil(count / limit);
-        if (count === 0) {
+        if (users.length === 0) {
             return res.status(200).json({
                 success: true,
-                messages: ['No Users found'],
+                messages: ['No users found'],
                 users: [],
-                pagination: {
-                    totalItems: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    itemsPerPage: limit
-                },
             });
         }
-        if (page > totalPages) {
-            return res.status(404).json({ success: false, messages: ['Page not found'] });
-        }
 
-
-        res.status(200).json({ success: true, users, totalPages, currentPage: page, itemsPerPage: limit });
+        res.status(200).json({ success: true, users });
     } catch (error) {
         console.error('Error fetching users by company:', error);
+        res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
+    }
+};
+
+export const getUsersByRole = async (req, res) => {
+    const { companyId, roleId } = req.params;
+
+    try {
+        const users = await User.findAll({
+            where: {
+                companyId,
+                roleId,
+            },
+            attributes: ['id', 'username', 'roleId'],
+        });
+
+        if (users.length === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No users found for this role'],
+                users: [],
+            });
+        }
+
+        res.status(200).json({ success: true, users });
+    } catch (error) {
+        console.error('Error fetching users by role:', error);
         res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
     }
 };

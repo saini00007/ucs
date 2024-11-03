@@ -105,6 +105,7 @@ export const getDepartmentById = async (req, res) => {
 
 export const createDepartment = async (req, res) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
+
     try {
         const company = await Company.findByPk(companyId);
 
@@ -124,21 +125,19 @@ export const createDepartment = async (req, res) => {
             createdByUserId: req.user.id,
         });
 
-        const assessments = [];
-
         const newAssessment = await Assessment.create({
             departmentId: newDepartment.id,
         });
-
-        assessments.push(newAssessment);
 
         const questions = await QuestionDepartmentLink.findAll({
             where: { masterDepartmentId },
             include: [{ model: MasterQuestion, required: true }],
         });
+
         if (questions.length === 0) {
             console.warn('No questions found for the master department');
         }
+
         await Promise.all(questions.map(async (qdl) => {
             try {
                 await AssessmentQuestion.create({
@@ -151,7 +150,7 @@ export const createDepartment = async (req, res) => {
             }
         }));
 
-        res.status(201).json({ success: true, department: newDepartment, assessments });
+        res.status(201).json({ success: true, department: newDepartment, assessment: newAssessment });
     } catch (error) {
         console.error('Error creating department:', error);
         res.status(500).json({ success: false, messages: ['Failed to create department'] });

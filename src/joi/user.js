@@ -41,22 +41,6 @@ const baseUserSchema = Joi.object({
             'string.empty': 'Role ID is required.',
             'any.required': 'Role ID is required.'
         }),
-    departmentId: Joi.string()
-        .uuid()
-        .optional()
-        .messages({
-            'string.base': 'Department ID must be a string.',
-            'string.uuid': 'Department ID must be a valid UUID.'
-        }),
-    companyId: Joi.string()
-        .uuid()
-        .required()
-        .messages({
-            'string.base': 'Company ID must be a string.',
-            'string.empty': 'Company ID is required.',
-            'string.uuid': 'Company ID must be a valid UUID.',
-            'any.required': 'Company ID is required.'
-        }),
     phoneNumber: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
@@ -101,14 +85,6 @@ const updateUserSchema = Joi.object({
         .messages({
             'string.base': 'Role ID must be a string.',
             'string.empty': 'Role ID cannot be empty.',
-        }),
-    departmentId: Joi.string()
-        .uuid()
-        .allow('')
-        .optional()
-        .messages({
-            'string.base': 'Department ID must be a string.',
-            'string.uuid': 'Department ID must be a valid UUID.',
         }),
     phoneNumber: Joi.string()
         .length(10)

@@ -25,7 +25,7 @@ router.post('/questions/:assessmentQuestionId/answers',
 // Route to update an existing answer
 router.put('/answers/:answerId',
   uploadFiles,
-  attachResourceInfo('Answer', 'Answer', 'answerId', 'create'),
+  attachResourceInfo('Answer', 'Answer', 'answerId', 'update'),
   checkAccess,
   updateAnswer);
 

@@ -2,7 +2,7 @@ import express from 'express';
 import {
     markAssessmentAsStarted,
     getAssessmentById,
-    getAllAssessments
+    getAssessmentByDepartmentId
 } from '../controllers/assessment.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -28,7 +28,7 @@ router.get('/assessments/:assessmentId',
 router.get('/departments/:departmentId/assessments', 
     attachResourceInfo('Assessment','Department', 'departmentId', 'read'), 
     checkAccess, 
-    getAllAssessments
+    getAssessmentByDepartmentId
 );
 
 export default router;

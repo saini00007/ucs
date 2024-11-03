@@ -1,6 +1,5 @@
-import { Comment, Answer, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
-
-export const checkCommentAccess = async (user, resourceId) => {
+import { Comment, AssessmentQuestion, Answer, Assessment, Department } from "../../models/index.js";
+export const checkCommentAccess = async (user, resourceId, action) => {
     try {
         const comment = await Comment.findByPk(resourceId, {
             include: [
@@ -24,25 +23,36 @@ export const checkCommentAccess = async (user, resourceId) => {
                 },
             ],
         });
+
         if (!comment) {
             console.log(`Comment with ID ${resourceId} not found`);
             return false;
         }
+
         const departmentId = comment.Answer.AssessmentQuestion.Assessment.departmentId;
         const companyId = comment.Answer.AssessmentQuestion.Assessment.Department.companyId;
+
         if (user.roleId === 'superadmin') {
             return true;
-        } else if (user.roleId === 'admin') {
+        }
+
+        if (action === 'delete' || action === 'update') {
+            return comment.userId === user.id;
+        }
+
+        if (user.roleId === 'admin') {
             if (user.companyId === companyId) {
                 return true;
             }
-        } else {
-            if (user.departmentId === departmentId) { return true; }
         }
-        return false;
 
+        if (user.departmentId === departmentId) {
+            return true;
+        }
+
+        return false;
     } catch (error) {
         console.error("Error checking Comment access:", error);
         return false;
     }
-}
+};

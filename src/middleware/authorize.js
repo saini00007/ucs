@@ -29,6 +29,7 @@ export const checkAccess = async (req, res, next) => {
       user: req.user,
       resourceType: contentResourceType,
       resourceId: contentResourceId,
+      action:action
     });
 
     if (!hasContentAccess) {

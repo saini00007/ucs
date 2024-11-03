@@ -9,7 +9,6 @@ import {
   checkCommentAccess,
   checkMasterQuestionAccess,
   checkMasterDepartmentAccess,
-
 } from "../middleware/contextChecks/index.js";
 import { getResourceId, getActionId } from '../utils/resourceActionUtils.js';
 import { checkRoleAccess } from "../middleware/contextChecks/checkRoleAccess.js";
@@ -24,7 +23,7 @@ const resourceAccessCheckMap = {
   Comment: checkCommentAccess,
   MasterQuestion: checkMasterQuestionAccess,
   MasterDepartment: checkMasterDepartmentAccess,
-  Role:checkRoleAccess
+  Role: checkRoleAccess
 };
 
 const permissionsService = {
@@ -46,14 +45,14 @@ const permissionsService = {
     }
   },
 
-  async hasContentAccess({ user, resourceType, resourceId }) {
+  async hasContentAccess({ user, resourceType, resourceId,action }) {
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
       console.log('contentAccessCheckFn not found');
       return false;
     }
     try {
-      return await contentAccessCheckFn(user, resourceId);
+      return await contentAccessCheckFn(user, resourceId,action);
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
       return false;

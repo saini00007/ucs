@@ -1,23 +1,36 @@
-// mockAuthenticate.js
 const mockUsers = {
-    admin: {
-        id: 'abcd12345678',
-        username: 'adminUser',
-        roleId: 'admin',
-        companyId: 'f10e2bb9-af6b-448e-b1b7-bd776c208c94',
-        departmentId: null
-    },
     superadmin: {
-        id: 'abcd87654321',
+        id: 'abcd12345678',
         username: 'superAdminUser',
         roleId: 'superadmin',
         companyId: null,
         departmentId: null
     },
-    guestUser: {
-        id: 'guest12345678',
-        username: 'guestUser',
-        roleId: 'guest',
+    admin: {
+        id: 'abcd12345679',
+        username: 'adminUser',
+        roleId: 'admin',
+        companyId: 'f10e2bb9-af6b-448e-b1b7-bd776c208c94',
+        departmentId: null
+    },
+    departmentManager: {
+        id: 'abcd12345680',
+        username: 'deptManagerUser',
+        roleId: 'departmentmanager',
+        companyId: 'f10e2bb9-af6b-448e-b1b7-bd776c208c94',
+        departmentId: 'eb2851cc-a2f9-45e7-bb0b-4db3c7065eca'
+    },
+    assessor: {
+        id: 'abcd12345681',
+        username: 'assessorUser',
+        roleId: 'assessor',
+        companyId: 'f10e2bb9-af6b-448e-b1b7-bd776c208c94',
+        departmentId: 'eb2851cc-a2f9-45e7-bb0b-4db3c7065eca'
+    },
+    reviewer: {
+        id: 'abcd12345682',
+        username: 'reviewerUser',
+        roleId: 'reviewer',
         companyId: 'f10e2bb9-af6b-448e-b1b7-bd776c208c94',
         departmentId: 'eb2851cc-a2f9-45e7-bb0b-4db3c7065eca'
     }
@@ -28,7 +41,7 @@ const setMockUser = (userType) => {
 };
 
 const mockAuthenticate = (req, res, next) => {
-    const userType = 'admin';
+    const userType = 'superadmin'; // Change this to switch users
     req.user = setMockUser(userType);
     next();
 };
