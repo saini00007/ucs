@@ -1,5 +1,5 @@
 import { Comment, AssessmentQuestion, Answer, Assessment, Department } from "../../models/index.js";
-export const checkCommentAccess = async (user, resourceId, action) => {
+export const checkCommentAccess = async (user, resourceId, actionIdDb) => {
     try {
         const comment = await Comment.findByPk(resourceId, {
             include: [

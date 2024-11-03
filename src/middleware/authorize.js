@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import permissionsService from '../services/permissionsService.js';
+import { getResourceId, getActionId } from '../utils/resourceActionUtils.js'
 
 export const checkAccess = async (req, res, next) => {
   const { roleId } = req.user;
@@ -12,11 +13,12 @@ export const checkAccess = async (req, res, next) => {
 
 
   try {
-
+    const resourceIdDb = await getResourceId(roleResourceType);
+    const actionIdDb = await getActionId(action);
     const hasRolePermission = await permissionsService.hasRolePermission({
       user: req.user,
-      resourceType: roleResourceType,
-      action,
+      resourceIdDb,
+      actionIdDb,
     });
     if (!hasRolePermission) {
       return res.status(403).json({
@@ -29,7 +31,7 @@ export const checkAccess = async (req, res, next) => {
       user: req.user,
       resourceType: contentResourceType,
       resourceId: contentResourceId,
-      action:action
+      actionIdDb
     });
 
     if (!hasContentAccess) {
