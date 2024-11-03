@@ -7,4 +7,4 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, 
 });
 
-export const uploadFiles = upload.array('files', 10); // Accept up to 10 files
+export const uploadFiles = upload.array('files', 10);

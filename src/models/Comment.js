@@ -1,4 +1,3 @@
-// models/Comment.js
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
@@ -9,14 +8,14 @@ const Comment = sequelize.define('Comment', {
     defaultValue: DataTypes.UUIDV4,
     field: 'id',
   },
-  assessmentQuestionId: {
+  answerId: {
     type: DataTypes.UUID,
     references: {
-      model: 'assessment_questions',
+      model: 'answers',
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'assessment_question_id',
+    field: 'answer_id',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),

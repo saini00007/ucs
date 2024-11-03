@@ -34,14 +34,10 @@ export const getAllAssessments = async (req, res) => {
   try {
     const { count, rows: assessments } = await Assessment.findAndCountAll({
       where: { departmentId },
-      attributes: ['id', 'companyId', 'departmentId', 'createdAt', 'updatedAt', 'assessmentStarted'],
+      attributes: ['id', 'departmentId','assessmentName', 'createdAt', 'updatedAt', 'assessmentStarted'],
       include:
         [
-          { model: Department },
-          {
-            model: Company,
-            attributes: ['id', 'companyName']
-          }
+          { model: Department }
         ]
       ,
       limit: limit,
@@ -93,11 +89,7 @@ export const getAssessmentById = async (req, res) => {
       where: { id: assessmentId },
       include:
         [
-          { model: Department },
-          {
-            model: Company,
-            attributes: ['id', 'companyName']
-          }
+          { model: Department }
         ]
       ,
     });

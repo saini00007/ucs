@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import seedRoles from './roles.js';
+import seedAll from './roles.js';
 import seedSuperAdmins from './superAdmins.js';
 import seedMasterDepartments from './masterDepartments.js';
 import seedMasterQuestions from './masterQuestions.js';
@@ -12,11 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const runSeeds = async () => {
-     await seedRoles();
+     await seedAll();
     await seedSuperAdmins();
    await seedMasterDepartments();
-    const useFakeData = true;
-    const fakeDataCount = 20;
    await seedMasterQuestions();
 };
 

@@ -5,19 +5,37 @@ import {
   deleteAssessmentQuestions,
   getAssessmentQuestionById
 } from '../controllers/assessmentQuestion.js';
+import attachResourceInfo from '../utils/attachResourceInfo.js';
+import { checkAccess } from '../middleware/authorize.js';
 
 const router = express.Router();
 
 // Route to add a question to an assessment
-router.post('/assessments/:assessmentId/questions', addAssessmentQuestions);
+router.post('/assessments/:assessmentId/questions', 
+    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'create'), 
+    checkAccess, 
+    addAssessmentQuestions
+);
 
 // Route to get a question by ID
-router.get('/questions/:assessmentQuestionId', getAssessmentQuestionById);
+router.get('/questions/:assessmentQuestionId', 
+    attachResourceInfo('AssessmentQuestion', 'AssessmentQuestion', 'assessmentQuestionId', 'read'), 
+    checkAccess, 
+    getAssessmentQuestionById
+);
 
 // Route to get all questions for a specific assessment
-router.get('/assessments/:assessmentId/questions', getAssessmentQuestions);
+router.get('/assessments/:assessmentId/questions', 
+    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'read'), 
+    checkAccess, 
+    getAssessmentQuestions
+);
 
 // Route to delete an assessment question
-router.delete('/questions', deleteAssessmentQuestions);
+router.delete('/questions/:assessmentQuestionId', 
+    attachResourceInfo('AssessmentQuestion', 'AssessmentQuestion', 'assessmentQuestionId', 'remove'), 
+    checkAccess, 
+    deleteAssessmentQuestions
+);
 
 export default router;

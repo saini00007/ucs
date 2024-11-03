@@ -1,7 +1,6 @@
 import { validationResult } from 'express-validator';
 import Answer from '../models/Answer.js';
 import EvidenceFile from '../models/EvidenceFile.js';
-import AnswerEvidenceFileLink from '../models/AnswerEvidenceFileLink.js';
 import AssessmentQuestion from '../models/AssessmentQuestion.js';
 
 export const createAnswer = async (req, res) => {
@@ -55,17 +54,10 @@ export const createAnswer = async (req, res) => {
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
-          assessmentId,
+          answerId: answer.id, // Directly linking evidence file to the answer
         });
         evidenceFileIds.push(evidenceFile.dataValues.id);
         return evidenceFile;
-      }));
-
-      await Promise.all(evidenceFiles.map(async (evidenceFile) => {
-        await AnswerEvidenceFileLink.create({
-          answerId: answer.id,
-          evidenceFileId: evidenceFile.dataValues.id,
-        });
       }));
     }
 
@@ -101,14 +93,12 @@ export const updateAnswer = async (req, res) => {
       ],
     });
 
-
     if (!answer) {
       return res.status(404).json({ success: false, messages: ['Answer not found.'] });
     }
 
     const isUpdatingToYes = answerText === "yes";
     const hasExistingEvidenceFiles = answer.EvidenceFiles.length > 0;
-
 
     if (isUpdatingToYes && !hasExistingEvidenceFiles && (!req.files || req.files.length === 0)) {
       return res.status(400).json({
@@ -124,41 +114,30 @@ export const updateAnswer = async (req, res) => {
 
     let evidenceFileIds = [];
 
-    if (isUpdatingToYes) {
-      if (req.files && req.files.length > 0) {
-        const evidenceFiles = await Promise.all(req.files.map(async (file) => {
-          const evidenceFile = await EvidenceFile.create({
-            filePath: file.originalname,
-            pdfData: file.buffer,
-            createdByUserId: userId,
-            assessmentId: answer.AssessmentQuestion.assessmentId,
-          });
-          evidenceFileIds.push(evidenceFile.dataValues.id);
-          return evidenceFile;
-        }));
-
-        await Promise.all(evidenceFiles.map(async (evidenceFile) => {
-          await AnswerEvidenceFileLink.create({
-            answerId: answer.id,
-            evidenceFileId: evidenceFile.dataValues.id,
-          });
-        }));
-      }
+    if (isUpdatingToYes && req.files && req.files.length > 0) {
+      const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+        const evidenceFile = await EvidenceFile.create({
+          filePath: file.originalname,
+          pdfData: file.buffer,
+          createdByUserId: userId,
+          answerId: answer.id, // Directly linking evidence file to the answer
+        });
+        evidenceFileIds.push(evidenceFile.dataValues.id);
+        return evidenceFile;
+      }));
     }
 
-    // Respond without including the answer's evidence files
     res.status(200).json({
       success: true,
       messages: ['Answer updated successfully'],
       answer,
-      updatedFiles:evidenceFileIds,
+      updatedFiles: evidenceFileIds,
     });
   } catch (error) {
     console.error('Error updating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
-
 
 export const getAnswerByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
@@ -168,8 +147,6 @@ export const getAnswerByQuestion = async (req, res) => {
       where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
-        through: { model: AnswerEvidenceFileLink },
-        as: 'EvidenceFiles',
         required: false
       }]
     });
@@ -183,11 +160,11 @@ export const getAnswerByQuestion = async (req, res) => {
     }
 
     const answerWithEvidence = {
-      answerId: answer.id,  // Ensure this references the correct ID field
+      answerId: answer.id,
       createdByUserId: answer.createdByUserId,
       answerText: answer.answerText,
       evidenceFiles: answer.EvidenceFiles.map(evidence => ({
-        evidenceFileId: evidence.id,  // Ensure this references the correct ID field
+        evidenceFileId: evidence.id,
         filePath: evidence.filePath
       }))
     };

@@ -127,7 +127,6 @@ export const createDepartment = async (req, res) => {
         const assessments = [];
 
         const newAssessment = await Assessment.create({
-            companyId,
             departmentId: newDepartment.id,
         });
 

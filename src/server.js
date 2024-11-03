@@ -6,6 +6,7 @@ import fs from 'fs'; // Import fs for file system operations
 import url from 'url'; // Import url for converting paths to URLs
 import sequelize from './config/db.js'; // Import the Sequelize instance
 import initializeDatabase from './initializeDatabase.js'; // Import the database initialization function
+import chalk from 'chalk';
 // Load environment variables from .env file
 dotenv.config();
 

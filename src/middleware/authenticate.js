@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js'; // Import your User model
+import User from '../models/User.js';
 
 export const authenticate = async (req, res, next) => {
   if (process.env.NODE_ENV === 'development') {

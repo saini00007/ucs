@@ -1,12 +1,20 @@
 import Comment from '../models/Comment.js';
+import Answer from '../models/Answer.js';
 
 export const createComment = async (req, res) => {
-  const { assessmentQuestionId } = req.params;
+  const { answerId } = req.params;
   const { commentText } = req.body;
 
   try {
+    // Verify that the answer exists
+    const answer = await Answer.findOne({ where: { id: answerId } });
+
+    if (!answer) {
+      return res.status(404).json({ success: false, messages: ['No associated answer found'] });
+    }
+
     const newComment = await Comment.create({
-      assessmentQuestionId,
+      answerId: answer.id,
       createdByUserId: req.user.id,
       commentText,
     });
@@ -23,11 +31,11 @@ export const createComment = async (req, res) => {
 };
 
 export const getCommentById = async (req, res) => {
-  const { id } = req.params;
+  const { commentId } = req.params;
 
   try {
     const comment = await Comment.findOne({
-      where: { id },
+      where: { id:commentId },
     });
 
     if (comment) {
@@ -44,12 +52,11 @@ export const getCommentById = async (req, res) => {
   }
 };
 
-export const getCommentsByQuestionId = async (req, res) => {
-  const { assessmentQuestionId } = req.params;
-
+export const getCommentsByAnswerId = async (req, res) => {
+  const { answerId } = req.params;
   try {
     const comments = await Comment.findAll({
-      where: { assessmentQuestionId },
+      where: { answerId: answerId },
     });
 
     return res.status(200).json({

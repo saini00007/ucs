@@ -6,40 +6,41 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id', 
+    field: 'id',
   },
   filePath: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'file_path', 
+    field: 'file_path',
   },
   pdfData: {
     type: DataTypes.BLOB,
-    allowNull: false, 
-    field: 'pdf_data', 
+    allowNull: false,
+    field: 'pdf_data',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
+    allowNull: false,
     references: {
       model: 'users',
       key: 'id',
     },
-    allowNull: false, 
     field: 'created_by_user_id',
   },
-  assessmentId: {
+  answerId: {
     type: DataTypes.UUID,
+    allowNull: false,
     references: {
-      model: 'assessments',
+      model: 'answers',
       key: 'id',
     },
-    allowNull: false,
-    field: 'assessment_id', 
     onDelete: 'CASCADE',
+    field: 'answer_id',
   },
 }, {
   tableName: 'evidence_files',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default EvidenceFile;
