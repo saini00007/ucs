@@ -17,7 +17,7 @@ export const addAssessmentQuestions = async (req, res) => {
     res.status(201).json({
       success: true,
       messages: ['Assessment questions added successfully'],
-      assessmentQuestions,
+      updatedAssessmentQuestions:assessmentQuestions,
     });
   } catch (error) {
     console.error('Error adding assessment questions:', error);

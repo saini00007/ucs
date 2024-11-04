@@ -94,7 +94,7 @@ export const deleteUser = async (req, res) => {
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
 
-        res.status(204).json({ success: true, messages: ['User deleted successfully'] });
+        res.status(200).json({ success: true, messages: ['User deleted successfully'] });
     } catch (error) {
         console.error('Error deleting user:', error);
         res.status(500).json({ success: false, messages: ['Error deleting user'], error: error.message });
@@ -103,35 +103,116 @@ export const deleteUser = async (req, res) => {
 
 export const getUsersByDepartment = async (req, res) => {
     const { departmentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
     try {
-        const users = await User.findAll({
+        const { count, rows: users } = await User.findAndCountAll({
             where: { departmentId },
             attributes: ['id', 'username', 'roleId'],
+            limit: limit,
+            offset: (page - 1) * limit,
         });
 
-        res.status(200).json({ success: true, users: users.length ? users : [], messages: users.length ? [] : ['No users found'] });
+        if (count === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No users found'],
+                users: [],
+                pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    itemsPerPage: limit
+                },
+            });
+        }
+
+        const totalPages = Math.ceil(count / limit);
+
+        if (page > totalPages) {
+            return res.status(404).json({
+                success: false,
+                messages: ['Page not found'],
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            messages: ['Users retrieved successfully'],
+            users,
+            pagination: {
+                totalItems: count,
+                totalPages,
+                currentPage: page,
+                itemsPerPage: limit
+            },
+        });
     } catch (error) {
         console.error('Error fetching users by department:', error);
-        res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
+        res.status(500).json({
+            success: false,
+            messages: ['Error fetching users'],
+            error: error.message,
+        });
     }
 };
 
 export const getUsersByCompany = async (req, res) => {
     const { companyId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
 
     try {
-        const users = await User.findAll({
+        const { count, rows: users } = await User.findAndCountAll({
             where: { companyId },
             attributes: ['id', 'username', 'roleId'],
+            limit: limit,
+            offset: (page - 1) * limit,
         });
 
-        res.status(200).json({ success: true, users: users.length ? users : [], messages: users.length ? [] : ['No users found'] });
+        if (count === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No users found'],
+                users: [],
+                pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    itemsPerPage: limit
+                },
+            });
+        }
+
+        const totalPages = Math.ceil(count / limit);
+
+        if (page > totalPages) {
+            return res.status(404).json({
+                success: false,
+                messages: ['Page not found'],
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            messages: ['Users retrieved successfully'],
+            users,
+            pagination: {
+                totalItems: count,
+                totalPages,
+                currentPage: page,
+                itemsPerPage: limit
+            },
+        });
     } catch (error) {
         console.error('Error fetching users by company:', error);
-        res.status(500).json({ success: false, messages: ['Error fetching users'], error: error.message });
+        res.status(500).json({
+            success: false,
+            messages: ['Error fetching users'],
+            error: error.message,
+        });
     }
 };
+
 
 export const getUserById = async (req, res) => {
     const { userId } = req.params;

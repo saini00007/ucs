@@ -88,7 +88,7 @@ export const updateAnswer = async (req, res) => {
         },
         {
           model: EvidenceFile,
-          attributes: ['id']
+          attributes: ['id', 'filePath']
         }
       ],
     });
@@ -112,18 +112,21 @@ export const updateAnswer = async (req, res) => {
       await answer.save();
     }
 
-    let evidenceFileIds = [];
+    let updatedFiles = []; // Array to hold newly added evidence files
 
     if (isUpdatingToYes && req.files && req.files.length > 0) {
-      const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+      updatedFiles = await Promise.all(req.files.map(async (file) => {
         const evidenceFile = await EvidenceFile.create({
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
-          answerId: answer.id, // Directly linking evidence file to the answer
+          answerId: answer.id,
         });
-        evidenceFileIds.push(evidenceFile.dataValues.id);
-        return evidenceFile;
+        // Return an object containing the ID and filePath of the new evidence file
+        return {
+          id: evidenceFile.id,
+          filePath: evidenceFile.filePath, // Include the filePath in the response
+        };
       }));
     }
 
@@ -131,13 +134,14 @@ export const updateAnswer = async (req, res) => {
       success: true,
       messages: ['Answer updated successfully'],
       answer,
-      updatedFiles: evidenceFileIds,
+      updatedFiles, // Return the array of newly added evidence files with IDs and filePaths
     });
   } catch (error) {
     console.error('Error updating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
+
 
 export const getAnswerByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
