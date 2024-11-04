@@ -32,9 +32,9 @@ router.get('/assessments/:assessmentId/questions',
 );
 
 // Route to delete an assessment question
-router.delete('/questions/:assessmentQuestionId', 
-    attachResourceInfo('AssessmentQuestion', 'AssessmentQuestion', 'assessmentQuestionId', 'remove'), 
-    checkAccess, 
+router.delete('/assessments/:assessmentId/questions/', 
+    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'remove'), 
+    checkAccess,
     deleteAssessmentQuestions
 );
 

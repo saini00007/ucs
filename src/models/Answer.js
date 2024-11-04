@@ -35,4 +35,6 @@ const Answer = sequelize.define('Answer', {
   underscored: true,
 });
 
+
+
 export default Answer;

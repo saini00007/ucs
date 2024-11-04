@@ -2,12 +2,11 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
 export const authenticate = async (req, res, next) => {
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'Development') {
     console.log('Cookies:', req.cookies);
   }
 
   const token = req.cookies.token;
-
   if (!token) {
     return res.status(401).json({ success: false, message: 'No token provided' });
   }
@@ -19,7 +18,7 @@ export const authenticate = async (req, res, next) => {
       where: {
         id: decoded.userId,
       },
-      attributes: ['id', 'username', 'email', 'roleId'], // Specify attributes to retrieve in camelCase
+      attributes: ['id', 'username', 'email', 'roleId', 'departmentId', 'companyId'],
     });
 
     if (!user) {

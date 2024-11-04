@@ -150,7 +150,7 @@ const seedRoleResourceActionLinks = async () => {
 
     { "roleId": "reviewer", "resourceId": "company", "actionId": "read" },
     { "roleId": "reviewer", "resourceId": "department", "actionId": "read" },
-    { "roleId": "reviewer", "resourceId": "assessment", "actionId": "start" },
+    // { "roleId": "reviewer", "resourceId": "assessment", "actionId": "start" },
     { "roleId": "reviewer", "resourceId": "assessment", "actionId": "read" },
     { "roleId": "reviewer", "resourceId": "assessmentquestion", "actionId": "list" },
     { "roleId": "reviewer", "resourceId": "assessmentquestion", "actionId": "read" },

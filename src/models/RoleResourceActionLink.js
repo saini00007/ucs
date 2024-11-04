@@ -40,4 +40,5 @@ const RoleResourceActionLink = sequelize.define('RoleResourceActionLink', {
   timestamps: false,
 });
 
+
 export default RoleResourceActionLink;

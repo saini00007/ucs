@@ -2,6 +2,8 @@ import { Assessment, Department } from "../../models/index.js";
 
 export const checkAssessmentAccess = async (user, resourceId) => {
     try {
+        if(user.roleId==='superadmin')return true;
+        
         const assessment = await Assessment.findByPk(resourceId, {
             include: [
                 {
@@ -9,7 +11,6 @@ export const checkAssessmentAccess = async (user, resourceId) => {
                 }
             ]
         });
-        
         console.log(assessment);
         if (!assessment) {
             console.log(`Assessment with ID ${resourceId} not found`);

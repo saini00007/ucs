@@ -43,4 +43,6 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
   underscored: true,
 });
 
+
+
 export default EvidenceFile;

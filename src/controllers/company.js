@@ -31,6 +31,7 @@ export const createCompany = async (req, res) => {
 
 export const getAllCompanies = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
+  console.log(req.user);
 
   try {
     const { count, rows: companies } = await Company.findAndCountAll({
@@ -82,15 +83,6 @@ export const getAllCompanies = async (req, res) => {
 
 export const getCompanyById = async (req, res) => {
   const { companyId } = req.params;
-  
-  //ABAC -- 
-if (req.user.roleId === 'admin' && req.user.companyId !== companyId) {
-    return res.status(403).json({
-        success: false,
-        message: 'Access denied: Admins can only manage their own company.'
-    });
- }
-
   try {
     const company = await Company.findByPk(companyId);
 

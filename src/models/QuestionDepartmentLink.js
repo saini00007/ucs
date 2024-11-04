@@ -1,11 +1,8 @@
-// models/QuestionDepartmentLink.js
-import { Model, DataTypes } from 'sequelize';
+import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
-class QuestionDepartmentLink extends Model {}
-
-QuestionDepartmentLink.init({
-  masterQuestionId: {//
+const QuestionDepartmentLink = sequelize.define('QuestionDepartmentLink', {
+  masterQuestionId: {
     type: DataTypes.UUID,
     references: {
       model: 'master_questions',
@@ -13,7 +10,7 @@ QuestionDepartmentLink.init({
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'master_question_id', 
+    field: 'master_question_id',
   },
   masterDepartmentId: {
     type: DataTypes.UUID,
@@ -23,13 +20,11 @@ QuestionDepartmentLink.init({
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'master_department_id', 
+    field: 'master_department_id',
   },
 }, {
-  sequelize,
-  modelName: 'QuestionDepartmentLink',
-  tableName: 'question_department_links', 
-  timestamps: false, 
+  tableName: 'question_department_links',
+  timestamps: false,
 });
 
 export default QuestionDepartmentLink;

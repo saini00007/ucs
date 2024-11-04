@@ -9,7 +9,6 @@ const generateUserId = async (username) => {
   if (existingUser) {
     return generateUserId(username);
   }
-
   return uniqueId;
 };
 
@@ -75,5 +74,6 @@ const User = sequelize.define('User', {
     },
   },
 });
+
 
 export default User;

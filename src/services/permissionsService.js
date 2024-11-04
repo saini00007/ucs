@@ -11,6 +11,7 @@ import {
   checkMasterDepartmentAccess,
 } from "../middleware/contextChecks/index.js";
 import { checkRoleAccess } from "../middleware/contextChecks/checkRoleAccess.js";
+import { checkUserAccess } from "../middleware/contextChecks/checkUserAccess.js";
 
 const resourceAccessCheckMap = {
   Assessment: checkAssessmentAccess,
@@ -22,7 +23,8 @@ const resourceAccessCheckMap = {
   Comment: checkCommentAccess,
   MasterQuestion: checkMasterQuestionAccess,
   MasterDepartment: checkMasterDepartmentAccess,
-  Role: checkRoleAccess
+  Role: checkRoleAccess,
+  User:checkUserAccess
 };
 
 const permissionsService = {
@@ -49,7 +51,8 @@ const permissionsService = {
       return false;
     }
     try {
-      return await contentAccessCheckFn(user, resourceId,actionIdDb);
+
+      return await contentAccessCheckFn(user, resourceId , actionIdDb);
 
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);

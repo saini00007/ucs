@@ -7,17 +7,13 @@ export const checkCompanyAccess = async (user, resourceId) => {
         }
 
         const company = await Company.findByPk(resourceId);
-
         if (!company) {
             console.log(`Company with ID ${resourceId} not found`);
             return false;
         }
-
-        if (user.roleId === 'admin') {
             if (company.id === user.companyId) {
                 return true;
             }
-        }
 
         return false;
 

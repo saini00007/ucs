@@ -31,4 +31,5 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
   underscored: true,
 });
 
+
 export default AssessmentQuestion;

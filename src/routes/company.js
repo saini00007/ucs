@@ -46,7 +46,7 @@ router.get('/companies/:companyId',
 
 // Route to delete a company by its ID
 router.delete('/companies/:companyId', 
-    attachResourceInfo('Company', 'Company', 'companyId', 'delete'), 
+    attachResourceInfo('Company', 'Company', 'companyId', 'remove'), 
     checkAccess, 
     deleteCompany
 );

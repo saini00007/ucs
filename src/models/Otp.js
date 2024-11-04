@@ -31,4 +31,5 @@ const Otp = sequelize.define('Otp', {
   underscored: true,
 });
 
+
 export default Otp;

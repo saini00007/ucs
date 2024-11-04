@@ -52,6 +52,24 @@ const baseUserSchema = Joi.object({
             'string.pattern.base': 'Phone number must contain only digits.',
             'any.required': 'Phone number is required.'
         }),
+    departmentId: Joi.string()
+        .when(Joi.ref('roleId'), {
+            is: 'admin',
+            then: Joi.optional(),
+            otherwise: Joi.required()
+        })
+        .messages({
+            'string.base': 'Department ID must be a string.',
+            'string.empty': 'Department ID is required.',
+            'any.required': 'Department ID is required.'
+        }),
+    companyId: Joi.string()
+        .required()
+        .messages({
+            'string.base': 'Company ID must be a string.',
+            'string.empty': 'Company ID is required.',
+            'any.required': 'Company ID is required.'
+        }),
 });
 
 const createUserSchema = baseUserSchema;
@@ -80,6 +98,7 @@ const updateUserSchema = Joi.object({
             'string.max': 'Email must be at most 100 characters long.',
         }),
     roleId: Joi.string()
+        .valid('assessor', 'reviewer', 'departmentManager')
         .allow('')
         .optional()
         .messages({
@@ -96,7 +115,7 @@ const updateUserSchema = Joi.object({
             'string.empty': 'Phone number cannot be empty.',
             'string.length': 'Phone number must be exactly 10 digits long.',
             'string.pattern.base': 'Phone number must contain only digits.',
-        }),
+        })
 });
 
 export { createUserSchema, updateUserSchema };

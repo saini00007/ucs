@@ -5,7 +5,6 @@ import {
   updateUser,
   getUsersByDepartment,
   getUsersByCompany,
-  getUsersByRole,
   getUserById
 } from '../controllers/user.js';
 import validate from '../middleware/validate.js';
@@ -15,40 +14,59 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
-router.post('/departments/:departmentId/users', validate(createUserSchema),
-  attachResourceInfo('User', 'Department', 'departmentId', 'create'),
+router.post('/users',
+  validate(createUserSchema),
+  (req, res, next) => {
+    if (req.body.roleId === 'admin') {
+      return attachResourceInfo('User', 'Company', 'companyId', 'create')(req, res, next);
+    }
+    return attachResourceInfo('User', 'Department', 'departmentId', 'create')(req, res, next);
+  },
   checkAccess,
   addUser
 );
 
-router.put('/users/:userId', validate(updateUserSchema),
+// Route to update an existing user
+router.put('/users/:userId',
+  validate(updateUserSchema),
   attachResourceInfo('User', 'User', 'userId', 'update'),
   checkAccess,
-  updateUser);
+  updateUser
+);
 
+// Route to delete a user
 router.delete('/users/:userId',
   attachResourceInfo('User', 'User', 'userId', 'remove'),
   checkAccess,
-  deleteUser);
+  deleteUser
+);
 
+// Route to get users by department
 router.get('/departments/:departmentId/users',
   attachResourceInfo('User', 'Department', 'departmentId', 'list'),
   checkAccess,
-  getUsersByDepartment);
+  getUsersByDepartment
+);
 
+// Route to get users by company
 router.get('/companies/:companyId/users',
   attachResourceInfo('User', 'Company', 'companyId', 'list'),
   checkAccess,
-  getUsersByCompany);
+  getUsersByCompany
+);
 
-router.get('/companies/:companyId/users/role/:roleId',
-  attachResourceInfo('User', 'Company', 'companyId', 'list'),
-  checkAccess,
-  getUsersByRole);
+// Route to get users by company and role
+// router.get('/companies/:companyId/users/role/:roleId',
+//   attachResourceInfo('User', 'Company', 'companyId', 'list'),
+//   checkAccess,
+//   getUsersByRole
+// );
 
+// Route to get a user by ID
 router.get('/users/:userId',
   attachResourceInfo('User', 'User', 'userId', 'read'),
   checkAccess,
-  getUserById);
+  getUserById
+);
 
 export default router;

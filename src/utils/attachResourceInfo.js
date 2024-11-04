@@ -1,30 +1,42 @@
-const attachResourceInfo = (roleResourceType, contentResourceType, contentResourceIdKey, action) => (req, res, next) => {
+const attachResourceInfo = (roleResourceType, contentResourceType, contentResourceIdKey, action) => {
+    return (req, res, next) => {
 
-    const actionPermissions = {
-        list: ['Company', 'MasterQuestion', 'MasterDepartment','Role'],
-        create: ['Company'],
-    };
-    if (actionPermissions[action] && actionPermissions[action].includes(contentResourceType)) {
+        const nullResourceIdMappings = {
+            'Company': {
+                'list': ['Company'],
+                'create': ['Company'],
+            },
+            'MasterQuestion': {
+                'list': ['MasterQuestion'],
+            },
+            'MasterDepartment': {
+                'list': ['MasterDepartment'],
+            },
+            'Role': {
+                'list': ['Role'],
+            },
+        };
+
+        if (
+            nullResourceIdMappings[roleResourceType] &&
+            nullResourceIdMappings[roleResourceType][action] &&
+            nullResourceIdMappings[roleResourceType][action].includes(contentResourceType)
+        ) {
+            req.contentResourceId = null;
+        } else {
+            if (req.params[contentResourceIdKey]) {
+                req.contentResourceId = req.params[contentResourceIdKey];
+            } else {
+                req.contentResourceId = req.body[contentResourceIdKey];
+            }
+        }
+
         req.roleResourceType = roleResourceType;
         req.contentResourceType = contentResourceType;
-        req.contentResourceId = null;
         req.action = action.toLowerCase();
+
         return next();
-    }
-
-    if (!req.params[contentResourceIdKey] || !roleResourceType || !contentResourceType || !action) {
-        return res.status(400).json({
-            success: false,
-            message: `Bad Request: Missing parameter(s). Required: '${contentResourceIdKey}', 'roleResourceType', 'contentResourceType', 'action'.`
-        });
-    }
-
-    req.roleResourceType = roleResourceType;
-    req.contentResourceType = contentResourceType;
-    req.contentResourceId = req.params[contentResourceIdKey];
-    req.action = action.toLowerCase();
-
-    next();
+    };
 };
 
 export default attachResourceInfo;

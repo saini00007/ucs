@@ -32,7 +32,6 @@ export const login = async (req, res) => {
     }
 
     try {
-        // Check if the identifier is an email
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
         
         const user = await User.findOne({
@@ -59,13 +58,12 @@ export const login = async (req, res) => {
         const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
         await Otp.create({ userId: user.id, otpCode: otp, expiresAt: otpExpiration });
 
-        res.status(200).json({ success: true, messages: ['OTP sent to email'], token });
+        res.status(200).json({ success: true, messages: ['OTP sent to email'], token,otp:`${otp} ----for development purpose only` });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ success: false, messages: ['Login failed'] });
     }
 };
-
 
 export const verifyOtp = async (req, res) => {
   const { token, otp } = req.body;

@@ -36,4 +36,5 @@ const Comment = sequelize.define('Comment', {
   underscored: true,
 });
 
+
 export default Comment;

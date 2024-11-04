@@ -103,7 +103,7 @@ export const getAssessmentQuestions = async (req, res) => {
 
 export const deleteAssessmentQuestions = async (req, res) => {
   const { questionIds } = req.body;
-
+const assessmentId=req.params;
   try {
     const result = await AssessmentQuestion.destroy({
       where: {

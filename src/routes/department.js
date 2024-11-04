@@ -15,7 +15,7 @@ const router = express.Router();
 
 // Route to get all departments for a company
 router.get('/companies/:companyId/departments', 
-    attachResourceInfo('Department', 'Company', 'companyId', 'read'), 
+    attachResourceInfo('Department', 'Company', 'companyId', 'list'), 
     checkAccess, 
     getAllDepartmentsForCompany
 );
@@ -31,7 +31,7 @@ router.get('/departments/:departmentId',
 router.post('/departments', 
     validate(createDepartmentSchema), 
     attachResourceInfo('Department', 'Company', 'companyId', 'create'), 
-    checkAccess, 
+    checkAccess,
     createDepartment
 );
 
