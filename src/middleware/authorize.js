@@ -26,6 +26,7 @@ export const checkAccess = async (req, res, next) => {
         message: 'Access denied: insufficient role permissions.'
       });
     }
+    if (roleId == 'superadmin') return next();
 
     const hasContentAccess = await permissionsService.hasContentAccess({
       user: req.user,

@@ -156,12 +156,12 @@ export const getAnswerByQuestion = async (req, res) => {
     });
 
     if (!answer) {
-      return res.status(200).json({
-        success: true,
+      return res.status(404).json({
+        success: false,
         messages: ['No Answer found'],
-        answer: null,
       });
     }
+
 
     const answerWithEvidence = {
       answerId: answer.id,

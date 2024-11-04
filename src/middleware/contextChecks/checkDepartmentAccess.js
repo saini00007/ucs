@@ -3,15 +3,12 @@ import { Department } from "../../models/index.js";
 export const checkDepartmentAccess = async (user, resourceId) => {
     try {
         const department = await Department.findByPk(resourceId);
-        
+
         if (!department) {
             console.log(`Department with ID ${resourceId} not found`);
             return false;
         }
-
-        if (user.roleId === 'superadmin') {
-            return true;
-        } else if (user.roleId === 'admin') {
+        if (user.roleId === 'admin') {
             if (department.companyId === user.companyId) {
                 return true;
             }
@@ -20,7 +17,7 @@ export const checkDepartmentAccess = async (user, resourceId) => {
                 return true;
             }
         }
-        
+
         return false;
 
     } catch (error) {

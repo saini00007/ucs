@@ -5,6 +5,23 @@ export const addAssessmentQuestions = async (req, res) => {
   const { questionIds } = req.body;
 
   try {
+    const validQuestions = await MasterQuestion.findAll({
+      where: {
+        id: questionIds,
+      },
+      attributes: ['id'],
+    });
+
+    const validQuestionIds = validQuestions.map(question => question.id);
+    const invalidQuestionIds = questionIds.filter(id => !validQuestionIds.includes(id));
+
+    if (invalidQuestionIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        messages: ['Invalid question IDs: ' + invalidQuestionIds.join(', ')],
+      });
+    }
+
     const assessmentQuestions = await Promise.all(
       questionIds.map(async (questionId) => {
         return await AssessmentQuestion.create({
@@ -17,15 +34,13 @@ export const addAssessmentQuestions = async (req, res) => {
     res.status(201).json({
       success: true,
       messages: ['Assessment questions added successfully'],
-      updatedAssessmentQuestions:assessmentQuestions,
+      updatedAssessmentQuestions: assessmentQuestions,
     });
   } catch (error) {
     console.error('Error adding assessment questions:', error);
-    console.log(error);
     res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
-
 
 export const getAssessmentQuestionById = async (req, res) => {
   const { assessmentQuestionId } = req.params;

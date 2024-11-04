@@ -32,9 +32,7 @@ export const checkEvidenceFileAccess = async (user, resourceId) => {
 
         const departmentId = evidenceFile.Answer.AssessmentQuestion.Assessment.departmentId;
         const companyId = evidenceFile.Answer.AssessmentQuestion.Assessment.Department.companyId;
-        if (user.roleId === 'superadmin') {
-            return true;
-        } else if (user.roleId === 'admin') {
+        if (user.roleId === 'admin') {
             if (user.companyId === companyId) {
                 return true;
             }

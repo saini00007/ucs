@@ -32,10 +32,6 @@ export const checkCommentAccess = async (user, resourceId, actionIdDb) => {
         const departmentId = comment.Answer.AssessmentQuestion.Assessment.departmentId;
         const companyId = comment.Answer.AssessmentQuestion.Assessment.Department.companyId;
 
-        if (user.roleId === 'superadmin') {
-            return true;
-        }
-
         if (action === 'delete' || action === 'update') {
             return comment.userId === user.id;
         }

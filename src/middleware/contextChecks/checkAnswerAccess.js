@@ -1,4 +1,4 @@
-import { Answer, Department, Assessment,AssessmentQuestion } from "../../models/index.js";
+import { Answer, Department, Assessment, AssessmentQuestion } from "../../models/index.js";
 
 export const checkAnswerAccess = async (user, resourceId) => {
     try {
@@ -30,9 +30,7 @@ export const checkAnswerAccess = async (user, resourceId) => {
         const departmentId = answer.AssessmentQuestion.Assessment.departmentId;
         const companyId = answer.AssessmentQuestion.Assessment.Department.companyId;
 
-        if (user.roleId === 'superadmin') {
-            return true;
-        } else if (user.roleId === 'admin') {
+        if (user.roleId === 'admin') {
             return user.companyId === companyId;
         } else if (user.departmentId === departmentId) {
             return true;

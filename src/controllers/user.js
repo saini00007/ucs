@@ -4,30 +4,34 @@ import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
-    const { username, password, email, roleId, phoneNumber, departmentId } = req.body;
+    const { username, password, email, roleId, phoneNumber, departmentId, companyId } = req.body;
     const currentUser = req.user;
 
-    if (roleId === 'superadmin') {
-        return res.status(422).json({ success: false, messages: ['Invalid roleId'] });
-    }
-
-    if (currentUser.roleId != 'superadmin' && roleId === 'admin') {
-        return res.status(403).json({ success: false, messages: ['Access denied: Only super admin can add admins'] });
-    }
-
-    if (roleId === 'admin') {
-        const { companyId } = req.body;
-        const company = await Company.findOne({ where: { id: companyId } });
-        if (!company) {
-            return res.status(404).json({ success: false, messages: ['Company not found.'] });
+    try {
+        if (roleId === 'superadmin') {
+            return res.status(422).json({ success: false, messages: ['Invalid roleId'] });
         }
-        return await createUser({ username, password, email, roleId, companyId, phoneNumber }, res);
-    } else {
-        const department = await Department.findOne({ where: { id: departmentId } });
-        if (!department) {
-            return res.status(404).json({ success: false, messages: ['Department not found.'] });
+
+        if (currentUser.roleId !== 'superadmin' && roleId === 'admin') {
+            return res.status(403).json({ success: false, messages: ['Access denied: Only super admin can add admins'] });
         }
-        return await createUser({ username, password, email, roleId, departmentId, companyId: department.companyId, phoneNumber }, res);
+
+        if (roleId === 'admin') {
+            const company = await Company.findOne({ where: { id: companyId } });
+            if (!company) {
+                return res.status(404).json({ success: false, messages: ['Company not found.'] });
+            }
+            return await createUser({ username, password, email, roleId, companyId, phoneNumber }, res);
+        } else {
+            const department = await Department.findOne({ where: { id: departmentId } });
+            if (!department) {
+                return res.status(404).json({ success: false, messages: ['Department not found.'] });
+            }
+            return await createUser({ username, password, email, roleId, departmentId, companyId: department.companyId, phoneNumber }, res);
+        }
+    } catch (error) {
+        console.error('Error adding user:', error);
+        res.status(500).json({ success: false, messages: ['Server error'] });
     }
 };
 

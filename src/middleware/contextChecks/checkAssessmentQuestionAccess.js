@@ -26,9 +26,7 @@ export const checkAssessmentQuestionAccess = async (user, resourceId) => {
         const departmentId = assessmentQuestion.Assessment.Department.id;
         const companyId = assessmentQuestion.Assessment.Department.companyId;
 
-        if (user.roleId === 'superadmin') {
-            return true;
-        } else if (user.roleId === 'admin') {
+        if (user.roleId === 'admin') {
             return user.companyId === companyId;
         } else {
             return user.departmentId === departmentId;
