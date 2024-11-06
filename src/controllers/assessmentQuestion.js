@@ -100,6 +100,7 @@ export const getAssessmentQuestions = async (req, res) => {
   try {
     const questions = await AssessmentQuestion.findAll({
       where: { assessmentId },
+      attributes: ['id', 'assessmentId'],
       include: [
         {
           model: MasterQuestion,
