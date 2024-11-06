@@ -12,17 +12,6 @@ const baseUserSchema = Joi.object({
             'string.max': 'Username must be at most 255 characters long.',
             'any.required': 'Username is required.'
         }),
-    password: Joi.string()
-        .min(8)
-        .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/)
-        .required()
-        .messages({
-            'string.base': 'Password must be a string.',
-            'string.empty': 'Password is required.',
-            'string.min': 'Password must be at least 8 characters long.',
-            'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character.',
-            'any.required': 'Password is required.'
-        }),
     email: Joi.string()
         .email()
         .max(100)
@@ -64,7 +53,11 @@ const baseUserSchema = Joi.object({
             'any.required': 'Department ID is required.'
         }),
     companyId: Joi.string()
-        .required()
+        .when(Joi.ref('roleId'), {
+            is: 'admin',
+            then: Joi.required(),
+            otherwise: Joi.optional()
+        })
         .messages({
             'string.base': 'Company ID must be a string.',
             'string.empty': 'Company ID is required.',
@@ -98,7 +91,7 @@ const updateUserSchema = Joi.object({
             'string.max': 'Email must be at most 100 characters long.',
         }),
     roleId: Joi.string()
-        .valid('assessor', 'reviewer', 'departmentManager')
+        .valid('admin', 'assessor', 'reviewer', 'departmentmanager')
         .allow('')
         .optional()
         .messages({

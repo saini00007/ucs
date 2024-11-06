@@ -1,4 +1,4 @@
-import { Assessment, AssessmentQuestion, Department, MasterQuestion } from '../models/index.js';
+import { Assessment, AssessmentQuestion, Department, MasterQuestion, Answer, EvidenceFile } from '../models/index.js';
 
 export const addAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
@@ -6,10 +6,8 @@ export const addAssessmentQuestions = async (req, res) => {
 
   try {
     const validQuestions = await MasterQuestion.findAll({
-      where: {
-        id: questionIds,
-      },
-      attributes: ['id'],
+      where: { id: questionIds },
+      attributes: ['id', 'questionText'],
     });
 
     const validQuestionIds = validQuestions.map(question => question.id);
@@ -24,17 +22,29 @@ export const addAssessmentQuestions = async (req, res) => {
 
     const assessmentQuestions = await Promise.all(
       questionIds.map(async (questionId) => {
-        return await AssessmentQuestion.create({
+        const assessmentQuestion = await AssessmentQuestion.create({
           assessmentId,
           masterQuestionId: questionId,
         });
+
+        const masterQuestion = validQuestions.find(question => question.id === questionId);
+
+        return {
+          id: assessmentQuestion.id,
+          assessmentId: assessmentQuestion.assessmentId,
+          masterQuestionId: assessmentQuestion.assessmentId,
+          masterQuestion: {
+            questionText: masterQuestion.questionText,
+          },
+          answer: null,
+        };
       })
     );
 
     res.status(201).json({
       success: true,
       messages: ['Assessment questions added successfully'],
-      updatedAssessmentQuestions: assessmentQuestions,
+      addedAssessmentQuestions: assessmentQuestions,
     });
   } catch (error) {
     console.error('Error adding assessment questions:', error);
@@ -48,17 +58,36 @@ export const getAssessmentQuestionById = async (req, res) => {
   try {
     const assessmentQuestion = await AssessmentQuestion.findOne({
       where: { id: assessmentQuestionId },
-      include: [{
-        model: MasterQuestion,
-        attributes: ['questionText'],
-      }],
+      attributes: ['id', 'assessmentId'],
+      include: [
+        {
+          model: MasterQuestion,
+          as: 'masterQuestion',
+          attributes: ['questionText'],
+        },
+        {
+          model: Answer,
+          as: 'answer',
+          attributes: ['id', 'answerText'],
+          include: [
+            {
+              model: EvidenceFile,
+              as: 'evidenceFiles',
+              attributes: ['id', 'filePath'],
+            },
+          ],
+        },
+      ],
     });
 
     if (!assessmentQuestion) {
       return res.status(404).json({ success: false, messages: ['Assessment question not found'] });
     }
 
-    res.status(200).json({ success: true, assessmentQuestion });
+    res.status(200).json({
+      success: true,
+      assessmentQuestion,
+    });
   } catch (error) {
     console.error('Error fetching assessment question:', error);
     res.status(500).json({ success: false, messages: ['Server error'] });
@@ -67,58 +96,45 @@ export const getAssessmentQuestionById = async (req, res) => {
 
 export const getAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   try {
-    const { count, rows: assessmentQuestions } = await AssessmentQuestion.findAndCountAll({
+    const questions = await AssessmentQuestion.findAll({
       where: { assessmentId },
-      include: [{
-        model: MasterQuestion,
-        attributes: ['questionText'],
-      }],
-      limit: limit,
-      offset: (page - 1) * limit,
-    });
-
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No Assessment Questions found'],
-        assessmentQuestions: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit
+      include: [
+        {
+          model: MasterQuestion,
+          as: 'masterQuestion',
+          attributes: ['questionText'],
         },
-      });
-    }
-
-    const totalPages = Math.ceil(count / limit);
-
-    if (page > totalPages) {
-      return res.status(404).json({ success: false, messages: ['Page not found'] });
-    }
+        {
+          model: Answer,
+          as: 'answer',
+          attributes: ['id', 'answerText'],
+          include: [
+            {
+              model: EvidenceFile,
+              as: 'evidenceFiles',
+              attributes: ['id', 'filePath'],
+            },
+          ],
+        },
+      ],
+    });
 
     res.status(200).json({
       success: true,
-      assessmentQuestions,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: page,
-        itemsPerPage: limit
-      },
+      questions,
     });
   } catch (error) {
-    console.error('Error retrieving assessment questions:', error);
-    res.status(500).json({ success: false, messages: ['Server error'] });
+    console.error('Error fetching assessment questions:', error);
+    res.status(500).json({ success: false, messages: ['Internal server error'] });
   }
 };
 
 export const deleteAssessmentQuestions = async (req, res) => {
   const { questionIds } = req.body;
-const assessmentId=req.params;
+  const assessmentId = req.params.assessmentId;
+
   try {
     const result = await AssessmentQuestion.destroy({
       where: {
@@ -130,7 +146,11 @@ const assessmentId=req.params;
       return res.status(404).json({ success: false, messages: ['No assessment questions found'] });
     }
 
-    res.status(200).json({ success: true, messages: ['Assessment questions deleted successfully'], deletedCount: result });
+    res.status(200).json({
+      success: true,
+      messages: ['Assessment questions deleted successfully'],
+      deletedCount: result,
+    });
   } catch (error) {
     console.error('Error deleting assessment questions:', error);
     res.status(500).json({ success: false, messages: ['Server error'] });

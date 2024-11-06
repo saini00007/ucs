@@ -19,7 +19,7 @@ export const markAssessmentAsStarted = async (req, res) => {
     res.status(200).json({
       success: true,
       message: ['Assessment marked as started'],
-      Assessment: updatedAssessments[0]
+      assessment: updatedAssessments[0]
     });
   } catch (error) {
     console.error('Error marking assessment as started:', error);
@@ -31,31 +31,32 @@ export const getAssessmentByDepartmentId = async (req, res) => {
   const { departmentId } = req.params;
 
   try {
-    const assessment = await Assessment.findOne({
+    const assessments = await Assessment.findAll({
       where: { departmentId },
       attributes: ['id', 'departmentId', 'assessmentName', 'createdAt', 'updatedAt', 'assessmentStarted'],
       include: [
-        { model: Department }
+        { model: Department, as: 'department' } // Ensure the alias matches your model definition
       ]
     });
 
-    if (!assessment) {
+    if (!assessments || assessments.length === 0) {
       return res.status(404).json({
         success: false,
-        message: ['Assessment not found for the given department'],
+        message: ['No assessments found for the given department'],
       });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Assessment retrieved successfully'],
-      assessment,
+      message: ['Assessments retrieved successfully'],
+      assessments, // Directly return the array of assessments
     });
   } catch (error) {
-    console.error('Error fetching assessment:', error);
-    res.status(500).json({ success: false, message: ['Error fetching assessment'] });
+    console.error('Error fetching assessments:', error);
+    res.status(500).json({ success: false, message: ['Error fetching assessments'] });
   }
 };
+
 
 
 export const getAssessmentById = async (req, res) => {
@@ -66,7 +67,7 @@ export const getAssessmentById = async (req, res) => {
       where: { id: assessmentId },
       include:
         [
-          { model: Department }
+          { model: Department,as:'department' }
         ]
       ,
     });

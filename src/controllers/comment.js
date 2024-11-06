@@ -6,13 +6,10 @@ export const createComment = async (req, res) => {
   const { commentText } = req.body;
 
   try {
-    // Verify that the answer exists
     const answer = await Answer.findOne({ where: { id: answerId } });
-
     if (!answer) {
       return res.status(404).json({ success: false, messages: ['No associated answer found'] });
     }
-
     const newComment = await Comment.create({
       answerId: answer.id,
       createdByUserId: req.user.id,

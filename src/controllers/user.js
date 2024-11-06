@@ -4,8 +4,9 @@ import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
-    const { username, password, email, roleId, phoneNumber, departmentId, companyId } = req.body;
+    const { username,email, roleId, phoneNumber, departmentId, companyId } = req.body;
     const currentUser = req.user;
+    const password="root";
 
     try {
         if (roleId === 'superadmin') {
@@ -32,11 +33,12 @@ export const addUser = async (req, res) => {
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ success: false, messages: ['Server error'] });
-    }
+    } 
 };
 
 const createUser = async (userData, res) => {
     try {
+
         const hashedPassword = await bcrypt.hash(userData.password, 10);
         const user = await User.create({
             ...userData,
@@ -49,7 +51,13 @@ const createUser = async (userData, res) => {
 
         await sendEmail(userData.email, emailSubject, emailText);
 
-        res.status(201).json({ success: true, messages: ['User added successfully, password setup email sent'], userId: user.id });
+        const { password, ...userWithoutPassword } = user.get({ plain: true });
+
+        res.status(201).json({
+            success: true,
+            messages: ['User added successfully, password setup email sent'],
+            user: userWithoutPassword 
+        });
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ success: false, messages: ['Error adding user'], error: error.message });
@@ -59,7 +67,6 @@ const createUser = async (userData, res) => {
 export const updateUser = async (req, res) => {
     const { userId } = req.params;
     const { username, email, roleId, departmentId, phoneNumber } = req.body;
-    const currentUser = req.user;
 
     try {
         const user = await User.findOne({ where: { id: userId } });
@@ -68,8 +75,16 @@ export const updateUser = async (req, res) => {
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
 
-        if (roleId === 'admin' || roleId === 'superadmin') {
-            return res.status(400).json({ success: false, messages: ['Cannot assign admin or superadmin roles.'] });
+        if (roleId) {
+            if (roleId === 'superadmin') {
+                return res.status(400).json({ success: false, messages: ['Cannot assign superadmin role.'] });
+            }
+            if (roleId === 'admin' && user.roleId !== 'admin') {
+                return res.status(400).json({ success: false, messages: ['Cannot assign admin role to this user.'] });
+            }
+            if (user.roleId === 'admin' && roleId !== 'admin') {
+                return res.status(400).json({ success: false, messages: ['Cannot change admin role.'] });
+            }
         }
 
         if (username) user.username = username;
@@ -80,7 +95,13 @@ export const updateUser = async (req, res) => {
 
         await user.save();
 
-        res.status(200).json({ success: true, messages: ['User updated successfully'] });
+        const { password, ...userWithoutPassword } = user.get({ plain: true });
+
+        res.status(200).json({
+            success: true,
+            messages: ['User updated successfully'],
+            user: userWithoutPassword,
+        });
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ success: false, messages: ['Error updating user'], error: error.message });
@@ -112,7 +133,7 @@ export const getUsersByDepartment = async (req, res) => {
     try {
         const { count, rows: users } = await User.findAndCountAll({
             where: { departmentId },
-            attributes: ['id', 'username', 'roleId'],
+            attributes: ['id', 'username', 'roleId', 'phoneNumber', 'email', 'companyId', 'departmentId'],
             limit: limit,
             offset: (page - 1) * limit,
         });
@@ -143,7 +164,7 @@ export const getUsersByDepartment = async (req, res) => {
         res.status(200).json({
             success: true,
             messages: ['Users retrieved successfully'],
-            users,
+            users: users, // Changed from 'Users' to 'users'
             pagination: {
                 totalItems: count,
                 totalPages,
@@ -168,7 +189,7 @@ export const getUsersByCompany = async (req, res) => {
     try {
         const { count, rows: users } = await User.findAndCountAll({
             where: { companyId },
-            attributes: ['id', 'username', 'roleId'],
+            attributes: ['id', 'username', 'roleId', 'phoneNumber', 'email', 'companyId', 'departmentId'],
             limit: limit,
             offset: (page - 1) * limit,
         });
@@ -199,7 +220,7 @@ export const getUsersByCompany = async (req, res) => {
         res.status(200).json({
             success: true,
             messages: ['Users retrieved successfully'],
-            users,
+            users: users, // Changed from 'Users' to 'users'
             pagination: {
                 totalItems: count,
                 totalPages,
@@ -217,7 +238,6 @@ export const getUsersByCompany = async (req, res) => {
     }
 };
 
-
 export const getUserById = async (req, res) => {
     const { userId } = req.params;
 
@@ -230,7 +250,7 @@ export const getUserById = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            user: userWithoutPassword,
+            user: userWithoutPassword, // Changed from 'User' to 'user'
         });
     } catch (error) {
         console.error('Error fetching user:', error);

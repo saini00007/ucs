@@ -34,10 +34,11 @@ export const createAnswer = async (req, res) => {
 
     const isAnswerYes = answerText.toLowerCase() === "yes";
 
-    if (isAnswerYes) {
-      if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ success: false, messages: ['Evidence files are required when the answer is "yes".'] });
-      }
+    if (isAnswerYes && (!req.files || req.files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        messages: ['Evidence files are required when the answer is "yes".'],
+      });
     }
 
     const answer = await Answer.create({
@@ -46,32 +47,40 @@ export const createAnswer = async (req, res) => {
       answerText,
     });
 
-    let evidenceFileIds = [];
+    let evidenceFiles = [];
 
     if (isAnswerYes) {
-      const evidenceFiles = await Promise.all(req.files.map(async (file) => {
+      evidenceFiles = await Promise.all(req.files.map(async (file) => {
         const evidenceFile = await EvidenceFile.create({
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
-          answerId: answer.id, // Directly linking evidence file to the answer
+          answerId: answer.id,
         });
-        evidenceFileIds.push(evidenceFile.dataValues.id);
-        return evidenceFile;
+        return {
+          id: evidenceFile.id,
+          filePath: evidenceFile.filePath,
+        };
       }));
     }
 
     res.status(201).json({
       success: true,
       messages: ['Answer created successfully'],
-      answer,
-      evidenceFileIds,
+      answer: {
+        id: answer.id,
+        answerText: answer.answerText,
+        assessmentQuestionId: answer.assessmentQuestionId,
+        createdByUserId: answer.createdByUserId,
+        evidenceFiles,
+      },
     });
   } catch (error) {
     console.error('Error creating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while creating answer.'] });
   }
 };
+
 
 export const updateAnswer = async (req, res) => {
   const { answerId } = req.params;
@@ -83,13 +92,10 @@ export const updateAnswer = async (req, res) => {
       where: { id: answerId },
       include: [
         {
-          model: AssessmentQuestion,
-          attributes: ['assessmentId'],
-        },
-        {
           model: EvidenceFile,
-          attributes: ['id', 'filePath']
-        }
+          as: 'evidenceFiles',
+          attributes: ['id', 'filePath'],
+        },
       ],
     });
 
@@ -98,7 +104,7 @@ export const updateAnswer = async (req, res) => {
     }
 
     const isUpdatingToYes = answerText === "yes";
-    const hasExistingEvidenceFiles = answer.EvidenceFiles.length > 0;
+    const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
     if (isUpdatingToYes && !hasExistingEvidenceFiles && (!req.files || req.files.length === 0)) {
       return res.status(400).json({
@@ -112,7 +118,7 @@ export const updateAnswer = async (req, res) => {
       await answer.save();
     }
 
-    let updatedFiles = []; // Array to hold newly added evidence files
+    let updatedFiles = [];
 
     if (isUpdatingToYes && req.files && req.files.length > 0) {
       updatedFiles = await Promise.all(req.files.map(async (file) => {
@@ -122,26 +128,34 @@ export const updateAnswer = async (req, res) => {
           createdByUserId: userId,
           answerId: answer.id,
         });
-        // Return an object containing the ID and filePath of the new evidence file
         return {
           id: evidenceFile.id,
-          filePath: evidenceFile.filePath, // Include the filePath in the response
+          filePath: evidenceFile.filePath,
         };
       }));
+
+      await answer.reload({
+        include: [
+          {
+            model: EvidenceFile,
+            as: 'evidenceFiles',
+            attributes: ['id', 'filePath'],
+          },
+        ],
+      });
     }
 
     res.status(200).json({
       success: true,
       messages: ['Answer updated successfully'],
       answer,
-      updatedFiles, // Return the array of newly added evidence files with IDs and filePaths
+      updatedFiles,
     });
   } catch (error) {
     console.error('Error updating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
-
 
 export const getAnswerByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
@@ -151,7 +165,8 @@ export const getAnswerByQuestion = async (req, res) => {
       where: { assessmentQuestionId },
       include: [{
         model: EvidenceFile,
-        required: false
+        as:'evidenceFiles',
+        attributes:['id','filePath'],
       }]
     });
 
@@ -161,21 +176,10 @@ export const getAnswerByQuestion = async (req, res) => {
         messages: ['No Answer found'],
       });
     }
-
-
-    const answerWithEvidence = {
-      answerId: answer.id,
-      createdByUserId: answer.createdByUserId,
-      answerText: answer.answerText,
-      evidenceFiles: answer.EvidenceFiles.map(evidence => ({
-        evidenceFileId: evidence.id,
-        filePath: evidence.filePath
-      }))
-    };
-
+console.log(answer.evidenceFiles[0]);
     res.status(200).json({
       success: true,
-      answer: answerWithEvidence,
+      answer,
     });
   } catch (error) {
     console.error('Error retrieving answer:', error);
