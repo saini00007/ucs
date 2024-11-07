@@ -15,7 +15,8 @@ const Resource = sequelize.define('Resource', {
   },
 }, {
   tableName: 'resources',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default Resource;

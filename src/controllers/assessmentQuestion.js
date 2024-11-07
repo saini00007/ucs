@@ -1,4 +1,4 @@
-import { Assessment, AssessmentQuestion, Department, MasterQuestion, Answer, EvidenceFile } from '../models/index.js';
+import { Assessment, AssessmentQuestion, Department, MasterQuestion, Answer, EvidenceFile, Comment, User } from '../models/index.js';
 
 export const addAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
@@ -73,9 +73,32 @@ export const getAssessmentQuestionById = async (req, res) => {
             {
               model: EvidenceFile,
               as: 'evidenceFiles',
-              attributes: ['id', 'filePath'],
+              attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+              order: [['createdAt', 'ASC']],
+              include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['id', 'username']
+              }]
+            }, {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
+            }
+          ],
+
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
             },
           ],
+          order: [['createdAt', 'ASC']],
         },
       ],
     });
@@ -96,9 +119,10 @@ export const getAssessmentQuestionById = async (req, res) => {
 
 export const getAssessmentQuestions = async (req, res) => {
   const { assessmentId } = req.params;
+  const { page = 1, limit = 10 } = req.query;  // Pagination parameters
 
   try {
-    const questions = await AssessmentQuestion.findAll({
+    const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
       where: { assessmentId },
       attributes: ['id', 'assessmentId'],
       include: [
@@ -115,22 +139,81 @@ export const getAssessmentQuestions = async (req, res) => {
             {
               model: EvidenceFile,
               as: 'evidenceFiles',
-              attributes: ['id', 'filePath'],
+              attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+              order: [['createdAt', 'ASC']],
+              include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['id', 'username']
+              }]
+            }, {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
+            }
+          ],
+
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
             },
           ],
+          order: [['createdAt', 'ASC']],
         },
       ],
+      limit,
+      offset: (page - 1) * limit,
     });
+
+    if (count === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No questions found for the given assessment'],
+        questions: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit,
+        },
+      });
+    }
+
+    const totalPages = Math.ceil(count / limit);
+
+    if (page > totalPages) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Page not found'],
+      });
+    }
 
     res.status(200).json({
       success: true,
+      messages: ['Assessment questions retrieved successfully'],
       questions,
+      pagination: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+      },
     });
   } catch (error) {
     console.error('Error fetching assessment questions:', error);
-    res.status(500).json({ success: false, messages: ['Internal server error'] });
+    res.status(500).json({
+      success: false,
+      messages: ['Internal server error'],
+    });
   }
 };
+
 
 export const deleteAssessmentQuestions = async (req, res) => {
   const { questionIds } = req.body;

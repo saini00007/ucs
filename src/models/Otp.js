@@ -27,7 +27,7 @@ const Otp = sequelize.define('Otp', {
   },
 }, {
   tableName: 'otp',
-  timestamps: false,
+  timestamps: true,
   underscored: true,
 });
 

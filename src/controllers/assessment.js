@@ -8,22 +8,22 @@ export const markAssessmentAsStarted = async (req, res) => {
       { assessmentStarted: true, updatedAt: new Date() },
       {
         where: { id: assessmentId },
-        returning: true
+        returning: true,
       }
     );
 
     if (updatedCount === 0) {
-      return res.status(404).json({ success: false, message: ['Assessment not found'] });
+      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Assessment marked as started'],
-      assessment: updatedAssessments[0]
+      messages: ['Assessment marked as started'],
+      assessment: updatedAssessments[0],
     });
   } catch (error) {
     console.error('Error marking assessment as started:', error);
-    res.status(500).json({ success: false, message: ['Error marking assessment as started'] });
+    res.status(500).json({ success: false, messages: ['Error marking assessment as started'] });
   }
 };
 
@@ -33,31 +33,28 @@ export const getAssessmentByDepartmentId = async (req, res) => {
   try {
     const assessments = await Assessment.findAll({
       where: { departmentId },
-      attributes: ['id', 'departmentId', 'assessmentName', 'createdAt', 'updatedAt', 'assessmentStarted'],
       include: [
-        { model: Department, as: 'department' } // Ensure the alias matches your model definition
-      ]
+        { model: Department, as: 'department', attributes: ['id', 'departmentName'] },
+      ],
     });
 
     if (!assessments || assessments.length === 0) {
       return res.status(404).json({
         success: false,
-        message: ['No assessments found for the given department'],
+        messages: ['No assessments found for the given department'],
       });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Assessments retrieved successfully'],
-      assessments, // Directly return the array of assessments
+      messages: ['Assessments retrieved successfully'],
+      assessments,
     });
   } catch (error) {
     console.error('Error fetching assessments:', error);
-    res.status(500).json({ success: false, message: ['Error fetching assessments'] });
+    res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
   }
 };
-
-
 
 export const getAssessmentById = async (req, res) => {
   const { assessmentId } = req.params;
@@ -65,24 +62,22 @@ export const getAssessmentById = async (req, res) => {
   try {
     const assessment = await Assessment.findOne({
       where: { id: assessmentId },
-      include:
-        [
-          { model: Department,as:'department' }
-        ]
-      ,
+      include: [
+        { model: Department, as: 'department', attributes: ['id', 'departmentName'] },
+      ],
     });
 
     if (!assessment) {
-      return res.status(404).json({ success: false, message: ['Assessment not found'] });
+      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Assessment retrieved successfully'],
-      assessment
+      messages: ['Assessment retrieved successfully'],
+      assessment,
     });
   } catch (error) {
     console.error('Error fetching assessment:', error);
-    res.status(500).json({ success: false, message: ['Error fetching assessment'] });
+    res.status(500).json({ success: false, messages: ['Error fetching assessment'] });
   }
 };

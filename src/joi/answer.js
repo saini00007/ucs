@@ -4,7 +4,7 @@ import Joi from 'joi';
 const createAnswerSchema = Joi.object({
   answerText: Joi.string()
     .allow("")
-    .valid('yes', 'no', 'not applicable')
+    .valid('yes', 'no', 'notApplicable')
     .insensitive()
     .required()
     .custom((value, helpers) => {
@@ -20,5 +20,6 @@ const createAnswerSchema = Joi.object({
     }),
 
 });
+const updateAnswerSchema=createAnswerSchema;
 
-export { createAnswerSchema };
+export { createAnswerSchema ,updateAnswerSchema};

@@ -1,36 +1,33 @@
-import { Comment, AssessmentQuestion, Answer, Assessment, Department } from "../../models/index.js";
+import { Comment, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 export const checkCommentAccess = async (user, resourceId, actionIdDb) => {
     try {
         const comment = await Comment.findByPk(resourceId, {
             include: [
                 {
-                    model: Answer,
+                    model: AssessmentQuestion,
                     include: [
                         {
-                            model: AssessmentQuestion,
+                            model: Assessment,
                             include: [
                                 {
-                                    model: Assessment,
-                                    include: [
-                                        {
-                                            model: Department,
-                                        },
-                                    ],
+                                    model: Department,
                                 },
                             ],
                         },
                     ],
                 },
             ],
-        });
+        },
+
+        );
 
         if (!comment) {
             console.log(`Comment with ID ${resourceId} not found`);
             return false;
         }
 
-        const departmentId = comment.Answer.AssessmentQuestion.Assessment.departmentId;
-        const companyId = comment.Answer.AssessmentQuestion.Assessment.Department.companyId;
+        const departmentId = comment.AssessmentQuestion.Assessment.departmentId;
+        const companyId = comment.AssessmentQuestion.Assessment.Department.companyId;
 
         if (action === 'delete' || action === 'update') {
             return comment.userId === user.id;

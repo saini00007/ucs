@@ -22,16 +22,6 @@ const Assessment = sequelize.define('Assessment', {
     defaultValue: 'default',
     field: 'assessment_name',
   },
-  createdAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'created_at',
-  },
-  updatedAt: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'updated_at',
-  },
   assessmentStarted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
@@ -39,7 +29,7 @@ const Assessment = sequelize.define('Assessment', {
   },
 }, {
   tableName: 'assessments',
-  timestamps: false,
+  timestamps: true,
   underscored: true,
 });
 

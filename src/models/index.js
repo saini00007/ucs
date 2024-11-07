@@ -52,8 +52,8 @@ Answer.belongsTo(User, { foreignKey: 'createdByUserId', targetKey: 'id', as: 'cr
 User.hasMany(Answer, { foreignKey: 'createdByUserId', as: 'createdAnswers' });
 
 // 10. Comment and Answer
-Comment.belongsTo(Answer, { foreignKey: 'answerId', targetKey: 'id', as: 'answer' });
-Answer.hasMany(Comment, { foreignKey: 'answerId', as: 'comments' });
+Comment.belongsTo(AssessmentQuestion, { foreignKey: 'assessmentQuestionId', targetKey: 'id', as: 'assessmentQuestion' });
+AssessmentQuestion.hasMany(Comment, { foreignKey: 'assessmentQuestionId', as: 'comments' });
 
 // 11. Comment and User
 Comment.belongsTo(User, { foreignKey: 'createdByUserId', targetKey: 'id', as: 'creator' });
@@ -61,7 +61,7 @@ User.hasMany(Comment, { foreignKey: 'createdByUserId', as: 'createdComments' });
 
 // 12. EvidenceFile and User
 EvidenceFile.belongsTo(User, { foreignKey: 'createdByUserId', targetKey: 'id', as: 'creator' });
-User.hasMany(EvidenceFile, { foreignKey: 'createdByUserId', as: 'createdFiles' });
+User.hasMany(EvidenceFile, { foreignKey: 'createdByUserId', as: 'createdEvidenceFiles' });
 
 // 13. Answer and EvidenceFile
 Answer.hasMany(EvidenceFile, { foreignKey: 'answerId', as: 'evidenceFiles' });
@@ -73,7 +73,7 @@ MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'masterQuestionId',
 
 // 15. QuestionDepartmentLink and MasterDepartment
 QuestionDepartmentLink.belongsTo(MasterDepartment, { foreignKey: 'masterDepartmentId', targetKey: 'id', as: 'masterDepartment' });
-MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'masterDepartmentId', as: 'questionLinks' });
+MasterDepartment.hasMany(QuestionDepartmentLink, { foreignKey: 'masterDepartmentId', as: 'questionDepartmentLinks' });
 
 // 16. Department and MasterDepartment
 Department.belongsTo(MasterDepartment, { foreignKey: 'masterDepartmentId', targetKey: 'id', as: 'masterDepartment' });

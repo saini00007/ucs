@@ -27,7 +27,7 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
   },
 }, {
   tableName: 'assessment_questions',
-  timestamps: false,
+  timestamps: true,
   underscored: true,
 });
 

@@ -8,7 +8,7 @@ import {
   serveFile
 } from '../controllers/answer.js';
 import validate from '../middleware/validate.js';
-import { createAnswerSchema } from '../joi/answer.js';
+import { createAnswerSchema,updateAnswerSchema } from '../joi/answer.js';
 import { checkAccess } from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 
@@ -25,6 +25,7 @@ router.post('/questions/:assessmentQuestionId/answers',
 // Route to update an existing answer
 router.put('/answers/:answerId',
   uploadFiles,
+  validate(updateAnswerSchema),
   attachResourceInfo('Answer', 'Answer', 'answerId', 'update'),
   checkAccess,
   updateAnswer);

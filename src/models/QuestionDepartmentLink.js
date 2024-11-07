@@ -24,7 +24,8 @@ const QuestionDepartmentLink = sequelize.define('QuestionDepartmentLink', {
   },
 }, {
   tableName: 'question_department_links',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default QuestionDepartmentLink;

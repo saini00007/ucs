@@ -37,7 +37,8 @@ const RoleResourceActionLink = sequelize.define('RoleResourceActionLink', {
   },
 }, {
   tableName: 'role_resource_actions',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 

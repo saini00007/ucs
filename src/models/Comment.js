@@ -8,14 +8,14 @@ const Comment = sequelize.define('Comment', {
     defaultValue: DataTypes.UUIDV4,
     field: 'id',
   },
-  answerId: {
+  assessmentQuestionId: {
     type: DataTypes.UUID,
     references: {
-      model: 'answers',
+      model: 'assessment_questions',
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'answer_id',
+    field: 'assessment_question_id',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),

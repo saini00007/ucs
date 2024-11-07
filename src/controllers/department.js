@@ -11,7 +11,7 @@ import {
 export const getAllDepartmentsForCompany = async (req, res) => {
     const { companyId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    if (req.user.roleId === "admin" && req.user.companyId !== companyId) {
+    if (req.user.roleId === "admin" && req.user.companyId !== companyId){
         return res.status(403).json({
             success: false,
             message: 'Access denied: Admins can only manage their own company.',
@@ -25,12 +25,12 @@ export const getAllDepartmentsForCompany = async (req, res) => {
             include: [
                 {
                     model: Company,
-                    as: 'company', // Specify the alias for Company
+                    as: 'company',
                     attributes: ['companyName']
                 },
                 {
                     model: MasterDepartment,
-                    as: 'masterDepartment', // Specify the alias for MasterDepartment
+                    as: 'masterDepartment',
                     attributes: ['departmentName']
                 },
             ],
@@ -58,7 +58,7 @@ export const getAllDepartmentsForCompany = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            departments: departments, // Changed to lowercase
+            departments: departments,
             pagination: { totalItems: count, totalPages, currentPage: page, itemsPerPage: limit }
         });
     } catch (error) {
@@ -135,7 +135,7 @@ export const createDepartment = async (req, res) => {
 
         const questions = await QuestionDepartmentLink.findAll({
             where: { masterDepartmentId },
-            include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }], // Ensure the alias matches
+            include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }],
         });
 
         if (questions.length === 0) {
@@ -146,7 +146,7 @@ export const createDepartment = async (req, res) => {
             try {
                 await AssessmentQuestion.create({
                     assessmentId: newAssessment.id,
-                    masterQuestionId: qdl.masterQuestionId, // Assuming masterQuestionId is directly accessible
+                    masterQuestionId: qdl.masterQuestionId,
                 });
                 console.log(`Assessment question created for questionId: ${qdl.masterQuestionId}`);
             } catch (err) {
@@ -160,11 +160,10 @@ export const createDepartment = async (req, res) => {
                 { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
             ]
         });
-
         res.status(201).json({
             success: true,
-            department: departmentWithAssociations, // Changed to lowercase
-            assessment: newAssessment, // Changed to lowercase
+            department: departmentWithAssociations,
+            assessment: newAssessment,
         });
     } catch (error) {
         console.error('Error creating department:', error);

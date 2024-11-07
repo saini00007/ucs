@@ -4,7 +4,7 @@ import sequelize from '../config/db.js';
 const generateUserId = async (username) => {
   const prefix = username.slice(0, 4).toLowerCase();
   let uniqueId = prefix + Math.floor(Math.random() * 9000 + 1000).toString();
-  
+
   const existingUser = await User.findOne({ where: { id: uniqueId } });
   if (existingUser) {
     return generateUserId(username);
@@ -16,7 +16,7 @@ const User = sequelize.define('User', {
   id: {
     type: DataTypes.STRING(12),
     primaryKey: true,
-    field: 'id', 
+    field: 'id',
   },
   username: {
     type: DataTypes.TEXT,
@@ -36,7 +36,7 @@ const User = sequelize.define('User', {
       model: 'roles',
       key: 'id',
     },
-    field: 'role_id', 
+    field: 'role_id',
   },
   departmentId: {
     type: DataTypes.UUID,
@@ -46,7 +46,7 @@ const User = sequelize.define('User', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'department_id', 
+    field: 'department_id',
   },
   companyId: {
     type: DataTypes.UUID,
@@ -56,16 +56,17 @@ const User = sequelize.define('User', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'company_id', 
+    field: 'company_id',
   },
   phoneNumber: {
     type: DataTypes.STRING(10),
-    allowNull: true,  
-    field: 'phone_number',  
+    allowNull: true,
+    field: 'phone_number',
   },
 }, {
   tableName: 'users',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
   hooks: {
     beforeValidate: async (user, options) => {
       if (!user.id && user.username) {

@@ -15,7 +15,8 @@ const Role = sequelize.define('Role', {
   },
 }, {
   tableName: 'roles',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default Role;

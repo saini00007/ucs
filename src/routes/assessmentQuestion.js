@@ -11,11 +11,11 @@ import { checkAccess } from '../middleware/authorize.js';
 const router = express.Router();
 
 // Route to add a question to an assessment
-router.post('/assessments/:assessmentId/questions', 
-    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'create'), 
-    checkAccess, 
-    addAssessmentQuestions
-);
+// router.post('/assessments/:assessmentId/questions', 
+//     attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'create'), 
+//     checkAccess, 
+//     addAssessmentQuestions
+// );
 
 // Route to get a question by ID
 router.get('/questions/:assessmentQuestionId', 
@@ -32,10 +32,10 @@ router.get('/assessments/:assessmentId/questions',
 );
 
 // Route to delete an assessment question
-router.delete('/assessments/:assessmentId/questions/', 
-    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'remove'), 
-    checkAccess,
-    deleteAssessmentQuestions
-);
+// router.delete('/assessments/:assessmentId/questions/', 
+//     attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'remove'), 
+//     checkAccess,
+//     deleteAssessmentQuestions
+// );
 
 export default router;

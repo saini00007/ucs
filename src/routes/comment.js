@@ -1,7 +1,7 @@
 import express from 'express';
 import {
   createComment,
-  getCommentsByAnswerId,
+  getCommentsByAssessmentQuestionId,
   getCommentById,
   updateComment,
   deleteComment,
@@ -12,31 +12,26 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
-// Route to create a new comment for a specific answer
-router.post('/answers/:answerId/comments',
-  attachResourceInfo('Comment', 'Answer', 'answerId', 'create'),
+router.post('/questions/:assessmentQuestionId/comments',
+  attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'create'),
   checkAccess,
   createComment);
 
-// Route to get all comments for a specific answer
-router.get('/answers/:answerId/comments',
-  attachResourceInfo('Comment', 'Answer', 'answerId', 'list'),
+router.get('/questions/:assessmentQuestionId/comments',
+  attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'list'),
   checkAccess,
-  getCommentsByAnswerId);
+  getCommentsByAssessmentQuestionId);
 
-// Route to get a specific comment by ID
 router.get('/comments/:commentId',
   attachResourceInfo('Comment', 'Comment', 'commentId', 'read'),
   checkAccess,
   getCommentById);
 
-// Route to update a specific comment
 router.put('/comments/:commentId',
   attachResourceInfo('Comment', 'Comment', 'commentId', 'update'),
   checkAccess,
   updateComment);
 
-// Route to delete a specific comment
 router.delete('/comments/:commentId',
   attachResourceInfo('Comment', 'Comment', 'commentId', 'remove'),
   checkAccess,

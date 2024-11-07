@@ -15,7 +15,8 @@ const Action = sequelize.define('Action', {
   },
 }, {
   tableName: 'actions',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default Action;

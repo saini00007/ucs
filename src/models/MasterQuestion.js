@@ -59,7 +59,8 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
 }, {
   tableName: 'master_questions',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default MasterQuestion;

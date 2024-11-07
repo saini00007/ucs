@@ -16,7 +16,8 @@ const MasterDepartment = sequelize.define('MasterDepartment', {
   },
 }, {
   tableName: 'master_departments',
-  timestamps: false,
+  timestamps: true,
+  underscored: true,
 });
 
 export default MasterDepartment;
