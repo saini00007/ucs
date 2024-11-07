@@ -64,22 +64,36 @@ export const createAnswer = async (req, res) => {
       }));
     }
 
-    const response = {
-      ...answer.get({ plain: true }),
-      evidenceFiles: evidenceFiles,
-      creator: { id: userId, username: req.user.username, },
-    };
+    const refetchedAnswer = await Answer.findOne({
+      where: { id: answer.id },
+      include: [{
+        model: EvidenceFile,
+        as: 'evidenceFiles',
+        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        order: [['createdAt', 'ASC']],
+        include: [{
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'username']
+        }]
+      }, {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'username']
+      }],
+    });
 
     res.status(201).json({
       success: true,
       messages: ['Answer created successfully'],
-      answer: response,
+      answer: refetchedAnswer,
     });
   } catch (error) {
     console.error('Error creating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while creating answer.'] });
   }
 };
+
 
 export const updateAnswer = async (req, res) => {
   const { answerId } = req.params;
@@ -142,27 +156,44 @@ export const updateAnswer = async (req, res) => {
       ...answer.evidenceFiles.map(file => ({
         id: file.id,
         filePath: file.filePath,
-        creator: { id: userId, username: req.user.username, }
+        creator: { id: userId, username: req.user.username },
       })),
       ...newEvidenceFiles,
     ];
 
     completeEvidenceFiles.sort((a, b) => a.createdAt - b.createdAt);
 
+    // Refetch the updated answer along with the evidence files
+    const refetchedAnswer = await Answer.findOne({
+      where: { id: answer.id },
+      include: [{
+        model: EvidenceFile,
+        as: 'evidenceFiles',
+        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        order: [['createdAt', 'ASC']],
+        include: [{
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'username']
+        }]
+      }, {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'username']
+      }],
+    });
+
     res.status(200).json({
       success: true,
       messages: ['Answer updated successfully'],
-      answer: {
-        ...answer.get({ plain: true }),
-        evidenceFiles: completeEvidenceFiles,
-        creator: { id: userId, username: req.user.username },
-      },
+      answer: refetchedAnswer,
     });
   } catch (error) {
     console.error('Error updating answer:', error);
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
+
 
 
 

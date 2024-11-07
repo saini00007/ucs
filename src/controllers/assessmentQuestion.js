@@ -68,7 +68,7 @@ export const getAssessmentQuestionById = async (req, res) => {
         {
           model: Answer,
           as: 'answer',
-          attributes: ['id', 'answerText'],
+          attributes: ['id', 'answerText','createdAt','updatedAt'],
           include: [
             {
               model: EvidenceFile,
@@ -134,7 +134,7 @@ export const getAssessmentQuestions = async (req, res) => {
         {
           model: Answer,
           as: 'answer',
-          attributes: ['id', 'answerText'],
+          attributes: ['id', 'answerText','createdAt','updatedAt'],
           include: [
             {
               model: EvidenceFile,
