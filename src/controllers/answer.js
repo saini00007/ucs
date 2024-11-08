@@ -114,20 +114,33 @@ export const updateAnswer = async (req, res) => {
       return res.status(404).json({ success: false, messages: ['Answer not found.'] });
     }
 
-    const isUpdatingToYes = answerText === "yes";
+    const isUpdatingToYes = answerText.toLowerCase() === "yes";
+    const isUpdatingToNo = answerText.toLowerCase() === "no" || answerText.toLowerCase() === "notapplicable";
     const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
-    if (isUpdatingToYes && !hasExistingEvidenceFiles && (!req.files || req.files.length === 0)) {
+    if (isUpdatingToNo && req.files && req.files.length > 0) {
       return res.status(400).json({
         success: false,
-        messages: ['You must upload evidence files when updating the answer to "yes".'],
+        messages: ['No evidence files should be uploaded when the answer is "no" or "not applicable".'],
       });
     }
 
-    if (answerText) {
-      answer.answerText = answerText;
+    if (isUpdatingToNo && hasExistingEvidenceFiles) {
+      await Promise.all(answer.evidenceFiles.map(async (file) => {
+        await EvidenceFile.destroy({ where: { id: file.id } });
+      }));
     }
 
+    if (isUpdatingToYes && (req.files.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        messages: ['no files uploaded'],
+      });
+    }
+
+    if (answerText !== answer.answerText) {
+      answer.answerText = answerText;
+    }
     if (answer.createdByUserId !== userId) {
       answer.createdByUserId = userId;
     }
@@ -135,7 +148,6 @@ export const updateAnswer = async (req, res) => {
     await answer.save();
 
     let newEvidenceFiles = [];
-
     if (isUpdatingToYes && req.files && req.files.length > 0) {
       newEvidenceFiles = await Promise.all(req.files.map(async (file) => {
         const evidenceFile = await EvidenceFile.create({
@@ -152,18 +164,6 @@ export const updateAnswer = async (req, res) => {
       }));
     }
 
-    const completeEvidenceFiles = [
-      ...answer.evidenceFiles.map(file => ({
-        id: file.id,
-        filePath: file.filePath,
-        creator: { id: userId, username: req.user.username },
-      })),
-      ...newEvidenceFiles,
-    ];
-
-    completeEvidenceFiles.sort((a, b) => a.createdAt - b.createdAt);
-
-    // Refetch the updated answer along with the evidence files
     const refetchedAnswer = await Answer.findOne({
       where: { id: answer.id },
       include: [{
@@ -193,10 +193,6 @@ export const updateAnswer = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
-
-
-
-
 
 export const getAnswerByQuestion = async (req, res) => {
   const { assessmentQuestionId } = req.params;
