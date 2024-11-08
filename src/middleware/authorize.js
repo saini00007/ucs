@@ -7,14 +7,14 @@ export const checkAccess = async (req, res, next) => {
   const roleResourceType = req.roleResourceType;
   const contentResourceType = req.contentResourceType;
   const contentResourceId = req.contentResourceId;
-  const action = req.action;
-
-  console.log(chalk.green(`Role ID: ${roleId},Role Resource Type: ${roleResourceType}, Action: ${action}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`));
+  const actionType = req.actionType;
 
 
   try {
     const resourceIdDb = await getResourceId(roleResourceType);
-    const actionIdDb = await getActionId(action);
+    const actionIdDb = await getActionId(actionType);
+    console.log(chalk.green(`Role ID: ${roleId},Role Resource Type: ${roleResourceType}, Action: ${actionType}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`));
+
     const hasRolePermission = await permissionsService.hasRolePermission({
       user: req.user,
       resourceIdDb,

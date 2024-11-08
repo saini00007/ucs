@@ -1,20 +1,24 @@
 import { EvidenceFile, Answer, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 
-export const checkEvidenceFileAccess = async (user, resourceId) => {
+const checkEvidenceFileAccess = async (user, resourceId) => {
     try {
         const evidenceFile = await EvidenceFile.findByPk(resourceId, {
             include: [
                 {
                     model: Answer,
+                    as:'answer',
                     include: [
                         {
                             model: AssessmentQuestion,
+                            as:'assessmentQuestion',
                             include: [
                                 {
                                     model: Assessment,
+                                    as:'assessment',
                                     include: [
                                         {
                                             model: Department,
+                                            as:'department'
                                         },
                                     ],
                                 },
@@ -30,8 +34,8 @@ export const checkEvidenceFileAccess = async (user, resourceId) => {
             return false;
         }
 
-        const departmentId = evidenceFile.Answer.AssessmentQuestion.Assessment.departmentId;
-        const companyId = evidenceFile.Answer.AssessmentQuestion.Assessment.Department.companyId;
+        const departmentId = evidenceFile.answer.assessmentQuestion.assessment.departmentId;
+        const companyId = evidenceFile.answer.assessmentQuestion.assessment.department.companyId;
         if (user.roleId === 'admin') {
             if (user.companyId === companyId) {
                 return true;
@@ -49,3 +53,4 @@ export const checkEvidenceFileAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkEvidenceFileAccess;

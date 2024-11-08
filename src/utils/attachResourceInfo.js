@@ -33,7 +33,7 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
 
         req.roleResourceType = roleResourceType;
         req.contentResourceType = contentResourceType;
-        req.action = action.toLowerCase();
+        req.actionType = action.toLowerCase();
 
         return next();
     };

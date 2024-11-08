@@ -1,23 +1,22 @@
 import { Assessment, Department } from "../../models/index.js";
 
-export const checkAssessmentAccess = async (user, resourceId) => {
+ const checkAssessmentAccess = async (user, resourceId) => {
     try {
-        if (user.roleId === 'superadmin') return true;
 
         const assessment = await Assessment.findByPk(resourceId, {
             include: [
                 {
                     model: Department,
+                    as:'department'
                 }
             ]
         });
-        console.log(assessment);
         if (!assessment) {
             console.log(`Assessment with ID ${resourceId} not found`);
             return false;
         }
         if (user.roleId === 'admin') {
-            if (assessment.Department && assessment.Department.companyId === user.companyId) {
+            if (assessment.department && assessment.department.companyId === user.companyId) {
                 return true;
             }
         } else {
@@ -32,3 +31,4 @@ export const checkAssessmentAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkAssessmentAccess;

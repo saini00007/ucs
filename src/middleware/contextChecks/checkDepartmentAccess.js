@@ -1,6 +1,6 @@
 import { Department } from "../../models/index.js";
 
-export const checkDepartmentAccess = async (user, resourceId) => {
+ const checkDepartmentAccess = async (user, resourceId) => {
     try {
         const department = await Department.findByPk(resourceId);
 
@@ -25,3 +25,4 @@ export const checkDepartmentAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkDepartmentAccess;

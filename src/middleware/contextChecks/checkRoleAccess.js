@@ -1,4 +1,4 @@
-export const checkRoleAccess = async (user, resourceId) => {
+const checkRoleAccess = async (user, resourceId) => {
     try {
         if (user.roleId === 'superadmin' || user.roleId === 'admin') { return true };
         return false;
@@ -7,3 +7,4 @@ export const checkRoleAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkRoleAccess;

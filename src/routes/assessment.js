@@ -2,7 +2,8 @@ import express from 'express';
 import {
     markAssessmentAsStarted,
     getAssessmentById,
-    getAssessmentByDepartmentId
+    getAssessmentByDepartmentId,
+    submitAssessment
 } from '../controllers/assessment.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -11,23 +12,30 @@ import { checkAccess } from '../middleware/authorize.js';
 const router = express.Router();
 
 // Route to mark an assessment as started
-router.put('/assessments/:assessmentId/start', 
-    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'start'), 
-    checkAccess, 
+router.put('/assessments/:assessmentId/start',
+    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'start'),
+    checkAccess,
     markAssessmentAsStarted
 );
 
+// Route to submit an assessment
+router.put('/assessments/:assessmentId/submit',
+    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'submit'),
+    checkAccess,
+    submitAssessment
+);
+
 // Route to get an assessment by its ID
-router.get('/assessments/:assessmentId', 
-    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'read'), 
-    checkAccess, 
+router.get('/assessments/:assessmentId',
+    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'read'),
+    checkAccess,
     getAssessmentById
 );
 
 // Route to get all assessments for a department
-router.get('/departments/:departmentId/assessments', 
-    attachResourceInfo('Assessment','Department', 'departmentId', 'read'), 
-    checkAccess, 
+router.get('/departments/:departmentId/assessments',
+    attachResourceInfo('Assessment', 'Department', 'departmentId', 'read'),
+    checkAccess,
     getAssessmentByDepartmentId
 );
 

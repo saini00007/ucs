@@ -1,17 +1,21 @@
-import { Answer, Department, Assessment, AssessmentQuestion } from "../../models/index.js";
+import { Answer, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 
-export const checkAnswerAccess = async (user, resourceId) => {
+ const checkAnswerAccess = async (user, resourceId) => {
     try {
         const answer = await Answer.findByPk(resourceId, {
             include: [
                 {
                     model: AssessmentQuestion,
+                    as:'assessmentQuestion',
                     include: [
                         {
                             model: Assessment,
+                            as:'assessment',
+                            attributes: ['assessmentStarted', 'submitted', 'departmentId'],
                             include: [
                                 {
                                     model: Department,
+                                    as:'department',
                                     attributes: ['id', 'companyId'],
                                 },
                             ],
@@ -21,25 +25,21 @@ export const checkAnswerAccess = async (user, resourceId) => {
             ],
         });
 
-        if (
-            !answer
-        ) {
+        if (!answer || !answer.assessmentQuestion.assessment.assessmentStarted || answer.assessmentQuestion.assessment.submitted) {
             return false;
         }
 
-        const departmentId = answer.AssessmentQuestion.Assessment.departmentId;
-        const companyId = answer.AssessmentQuestion.Assessment.Department.companyId;
+        const departmentId = answer.assessmentQuestion.assessment.departmentId;
+        const companyId = answer.assessmentQuestion.assessment.department.companyId;
 
         if (user.roleId === 'admin') {
             return user.companyId === companyId;
-        } else if (user.departmentId === departmentId) {
-            return true;
         }
 
-        return false;
-
+        return user.departmentId === departmentId;
     } catch (error) {
         console.error("Error checking answer access:", error);
         return false;
     }
 };
+export default checkAnswerAccess;

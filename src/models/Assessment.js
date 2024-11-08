@@ -27,6 +27,21 @@ const Assessment = sequelize.define('Assessment', {
     defaultValue: false,
     field: 'assessment_started',
   },
+  submitted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'submitted',
+  },
+  startedAt: {
+    type: DataTypes.DATE,
+    field: 'started_at',
+    allowNull: true,
+  },
+  submittedAt: {
+    type: DataTypes.DATE,
+    field: 'submitted_at',
+    allowNull: true, 
+  },
 }, {
   tableName: 'assessments',
   timestamps: true,

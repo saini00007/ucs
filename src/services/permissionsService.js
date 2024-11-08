@@ -9,9 +9,9 @@ import {
   checkCommentAccess,
   checkMasterQuestionAccess,
   checkMasterDepartmentAccess,
+  checkRoleAccess,
+  checkUserAccess
 } from "../middleware/contextChecks/index.js";
-import { checkRoleAccess } from "../middleware/contextChecks/checkRoleAccess.js";
-import { checkUserAccess } from "../middleware/contextChecks/checkUserAccess.js";
 
 const resourceAccessCheckMap = {
   Assessment: checkAssessmentAccess,
@@ -51,7 +51,6 @@ const permissionsService = {
       return false;
     }
     try {
-
       return await contentAccessCheckFn(user, resourceId , actionIdDb);
 
     } catch (error) {

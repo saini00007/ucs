@@ -1,6 +1,6 @@
 import { Company } from "../../models/index.js";
 
-export const checkCompanyAccess = async (user, resourceId) => {
+ const checkCompanyAccess = async (user, resourceId) => {
     try {
         const company = await Company.findByPk(resourceId);
         if (!company) {
@@ -18,3 +18,4 @@ export const checkCompanyAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkCompanyAccess;

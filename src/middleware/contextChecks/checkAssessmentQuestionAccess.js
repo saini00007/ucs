@@ -1,30 +1,28 @@
-import { AssessmentQuestion } from "../../models/index.js";
-import Department from "../../models/Department.js";
-import Assessment from "../../models/Assessment.js";
-
-export const checkAssessmentQuestionAccess = async (user, resourceId) => {
+import { AssessmentQuestion,Department,Assessment } from "../../models/index.js";
+const checkAssessmentQuestionAccess = async (user, resourceId) => {
     try {
         const assessmentQuestion = await AssessmentQuestion.findByPk(resourceId, {
             include: [
                 {
                     model: Assessment,
+                    attributes: ['assessmentStarted', 'submitted', 'departmentId'],
                     include: [
                         {
                             model: Department,
+                            as:'department',
                             attributes: ['id', 'companyId'],
                         },
                     ],
                 },
             ],
         });
-        console.log(assessmentQuestion);
 
-        if (!assessmentQuestion) {
+        if (!assessmentQuestion || !assessmentQuestion.assessment.assessmentStarted || assessmentQuestion.assessment.submitted) {
             return false;
         }
 
-        const departmentId = assessmentQuestion.Assessment.Department.id;
-        const companyId = assessmentQuestion.Assessment.Department.companyId;
+        const departmentId = assessmentQuestion.assessment.departmentId;
+        const companyId = assessmentQuestion.assessment.department.companyId;
 
         if (user.roleId === 'admin') {
             return user.companyId === companyId;
@@ -36,3 +34,4 @@ export const checkAssessmentQuestionAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkAssessmentQuestionAccess;

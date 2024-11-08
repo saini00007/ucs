@@ -22,7 +22,8 @@ const actions = [
   { id: 'update', actionName: 'update' },
   { id: 'remove', actionName: 'remove' },
   { id: 'list', actionName: 'list' },
-  { id: 'start', actionName: 'start' }
+  { id: 'start', actionName: 'start' },
+  { id: 'submit', actionName: 'submit' }
 ];
 
 const createOrFind = async (model, entities) => {
@@ -55,6 +56,7 @@ const seedRoleResourceActionLinks = async () => {
     { "roleId": "superadmin", "resourceId": "department", "actionId": "update" },
     { "roleId": "superadmin", "resourceId": "department", "actionId": "remove" },
     { "roleId": "superadmin", "resourceId": "assessment", "actionId": "start" },
+    { "roleId": "superadmin", "resourceId": "assessment", "actionId": "submit" },
     { "roleId": "superadmin", "resourceId": "assessment", "actionId": "read" },
     { "roleId": "superadmin", "resourceId": "assessmentquestion", "actionId": "list" },
     { "roleId": "superadmin", "resourceId": "assessmentquestion", "actionId": "read" },
@@ -83,6 +85,7 @@ const seedRoleResourceActionLinks = async () => {
     { "roleId": "admin", "resourceId": "department", "actionId": "list" },
     { "roleId": "admin", "resourceId": "department", "actionId": "read" },
     { "roleId": "admin", "resourceId": "assessment", "actionId": "start" },
+    { "roleId": "admin", "resourceId": "assessment", "actionId": "submit" },
     { "roleId": "admin", "resourceId": "assessment", "actionId": "read" },
     { "roleId": "admin", "resourceId": "assessmentquestion", "actionId": "list" },
     { "roleId": "admin", "resourceId": "assessmentquestion", "actionId": "read" },

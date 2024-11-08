@@ -1,6 +1,6 @@
 import { User } from "../../models/index.js";
 
-export const checkUserAccess = async (user, resourceId, actionIdDb) => {
+const checkUserAccess = async (user, resourceId, actionIdDb) => {
     try {
         const userDb = await User.findByPk(resourceId);
         if (user.roleId === 'admin') {
@@ -15,3 +15,4 @@ export const checkUserAccess = async (user, resourceId, actionIdDb) => {
         return false;
     }
 };
+export default checkUserAccess;

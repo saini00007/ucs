@@ -38,10 +38,10 @@ const mockUsers = {
 
 const setMockUser = (userType) => {
     return mockUsers[userType] || mockUsers['guestUser'];
-};
+}; 
 
 const mockAuthenticate = (req, res, next) => {
-    const userType = 'superadmin'; // Change this to switch users
+    const userType = 'superadmin';
     req.user = setMockUser(userType);
     next();
 };

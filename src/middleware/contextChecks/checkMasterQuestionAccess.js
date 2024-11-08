@@ -1,4 +1,4 @@
-export const checkMasterQuestionAccess = async (user, resourceId) => {
+const checkMasterQuestionAccess = async (user, resourceId) => {
     try {
         if (user.roleId === 'superadmin') { return true };
         return false;
@@ -7,3 +7,4 @@ export const checkMasterQuestionAccess = async (user, resourceId) => {
         return false;
     }
 };
+export default checkMasterQuestionAccess;
