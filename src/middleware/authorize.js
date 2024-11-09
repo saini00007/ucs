@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import permissionsService from '../services/permissionsService.js';
 import { getResourceId, getActionId } from '../utils/resourceActionUtils.js'
 
-export const checkAccess = async (req, res, next) => {
+const checkAccess = async (req, res, next) => {
   const { roleId } = req.user;
   const roleResourceType = req.roleResourceType;
   const contentResourceType = req.contentResourceType;
@@ -51,3 +51,4 @@ export const checkAccess = async (req, res, next) => {
     });
   }
 };
+export default checkAccess;

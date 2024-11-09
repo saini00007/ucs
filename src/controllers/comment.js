@@ -83,49 +83,85 @@ export const updateComment = async (req, res) => {
   const { commentId } = req.params;
   const { commentText } = req.body;
 
+  const UPDATE_TIME_LIMIT = 20 * 60 * 1000;
+
   try {
-    const [updated] = await Comment.update({ commentText }, {
+    const comment = await Comment.findOne({
       where: { id: commentId },
+      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
     });
 
-    if (updated) {
-      const updatedComment = await Comment.findOne({
-        where: { id: commentId },
-        include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
-      });
-      return res.status(200).json({
-        success: true,
-        messages: ['Comment updated successfully'],
-        comment: updatedComment,
+    if (!comment) {
+      return res.status(404).json({ success: false, messages: ['Comment not found'] });
+    }
+
+    const currentTime = new Date().getTime();
+    const commentCreationTime = new Date(comment.createdAt).getTime();
+    console.log(currentTime - commentCreationTime);
+    if (currentTime - commentCreationTime > UPDATE_TIME_LIMIT) {
+      return res.status(403).json({
+        success: false,
+        messages: ['Time limit exceeded. You can no longer update this comment.']
       });
     }
 
-    return res.status(404).json({ success: false, messages: ['Comment not found'] });
+    comment.commentText = commentText;
+    await comment.save();
+    return res.status(200).json({
+      success: true,
+      messages: ['Comment updated successfully'],
+      comment,
+    });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ success: false, messages: ['Error updating comment'], error: error.message });
+    return res.status(500).json({
+      success: false,
+      messages: ['Error updating comment'],
+      error: error.message
+    });
   }
 };
+
 
 
 export const deleteComment = async (req, res) => {
   const { commentId } = req.params;
 
   try {
-    const deleted = await Comment.destroy({
+    const comment = await Comment.findOne({
       where: { id: commentId },
     });
 
-    if (deleted) {
-      return res.status(200).json({
-        success: true,
-        messages: ['Comment deleted successfully'],
+    if (!comment) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Comment not found'],
       });
     }
 
-    return res.status(404).json({ success: false, messages: ['Comment not found'] });
+    if (comment.deleted) {
+      return res.status(400).json({
+        success: false,
+        messages: ['This comment has already been deleted'],
+      });
+    }
+    comment.deletedAt = new Date();
+    comment.deleted = true;
+    await comment.save();
+
+    return res.status(200).json({
+      success: true,
+      messages: ['Comment deleted successfully'],
+    });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ success: false, messages: ['Error deleting comment'], error: error.message });
+    return res.status(500).json({
+      success: false,
+      messages: ['Error deleting comment'],
+      error: error.message,
+    });
   }
 };
+
+

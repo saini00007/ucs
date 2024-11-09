@@ -24,7 +24,7 @@ const resourceAccessCheckMap = {
   MasterQuestion: checkMasterQuestionAccess,
   MasterDepartment: checkMasterDepartmentAccess,
   Role: checkRoleAccess,
-  User:checkUserAccess
+  User: checkUserAccess
 };
 
 const permissionsService = {
@@ -44,14 +44,14 @@ const permissionsService = {
     }
   },
 
-  async hasContentAccess({ user, resourceType, resourceId,actionIdDb }) {
+  async hasContentAccess({ user, resourceType, resourceId, actionIdDb }) {
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
       console.log('contentAccessCheckFn not found');
       return false;
     }
     try {
-      return await contentAccessCheckFn(user, resourceId , actionIdDb);
+      return await contentAccessCheckFn(user, resourceId, actionIdDb);
 
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);

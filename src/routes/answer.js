@@ -9,7 +9,7 @@ import {
 } from '../controllers/answer.js';
 import validate from '../middleware/validate.js';
 import { createAnswerSchema, updateAnswerSchema } from '../joi/answer.js';
-import { checkAccess } from '../middleware/authorize.js';
+import checkAccess  from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();

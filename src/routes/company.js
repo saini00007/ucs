@@ -8,7 +8,7 @@ import {
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
-import { checkAccess } from '../middleware/authorize.js';
+import  checkAccess  from '../middleware/authorize.js';
 import validate from '../middleware/validate.js';
 import { createCompanySchema, updateCompanySchema } from '../joi/company.js';
 

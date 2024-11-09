@@ -6,13 +6,15 @@ import {
   updateComment,
   deleteComment,
 } from '../controllers/comment.js';
-
-import { checkAccess } from '../middleware/authorize.js';
+import commentSchema from '../joi/comment.js';
+import validate from '../middleware/validate.js';
+import checkAccess  from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
 router.post('/questions/:assessmentQuestionId/comments',
+  validate(commentSchema),
   attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'create'),
   checkAccess,
   createComment);
@@ -28,6 +30,7 @@ router.get('/comments/:commentId',
   getCommentById);
 
 router.put('/comments/:commentId',
+  validate(commentSchema),
   attachResourceInfo('Comment', 'Comment', 'commentId', 'update'),
   checkAccess,
   updateComment);

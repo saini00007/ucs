@@ -29,12 +29,28 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.TEXT,
     allowNull: false,
     field: 'comment_text',
+    get() {
+      const deletedAt = this.getDataValue('deletedAt');
+      if (this.deleted || deletedAt) {
+        return null;
+      }
+      return this.getDataValue('commentText');
+    }
+  },
+  deleted: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'deleted',
+  },
+  deletedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'deleted_at',
   },
 }, {
   tableName: 'comments',
   timestamps: true,
   underscored: true,
 });
-
 
 export default Comment;

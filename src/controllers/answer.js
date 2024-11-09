@@ -203,7 +203,7 @@ export const getAnswerByQuestion = async (req, res) => {
       include: [{
         model: EvidenceFile,
         as: 'evidenceFiles',
-        attributes: ['id', 'filePath'],
+        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
         order: [['createdAt', 'ASC']],
         include: [{
           model: User,
