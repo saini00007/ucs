@@ -1,15 +1,14 @@
 import express from 'express';
-import { resetPassword, login, verifyOtp } from '../controllers/auth.js';
+import { resetPassword, login, verifyOtp, requestPasswordReset } from '../controllers/auth.js';
 
 const router = express.Router();
 
-// Route to verify OTP
 router.post('/verify-otp', verifyOtp);
 
-// Route to log in the user
 router.post('/login', login);
 
-// Route to reset the password
 router.post('/reset-password', resetPassword);
+
+router.post('/request-password-reset', requestPasswordReset);
 
 export default router;

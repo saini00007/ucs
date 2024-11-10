@@ -11,7 +11,7 @@ import {
 export const getAllDepartmentsForCompany = async (req, res) => {
     const { companyId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    if (req.user.roleId === "admin" && req.user.companyId !== companyId){
+    if (req.user.roleId === "admin" && req.user.companyId !== companyId) {
         return res.status(403).json({
             success: false,
             message: 'Access denied: Admins can only manage their own company.',

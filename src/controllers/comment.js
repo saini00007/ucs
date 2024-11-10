@@ -95,9 +95,16 @@ export const updateComment = async (req, res) => {
       return res.status(404).json({ success: false, messages: ['Comment not found'] });
     }
 
+    if (comment.isDeleted) {
+      return res.status(403).json({
+        success: false,
+        messages: ['This comment has been deleted and cannot be updated.']
+      });
+    }
+
     const currentTime = new Date().getTime();
     const commentCreationTime = new Date(comment.createdAt).getTime();
-    console.log(currentTime - commentCreationTime);
+
     if (currentTime - commentCreationTime > UPDATE_TIME_LIMIT) {
       return res.status(403).json({
         success: false,
@@ -107,6 +114,7 @@ export const updateComment = async (req, res) => {
 
     comment.commentText = commentText;
     await comment.save();
+
     return res.status(200).json({
       success: true,
       messages: ['Comment updated successfully'],
@@ -118,11 +126,10 @@ export const updateComment = async (req, res) => {
     return res.status(500).json({
       success: false,
       messages: ['Error updating comment'],
-      error: error.message
+      error: error.message,
     });
   }
 };
-
 
 
 export const deleteComment = async (req, res) => {

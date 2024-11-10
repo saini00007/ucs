@@ -4,11 +4,16 @@ import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
-    const { username,email, roleId, phoneNumber, departmentId, companyId } = req.body;
+    const { username, email, roleId, phoneNumber, departmentId, companyId } = req.body;
     const currentUser = req.user;
-    const password="root";
+    const password = "root";
 
     try {
+        const existingUser = await User.findOne({ where: { email } });
+        if (existingUser) {
+            return res.status(409).json({ success: false, messages: ['Email already in use'] });
+        }
+
         if (roleId === 'superadmin') {
             return res.status(422).json({ success: false, messages: ['Invalid roleId'] });
         }
@@ -33,7 +38,7 @@ export const addUser = async (req, res) => {
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ success: false, messages: ['Server error'] });
-    } 
+    }
 };
 
 const createUser = async (userData, res) => {
@@ -44,19 +49,22 @@ const createUser = async (userData, res) => {
             ...userData,
             password: hashedPassword,
         });
-
+        // console.log(user);
         const token = generateToken(user.id);
-        const emailSubject = 'Set Your Account Password';
-        const emailText = `Hello ${userData.username},\n\nYour account has been created successfully. Please set your password using the following link:\n\nhttp://localhost:4000/set-password?token=${token}\n\nPlease keep this information secure.`;
+        const resetLink = `${process.env.CLIENT_URL}/set-password?token=${token}`;
+
+        const emailSubject = 'Set Your Password';
+        const emailText = `Hi ${userData.username},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`;
 
         await sendEmail(userData.email, emailSubject, emailText);
+
 
         const { password, ...userWithoutPassword } = user.get({ plain: true });
 
         res.status(201).json({
             success: true,
             messages: ['User added successfully, password setup email sent'],
-            user: userWithoutPassword 
+            user: userWithoutPassword
         });
     } catch (error) {
         console.error('Error adding user:', error);

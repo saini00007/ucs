@@ -2,6 +2,40 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { User, Otp } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
+import { generateToken } from '../utils/token.js';
+
+export const requestPasswordReset = async (req, res) => {
+  const { identifier } = req.body;
+
+  if (!identifier) {
+    return res.status(400).json({ success: false, messages: ['Email or user ID is required.'] });
+  }
+
+  try {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    console.log(isEmail);
+
+    const user = await User.findOne({
+      where: isEmail ? { email: identifier } : { id: identifier }
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, messages: ['No user found with this identifier.'] });
+    }
+    const token = generateToken(user.id)
+
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const emailSubject = 'Password Reset Request';
+    const emailText = `Hello ${user.username},\n\nClick the following link to reset your password: ${resetLink}\n\nThis link will expire in 15 minutes.`;
+
+    await sendEmail(user.email, emailSubject, emailText);
+
+    res.status(200).json({ success: true, messages: ['Password reset link sent to email'] });
+  } catch (error) {
+    console.error('Error requesting password reset:', error);
+    res.status(500).json({ success: false, messages: ['Failed to request password reset'] });
+  }
+};
+
 
 export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
@@ -12,10 +46,12 @@ export const resetPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log(decoded)
     const userId = decoded.userId;
+    console.log(userId);
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.update({ password: hashedPassword }, { where: { id:userId } });
+    await User.update({ password: hashedPassword }, { where: { id: userId } });
 
     res.status(200).json({ success: true, messages: ['Password reset successfully'] });
   } catch (error) {
@@ -25,44 +61,44 @@ export const resetPassword = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-    const { identifier, password } = req.body;
+  const { identifier, password } = req.body;
 
-    if (!identifier || !password) {
-        return res.status(400).json({ success: false, messages: ['Identifier and password are required.'] });
+  if (!identifier || !password) {
+    return res.status(400).json({ success: false, messages: ['Identifier and password are required.'] });
+  }
+
+  try {
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
+    const user = await User.findOne({
+      where: isEmail ? { email: identifier } : { id: identifier },
+    });
+
+    if (!user) {
+      return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
     }
 
-    try {
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-        
-        const user = await User.findOne({
-            where: isEmail ? { email: identifier } : { id: identifier },
-        });
-
-        if (!user) {
-            return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
-        }
-
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const emailSubject = 'Your OTP Code';
-        const emailText = `Hello ${user.username},\n\nYour OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
-
-        await sendEmail(user.email, emailSubject, emailText);
-
-        const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
-        await Otp.create({ userId: user.id, otpCode: otp, expiresAt: otpExpiration });
-
-        res.status(200).json({ success: true, messages: ['OTP sent to email'], token,otp:`${otp} ----for development purpose only` });
-    } catch (error) {
-        console.error('Error during login:', error);
-        res.status(500).json({ success: false, messages: ['Login failed'] });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
     }
+
+    const token = generateToken(user.id, '5m')
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const emailSubject = 'Your OTP Code';
+    const emailText = `Hello ${user.username},\n\nYour OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
+
+    await sendEmail(user.email, emailSubject, emailText);
+
+    const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
+    await Otp.create({ userId: user.id, otpCode: otp, expiresAt: otpExpiration });
+
+    res.status(200).json({ success: true, messages: ['OTP sent to email'], token, otp: `${otp} ----for development purpose only` });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ success: false, messages: ['Login failed'] });
+  }
 };
 
 export const verifyOtp = async (req, res) => {
@@ -71,7 +107,6 @@ export const verifyOtp = async (req, res) => {
   if (!token || !otp) {
     return res.status(400).json({ success: false, messages: ['Token and OTP are required.'] });
   }
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
@@ -86,11 +121,11 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, messages: ['OTP expired'] });
     }
 
-    const finalToken = jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const finalToken = generateToken(userId, '2d');
 
     await Otp.destroy({ where: { userId } });
-
-    res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', maxAge: 3600000 });
+    const maxAge = 24 * 60 * 60 * 1000;
+    res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'Production', maxAge });
     res.status(200).json({ success: true, messages: ['OTP verified successfully'] });
   } catch (error) {
     console.error('Error verifying OTP:', error);
