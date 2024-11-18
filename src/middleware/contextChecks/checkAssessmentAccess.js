@@ -8,7 +8,7 @@ const checkAssessmentAccess = async (user, resourceId) => {
             include: [
                 {
                     model: Department,
-                    as: 'department' // Include department details associated with the assessment.
+                    as: 'department'
                 }
             ]
         });

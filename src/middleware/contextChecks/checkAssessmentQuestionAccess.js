@@ -8,12 +8,12 @@ const checkAssessmentQuestionAccess = async (user, resourceId) => {
             include: [
                 {
                     model: Assessment,
-                    attributes: ['assessmentStarted', 'submitted', 'departmentId'], // Include relevant attributes for the assessment.
+                    attributes: ['assessmentStarted', 'submitted', 'departmentId'],
                     include: [
                         {
                             model: Department,
                             as: 'department',
-                            attributes: ['id', 'companyId'], // Include department ID and company ID for access validation.
+                            attributes: ['id', 'companyId'],
                         },
                     ],
                 },

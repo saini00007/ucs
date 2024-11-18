@@ -13,12 +13,12 @@ const checkCommentAccess = async (user, resourceId, action) => {
                         {
                             model: Assessment,
                             as: 'assessment',
-                            attributes: ['assessmentStarted', 'submitted', 'departmentId'], // Include relevant assessment details.
+                            attributes: ['assessmentStarted', 'submitted', 'departmentId'],
                             include: [
                                 {
                                     model: Department,
                                     as: 'department',
-                                    attributes: ['id', 'companyId'], // Include department ID and company ID for access validation.
+                                    attributes: ['id', 'companyId'],
                                 },
                             ],
                         },
