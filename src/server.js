@@ -1,51 +1,48 @@
 import express from 'express';
-import path from 'path';
+import dotenv from 'dotenv';
+
+import initializeDatabase from './initializeDatabase.js';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv'; // Import dotenv for environment variables
-import fs from 'fs'; // Import fs for file system operations
-import url from 'url'; // Import url for converting paths to URLs
-import sequelize from './config/db.js'; // Import the Sequelize instance
-import initializeDatabase from './initializeDatabase.js'; // Import the database initialization function
-import chalk from 'chalk';
-// Load environment variables from .env file
+
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 443; 
+const PORT = process.env.PORT || 443;
 
+//authentication
 import mockAuthenticate from './middleware/mockAuth.js';
 import { authenticate } from './middleware/authenticate.js';
 const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
 
-
-import companyRoutes from './routes/company.js'; 
-import departmentRoutes from './routes/department.js'; 
-import userRoutes from './routes/user.js'; 
-import authRoutes from './routes/auth.js'; 
-import assessmentRoutes from'./routes/assessment.js';
+//importing routes
+import companyRoutes from './routes/company.js';
+import departmentRoutes from './routes/department.js';
+import userRoutes from './routes/user.js';
+import authRoutes from './routes/auth.js';
+import assessmentRoutes from './routes/assessment.js';
 import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
 import masterRoutes from './routes/master.js'
 import masterQuestionRoute from './routes/masterQuestion.js';
 import commentRoutes from './routes/comment.js';
 
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 
-
-app.use('/', authRoutes); // Routes for authentication operations
+app.use('/', authRoutes); 
 app.use(authMiddleware);
-app.use('/', companyRoutes); // Routes for company operations
-app.use('/', departmentRoutes); // Routes for department operations
-app.use('/', userRoutes); // Routes for user operations
-app.use('/',assessmentRoutes);
-app.use('/',assessmentQuestionRoutes);
-app.use('/',answerRoutes);
-app.use('/',masterRoutes);
-app.use('/',masterQuestionRoute);
-app.use('/',commentRoutes);
+app.use('/', companyRoutes);
+app.use('/', departmentRoutes);
+app.use('/', userRoutes);
+app.use('/', assessmentRoutes);
+app.use('/', assessmentQuestionRoutes);
+app.use('/', answerRoutes);
+app.use('/', masterRoutes);
+app.use('/', masterQuestionRoute);
+app.use('/', commentRoutes);
 
 const startServer = async () => {
   try {

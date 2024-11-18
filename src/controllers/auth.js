@@ -13,7 +13,6 @@ export const requestPasswordReset = async (req, res) => {
 
   try {
     const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-    console.log(isEmail);
 
     const user = await User.findOne({
       where: isEmail ? { email: identifier } : { id: identifier }
@@ -21,7 +20,8 @@ export const requestPasswordReset = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, messages: ['No user found with this identifier.'] });
     }
-    const token = generateToken(user.id)
+
+    const token = generateToken(user.id, 'reset-password');
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
     const emailSubject = 'Password Reset Request';
@@ -36,7 +36,6 @@ export const requestPasswordReset = async (req, res) => {
   }
 };
 
-
 export const resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -46,9 +45,12 @@ export const resetPassword = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decoded)
+
+    if (decoded.type !== 'reset-password') {
+      return res.status(400).json({ success: false, messages: ['Invalid token type'] });
+    }
+
     const userId = decoded.userId;
-    console.log(userId);
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.update({ password: hashedPassword }, { where: { id: userId } });
@@ -83,7 +85,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
     }
 
-    const token = generateToken(user.id, '5m')
+    const token = generateToken(user.id, 'login', '5m');
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const emailSubject = 'Your OTP Code';
@@ -107,9 +109,14 @@ export const verifyOtp = async (req, res) => {
   if (!token || !otp) {
     return res.status(400).json({ success: false, messages: ['Token and OTP are required.'] });
   }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
+
+    if (decoded.type !== 'login') {
+      return res.status(400).json({ success: false, messages: ['Invalid token type'] });
+    }
 
     const otpRecord = await Otp.findOne({ where: { userId, otpCode: otp } });
 
@@ -121,12 +128,10 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, messages: ['OTP expired'] });
     }
 
-    const finalToken = generateToken(userId, '2d');
+    const finalToken = generateToken(userId, 'session', '2d');
 
     await Otp.destroy({ where: { userId } });
-    const maxAge = 24 * 60 * 60 * 1000;
-    res.cookie('token', finalToken, { httpOnly: true, secure: process.env.NODE_ENV === 'Production', maxAge });
-    res.status(200).json({ success: true, messages: ['OTP verified successfully'] });
+    res.status(200).json({ success: true, messages: ['OTP verified successfully'], token: finalToken });
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ success: false, messages: ['Failed to verify OTP'] });

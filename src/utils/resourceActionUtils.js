@@ -1,5 +1,6 @@
 import { RoleResourceActionLink, Resource, Action } from '../models/index.js';
 
+// Function to retrieve the ID of a resource by its name.
 export const getResourceId = async (resourceName) => {
   try {
     const resource = await Resource.findOne({ where: { resourceName: resourceName } });
@@ -10,6 +11,7 @@ export const getResourceId = async (resourceName) => {
   }
 };
 
+// Function to retrieve the ID of an action by its name.
 export const getActionId = async (actionName) => {
   try {
     const action = await Action.findOne({ where: { actionName: actionName } });

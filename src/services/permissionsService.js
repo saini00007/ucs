@@ -13,6 +13,7 @@ import {
   checkUserAccess
 } from "../middleware/contextChecks/index.js";
 
+// Mapping of resource types to their corresponding access check functions.
 const resourceAccessCheckMap = {
   Assessment: checkAssessmentAccess,
   Department: checkDepartmentAccess,
@@ -28,8 +29,10 @@ const resourceAccessCheckMap = {
 };
 
 const permissionsService = {
+  // Method to check if a user has a specific role permission.
   async hasRolePermission({ user, resourceIdDb, actionIdDb }) {
     try {
+      // Find a matching permission in the RoleResourceActionLink table.
       const permission = await RoleResourceActionLink.findOne({
         where: {
           roleId: user.roleId,
@@ -37,22 +40,26 @@ const permissionsService = {
           actionId: actionIdDb,
         },
       });
+      // Return true if a permission is found, otherwise return false.
       return !!permission;
     } catch (error) {
-      console.error(`Error checking role permission for user ${user.id} on ${resourceType} ${resourceId}:`, error);
+      console.error(`Error checking role permission for user ${user.id} on resource ${resourceIdDb}:`, error);
       return false;
     }
   },
 
+  // Method to check if a user has access to specific content.
   async hasContentAccess({ user, resourceType, resourceId, actionIdDb }) {
+    // Retrieve the access check function for the given resource type.
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
-      console.log('contentAccessCheckFn not found');
+      // If no access check function is found, log the issue and return false.
+      console.log('Content access check function not found for resource type:', resourceType);
       return false;
     }
     try {
+      // Call the access check function and return its result.
       return await contentAccessCheckFn(user, resourceId, actionIdDb);
-
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
       return false;

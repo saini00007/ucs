@@ -49,8 +49,7 @@ const createUser = async (userData, res) => {
             ...userData,
             password: hashedPassword,
         });
-        // console.log(user);
-        const token = generateToken(user.id);
+        const token = generateToken(user.id, 'reset-password');
         const resetLink = `${process.env.CLIENT_URL}/set-password?token=${token}`;
 
         const emailSubject = 'Set Your Password';

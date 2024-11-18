@@ -4,7 +4,9 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'Production';
 
-const sequelize = new Sequelize(isProduction ? process.env.RENDER_DB_URL : process.env.LOCAL_DB_URL, {
+// Sequelize instance to manage the database connection.
+const sequelize = new Sequelize(
+    isProduction ? process.env.RENDER_DB_URL : process.env.LOCAL_DB_URL, {
     dialect: 'postgres',
     protocol: 'postgres',
     dialectOptions: isProduction ? {
@@ -12,8 +14,9 @@ const sequelize = new Sequelize(isProduction ? process.env.RENDER_DB_URL : proce
             require: true,
             rejectUnauthorized: false
         }
-    } : {},
-    logging: false,
-});
+    } : {}, // No special options for non-production environments.
+    logging: false, // Disable logging of SQL queries for cleaner console output.
+}
+);
 
 export default sequelize;

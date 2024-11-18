@@ -1,18 +1,17 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 
 // Create a transporter object
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // Directly use Gmail service
+    service: 'gmail',
     auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASS,
     },
     tls: {
-        rejectUnauthorized: false, // Can be set to true for production
+        rejectUnauthorized: false,
     },
 });
 
