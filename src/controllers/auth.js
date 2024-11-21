@@ -128,10 +128,18 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, messages: ['OTP expired'] });
     }
 
+    const user = await User.findByPk(userId, {
+      attributes: ['id', 'username', 'email', 'roleId', 'email', 'departmentId', 'companyId', 'phoneNumber'],
+    });
+
+
+    if (!user) {
+      return res.status(400).json({ success: false, messages: ['Invalid user ID'] });
+    }
     const finalToken = generateToken(userId, 'session', '2d');
 
     await Otp.destroy({ where: { userId } });
-    res.status(200).json({ success: true, messages: ['OTP verified successfully'], token: finalToken });
+    res.status(200).json({ success: true, messages: ['OTP verified successfully'], token: finalToken, user });
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ success: false, messages: ['Failed to verify OTP'] });

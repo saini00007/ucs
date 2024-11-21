@@ -249,15 +249,15 @@ export const getUserById = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const user = await User.findByPk(userId);
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'username', 'email', 'roleId', 'email', 'departmentId', 'companyId', 'phoneNumber'],
+        });
         if (!user) {
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
-        const { password, ...userWithoutPassword } = user.get({ plain: true });
-
         res.status(200).json({
             success: true,
-            user: userWithoutPassword, // Changed from 'User' to 'user'
+            user,
         });
     } catch (error) {
         console.error('Error fetching user:', error);

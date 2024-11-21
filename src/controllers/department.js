@@ -171,7 +171,7 @@ export const createDepartment = async (req, res) => {
     }
 };
 
-
+//done some changes
 export const updateDepartment = async (req, res) => {
     const { departmentId } = req.params;
     const { departmentName, masterDepartmentId } = req.body;
@@ -181,7 +181,6 @@ export const updateDepartment = async (req, res) => {
         if (!department) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
         }
-
         if (departmentName) {
             department.departmentName = departmentName;
         }
@@ -190,6 +189,23 @@ export const updateDepartment = async (req, res) => {
             const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
             if (!masterDepartment) {
                 return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
+            }
+            if (department.masterDepartmentId != masterDepartmentId) {
+
+                const startedAssessments = await Assessment.findAll({
+                    where: {
+                        departmentId: departmentId,
+                        assessmentStarted: true,
+                    }
+                });
+
+                if (startedAssessments.length > 0) {
+                    return res.status(400).json({
+                        success: false,
+                        messages: ['Could not update department because some assessments are in progress']
+                    });
+                }
+
             }
             department.masterDepartmentId = masterDepartmentId;
         }

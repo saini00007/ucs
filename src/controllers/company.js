@@ -14,7 +14,6 @@ export const createCompany = async (req, res) => {
       secondaryPhone,
       createdByUserId: req.user.id,
     });
-
     res.status(201).json({
       success: true,
       messages: ['Company created successfully!'],
@@ -85,7 +84,7 @@ export const getCompanyById = async (req, res) => {
   const { companyId } = req.params;
   try {
     const company = await Company.findByPk(companyId);
-
+    console.log(company);
     if (!company) {
       return res.status(404).json({
         success: false,
