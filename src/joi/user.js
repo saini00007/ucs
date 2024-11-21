@@ -33,6 +33,7 @@ const baseUserSchema = Joi.object({
     phoneNumber: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
+        .required()
         .messages({
             'string.base': 'Phone number must be a string.',
             'string.empty': 'Phone number is required.',
@@ -62,6 +63,17 @@ const baseUserSchema = Joi.object({
             'string.empty': 'Company ID is required.',
             'any.required': 'Company ID is required.'
         }),
+    countryCode: Joi.string()
+        .min(1)
+        .max(5)
+        .required()
+        .allow('')
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
+        }),
 });
 
 const createUserSchema = baseUserSchema;
@@ -88,6 +100,17 @@ const updateUserSchema = Joi.object({
             'string.empty': 'Email cannot be empty.',
             'string.email': 'Email must be a valid email address.',
             'string.max': 'Email must be at most 100 characters long.',
+        }),
+    countryCode: Joi.string()
+        .min(1)
+        .max(5)
+        .optional()
+        .allow('')
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
     roleId: Joi.string()
         .valid('admin', 'assessor', 'reviewer', 'departmentmanager')
