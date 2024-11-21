@@ -4,32 +4,53 @@ import Role from '../models/Role';
 
 const seedSuperAdmins = async () => {
   try {
-    const hashedPassword = await bcrypt.hash("root", 10);    
-    const superAdminRole = await Role.findOne({ where: { id: 'superadmin' } });
 
-    if (!superAdminRole) {
-      console.error('Superadmin role not found');
-      return;
+    const superAdminsData = [
+      {
+        id: 'abcd12345678',
+        username: 'root',
+        email: 'testingbygeek@gmail.com',
+        phoneNumber: '1234567890',
+        password: 'root',
+      },
+      {
+        id: 'efgh23456789',
+        username: 'admin1',
+        email: 'admin1@example.com',
+        phoneNumber: '0987654321',
+        password: 'admin1Pass456',
+
+      },
+      {
+        id: 'ijkl34567890',
+        username: 'admin2',
+        email: 'admin2@example.com',
+        phoneNumber: '1122334455',
+        password: 'admin2Pass789',
+
+      },
+    ];
+
+    for (const superAdminData of superAdminsData) {
+      const existingSuperAdmin = await User.findOne({ where: { username: superAdminData.username } });
+
+      if (existingSuperAdmin) {
+        console.log(`Super admin already exists with username: ${existingSuperAdmin.username}`);
+        continue;
+      }
+
+      const hashedPassword = await bcrypt.hash(superAdminData.password, 10);
+
+      const newSuperAdminData = {
+        ...superAdminData,
+        password: hashedPassword,
+        roleId: 'superadmin',
+        companyId: null,
+      };
+
+      const superAdmin = await User.create(newSuperAdminData);
+      console.log(`Super admin inserted with user ID: ${superAdmin.id}`);
     }
-    const superAdminData = {
-      id: 'abcd12345678',
-      username: 'root',
-      password: hashedPassword,
-      email: 'testingbygeek@gmail.com',
-      roleId: superAdminRole.id,
-      departmentId: null,
-      companyId: null,
-      phoneNumber: '1234567890'
-    };
-
-    const existingSuperAdmin = await User.findOne({ where: { username: superAdminData.username } });
-
-    if (existingSuperAdmin) {
-      console.log('Super admin already exists with username:', existingSuperAdmin.username);
-      return;
-    }
-    const superAdmin = await User.create(superAdminData);
-    console.log('Super admin inserted with user ID:', superAdmin.id);
 
   } catch (error) {
     console.error('Error seeding super admins:', error.message || error);

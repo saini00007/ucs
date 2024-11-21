@@ -1,27 +1,33 @@
-// Function to check if a user has access to a resource based on their role and department/company
-const checkUserAccess = async (user, resourceId, actionIdDb) => {
+import { User, Department } from "../../models/index.js";
+
+const checkUserAccess = async (user, resourceId) => {
     try {
-        // Retrieve the user from the database using the provided resourceId (the user being checked)
-        const userDb = await User.findByPk(resourceId);
-        
-        // If the user is an admin, they can access resources within their company
-        if (user.roleId === 'admin') {
-            // Admins have access to users within the same company
-            if (user.companyId == userDb.companyId) {
-                return true; // Grant access if the company IDs match
-            }
-        } else {
-            // For non-admins, check if the department IDs match
-            if (user.departmentId === userDb.departmentId) {
-                return true; // Grant access if the department IDs match
-            }
+        const userDb = await User.findByPk(resourceId, {
+            include: [{
+                model: Department,
+                as: 'departments',
+                attributes: ['id'],
+                through: { attributes: [] }
+            }]
+        });
+
+        if (!userDb) {
+            console.error("User not found");
+            return false;
         }
 
-        return false;
+        if (user.roleId === 'admin' && user.companyId === userDb.companyId) return true;
 
+        if (user.roleId === 'departmentManager') {
+            return user.departments.some(department =>
+                userDb.departments.some(dbDept => dbDept.id === department.id)
+            );
+        }
+
+        return user.id === userDb.id;
     } catch (error) {
-        console.error("Error checking Role access:", error);
-        return false; // Return false in case of an error (access denied)
+        console.error("Error checking user access:", error);
+        return false;
     }
 };
 

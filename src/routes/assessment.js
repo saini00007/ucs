@@ -3,11 +3,12 @@ import {
     markAssessmentAsStarted,
     getAssessmentById,
     getAssessmentByDepartmentId,
-    submitAssessment
+    submitAssessment,
+    reopenAssessment
 } from '../controllers/assessment.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
-import checkAccess  from '../middleware/authorize.js';
+import checkAccess from '../middleware/authorize.js';
 
 const router = express.Router();
 
@@ -24,6 +25,12 @@ router.put('/assessments/:assessmentId/submit',
     checkAccess,
     submitAssessment
 );
+
+router.put('/assessments/:assessmentId/reopen',
+    attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'reopen'),
+    checkAccess,
+    reopenAssessment);
+
 
 // Route to get an assessment by its ID
 router.get('/assessments/:assessmentId',

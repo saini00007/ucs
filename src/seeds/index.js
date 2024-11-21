@@ -1,10 +1,12 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import seedRoles from './roles.js';
+import seedResources from './resources.js';
+import seedActions from './actions.js';
 import seedSuperAdmins from './superAdmins.js';
 import seedMasterDepartments from './masterDepartments.js';
 import seedMasterQuestions from './masterQuestions.js';
-import seedRoleResourceAction from './seedRoleResourceAction.js';
+import seedRoleResourceActionLinks from './roleResourceActionLinks.js';
 import initializeDatabase from '../initializeDatabase.js';
 
 dotenv.config();
@@ -14,7 +16,9 @@ const PORT = process.env.PORT || 4000;
 
 const runSeeds = async () => {
     await seedRoles();
-    await seedRoleResourceAction();
+    await seedResources();
+    await seedActions();
+    await seedRoleResourceActionLinks();
     await seedSuperAdmins();
     await seedMasterDepartments();
     await seedMasterQuestions();

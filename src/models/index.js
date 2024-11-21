@@ -14,14 +14,15 @@ import QuestionDepartmentLink from './QuestionDepartmentLink.js';
 import RoleResourceActionLink from './RoleResourceActionLink.js';
 import Action from './Action.js';
 import Resource from './Resource.js';
+import UserDepartmentLink from './UserDepartmentLink.js';
 
 // 1. User and Company
 User.belongsTo(Company, { foreignKey: 'companyId', targetKey: 'id', as: 'company' });
 Company.hasMany(User, { foreignKey: 'companyId', as: 'users' });
 
 // 2. User and Department
-User.belongsTo(Department, { foreignKey: 'departmentId', targetKey: 'id', as: 'department' });
-Department.hasMany(User, { foreignKey: 'departmentId', as: 'users' });
+User.belongsToMany(Department, { through: UserDepartmentLink, foreignKey: 'userId', as: 'departments' });
+Department.belongsToMany(User, { through: UserDepartmentLink, foreignKey: 'departmentId', as: 'users' });
 
 // 3. User and Role
 User.belongsTo(Role, { foreignKey: 'roleId', targetKey: 'id', as: 'role' });

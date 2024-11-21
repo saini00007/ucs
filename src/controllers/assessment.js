@@ -148,3 +148,45 @@ export const getAssessmentById = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Error fetching assessment'] });
   }
 };
+export const reopenAssessment = async (req, res) => {
+  const { assessmentId } = req.params;
+
+  try {
+    const assessment = await Assessment.findByPk(assessmentId);
+
+    if (!assessment) {
+      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+    }
+
+    if (!assessment.submitted) {
+      return res.status(400).json({
+        success: false,
+        messages: ['Assessment is not submitted, cannot reopen'],
+      });
+    }
+
+    const [updatedCount, updatedAssessments] = await Assessment.update(
+      {
+        submitted: false,
+        submittedAt: null,
+      },
+      {
+        where: { id: assessmentId },
+        returning: true,
+      }
+    );
+
+    if (updatedCount === 0) {
+      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+    }
+
+    res.status(200).json({
+      success: true,
+      messages: ['Assessment reopened successfully'],
+      assessment: updatedAssessments[0],
+    });
+  } catch (error) {
+    console.error('Error reopening assessment:', error);
+    res.status(500).json({ success: false, messages: ['Error reopening assessment'] });
+  }
+};

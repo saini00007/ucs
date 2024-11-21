@@ -1,6 +1,5 @@
-import MasterQuestion from '../models/MasterQuestion.js';
-import QuestionDepartmentLink from '../models/QuestionDepartmentLink.js';
-import MasterDepartment from '../models/MasterDepartment.js';
+import {MasterQuestion,QuestionDepartmentLink,MasterDepartment} from '../models/index.js';
+
 import { faker } from '@faker-js/faker';
 
 const generateFakeData = (count) => {
@@ -14,29 +13,25 @@ const generateFakeData = (count) => {
     'Human Resources'
   ];
 
-  const data = [];
-  for (let i = 0; i < count; i++) {
-    data.push({
-      SRNO: i + 1,
-      'SP 800-53 Control Number': faker.string.alphanumeric(10),
-      Question: faker.lorem.sentence(),
-      'ISO 27001:2022 Control ID Number': faker.string.alphanumeric(10),
-      'NIST CSF Control ID': faker.string.alphanumeric(10),
-      'MITRE Defend Control ID': faker.string.alphanumeric(10),
-      'NIST 800-82 Control ID': faker.string.alphanumeric(10),
-      'IEC 62443 Control ID': faker.string.alphanumeric(10),
-      PCIDSS: faker.string.alphanumeric(10),
-      'suggested evidence': faker.lorem.sentence(),
-      Department: faker.helpers.arrayElement(departments),
-      'Control Family Full Form': faker.lorem.words(3),
-    });
-  }
-  return data;
+  return Array.from({ length: count }, (_, i) => ({
+    SRNO: i + 1,
+    'SP 800-53 Control Number': faker.string.alphanumeric(10),
+    Question: faker.lorem.sentence(),
+    'ISO 27001:2022 Control ID Number': faker.string.alphanumeric(10),
+    'NIST CSF Control ID': faker.string.alphanumeric(10),
+    'MITRE Defend Control ID': faker.string.alphanumeric(10),
+    'NIST 800-82 Control ID': faker.string.alphanumeric(10),
+    'IEC 62443 Control ID': faker.string.alphanumeric(10),
+    PCIDSS: faker.string.alphanumeric(10),
+    'suggested evidence': faker.lorem.sentence(),
+    Department: faker.helpers.arrayElement(departments),
+    'Control Family Full Form': faker.lorem.words(3),
+  }));
 };
 
+// Seed MasterQuestions table with fake data
 const seedMasterQuestions = async (count = 50) => {
   try {
-    // Generate fake data
     const data = generateFakeData(count);
 
     for (const row of data) {
@@ -70,7 +65,7 @@ const seedMasterQuestions = async (count = 50) => {
         controlFamilyFullForm: controlFamilyFullForm?.toString().trim(),
       };
 
-      console.log(`Processing Question: ${trimmedData.questionText}, Department: ${trimmedData.department}`);
+      console.log(`Processing Question: "${trimmedData.questionText}", Department: "${trimmedData.department}"`);
 
       const question = await MasterQuestion.create(trimmedData);
       console.log(`Question inserted with ID: ${question.id}`);
@@ -89,7 +84,7 @@ const seedMasterQuestions = async (count = 50) => {
           await QuestionDepartmentLink.create(questionDepartmentLink);
           console.log(`Link created for Question ID: ${question.id} and Department ID: ${departmentRecord.id}`);
         } else {
-          console.warn(`Department not found for Question ID: ${question.id}`);
+          console.warn(`Department "${trimmedData.department}" not found for Question ID: ${question.id}`);
         }
       } else {
         console.warn(`Department name is missing for Question ID: ${question.id}`);

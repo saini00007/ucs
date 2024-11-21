@@ -6,8 +6,6 @@ const roles = [
   { id: 'departmentmanager', roleName: 'departmentManager' },
   { id: 'assessor', roleName: 'assessor' },
   { id: 'reviewer', roleName: 'reviewer' },
-  { id: 'reportviewer', roleName: 'reportViewer' },
-  { id: 'guestuser', roleName: 'guestUser' },
 ];
 
 const seedRoles = async () => {

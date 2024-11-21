@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { User, Department } from '../models/index.js';
 
 export const authenticate = async (req, res, next) => {
 
   // Retrieve token from the cookies
-  const token = req.cookies.token;
+  const token = req.cookies.token || req.cookies.session_token;
 
   //if no token provided
   if (!token) {
@@ -23,10 +23,17 @@ export const authenticate = async (req, res, next) => {
       where: {
         id: decoded.userId,
       },
-      attributes: ['id', 'username', 'email', 'roleId', 'departmentId', 'companyId'],
+      attributes: ['id', 'username', 'email', 'roleId', 'companyId'],
+      include: [{
+        model: Department,
+        as: 'departments',
+        attributes: ['id', 'departmentName'],
+        through: {
+          attributes: []
+        },
+      }]
     });
 
-    // returning error if no user has been found
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
     }

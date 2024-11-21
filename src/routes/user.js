@@ -5,7 +5,10 @@ import {
   updateUser,
   getUsersByDepartment,
   getUsersByCompany,
-  getUserById
+  getUserById,
+  removeUserFromDepartment,
+  getDepartmentsByUser,
+  addUserToDepartment
 } from '../controllers/user.js';
 import validate from '../middleware/validate.js';
 import { createUserSchema, updateUserSchema } from '../joi/user.js';
@@ -55,18 +58,26 @@ router.get('/companies/:companyId/users',
   getUsersByCompany
 );
 
-// Route to get users by company and role
-// router.get('/companies/:companyId/users/role/:roleId',
-//   attachResourceInfo('User', 'Company', 'companyId', 'list'),
-//   checkAccess,
-//   getUsersByRole
-// );
-
 // Route to get a user by ID
 router.get('/users/:userId',
   attachResourceInfo('User', 'User', 'userId', 'read'),
   checkAccess,
   getUserById
 );
+
+router.get('/users/:userId/departments',
+  attachResourceInfo('User', 'User', 'userId', 'read'),
+  checkAccess,
+  getDepartmentsByUser);
+
+router.delete('/users/:userId/departments/:departmentId',
+  attachResourceInfo('UserDepartmentLink', 'User', 'userId', 'remove'),
+  checkAccess,
+  removeUserFromDepartment);
+
+router.post('/users/:userId/departments/:departmentId',
+  attachResourceInfo('UserDepartmentLink', 'Department', 'departmentId', 'create'),
+  checkAccess,
+  addUserToDepartment);
 
 export default router;

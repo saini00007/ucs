@@ -38,16 +38,6 @@ const User = sequelize.define('User', {
     },
     field: 'role_id',
   },
-  departmentId: {
-    type: DataTypes.UUID,
-    allowNull: true,
-    references: {
-      model: 'departments',
-      key: 'id',
-    },
-    onDelete: 'CASCADE',
-    field: 'department_id',
-  },
   companyId: {
     type: DataTypes.UUID,
     allowNull: true,
