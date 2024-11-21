@@ -4,7 +4,7 @@ import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 export const addUser = async (req, res) => {
-    const { username, email, roleId, phoneNumber, departmentId, companyId } = req.body;
+    const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
     const currentUser = req.user;
     const password = "root";
 
@@ -37,7 +37,7 @@ export const addUser = async (req, res) => {
                 return res.status(403).json({ success: false, messages: ['Invalid email for admin role.'] });
             }
 
-            return await createUser({ username, password, email, roleId, companyId, phoneNumber }, res);
+            return await createUser({ username, password, email, roleId, companyId, phoneNumber, countryCode }, res);
         } else {
             const department = await Department.findOne({ where: { id: departmentId } });
             if (!department) {

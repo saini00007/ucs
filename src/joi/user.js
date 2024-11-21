@@ -33,7 +33,6 @@ const baseUserSchema = Joi.object({
     phoneNumber: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
-        .required()
         .messages({
             'string.base': 'Phone number must be a string.',
             'string.empty': 'Phone number is required.',

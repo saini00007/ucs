@@ -39,6 +39,11 @@ const User = sequelize.define('User', {
     allowNull: false,
     field: 'role_id',
   },
+  countryCode: {
+    type: DataTypes.STRING(5),
+    allowNull: false,
+    field: 'country_code',
+  },
   companyId: {
     type: DataTypes.UUID,
     allowNull: true,
