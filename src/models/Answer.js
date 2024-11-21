@@ -14,6 +14,7 @@ const Answer = sequelize.define('Answer', {
       model: 'assessment_questions',
       key: 'id',
     },
+    allowNull: false,
     onDelete: 'CASCADE',
     field: 'assessment_question_id',
   },
@@ -23,18 +24,18 @@ const Answer = sequelize.define('Answer', {
       model: 'users',
       key: 'id',
     },
+    allowNull: false,
     field: 'created_by_user_id',
   },
   answerText: {
     type: DataTypes.TEXT,
     field: 'answer_text',
-  },
+  }
 }, {
   tableName: 'answers',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
-
-
 
 export default Answer;

@@ -14,6 +14,7 @@ const Otp = sequelize.define('Otp', {
       model: 'users',
       key: 'id',
     },
+    allowNull: false,
     field: 'user_id',
   },
   otpCode: {

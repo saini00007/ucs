@@ -41,8 +41,7 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
   tableName: 'evidence_files',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
-
-
 
 export default EvidenceFile;

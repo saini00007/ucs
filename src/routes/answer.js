@@ -4,7 +4,6 @@ import {
   createAnswer,
   updateAnswer,
   getAnswerByQuestion,
-  deleteAnswer,
   serveFile
 } from '../controllers/answer.js';
 import validate from '../middleware/validate.js';
@@ -40,11 +39,5 @@ router.get('/evidence-files/:fileId',
   attachResourceInfo('EvidenceFile', 'EvidenceFile', 'fileId', 'read'),
   checkAccess,
   serveFile);
-
-// Route to delete an answer
-router.delete('/answers/:answerId',
-  attachResourceInfo('Answer', 'Answer', 'answerId', 'remove'),
-  checkAccess,
-  deleteAnswer);
 
 export default router;

@@ -43,7 +43,6 @@ export const markAssessmentAsStarted = async (req, res) => {
   }
 };
 
-
 export const submitAssessment = async (req, res) => {
   const { assessmentId } = req.params;
 
@@ -91,8 +90,6 @@ export const submitAssessment = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Error submitting assessment'] });
   }
 };
-
-
 
 export const getAssessmentByDepartmentId = async (req, res) => {
   const { departmentId } = req.params;

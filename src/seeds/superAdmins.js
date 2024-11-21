@@ -17,7 +17,6 @@ const seedSuperAdmins = async () => {
         id: 'efgh23456789',
         username: 'admin1',
         email: 'admin1@example.com',
-        phoneNumber: '0987654321',
         password: 'admin1Pass456',
 
       },

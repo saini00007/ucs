@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+
 const Department = sequelize.define('Department', {
   id: {
     type: DataTypes.UUID,
@@ -20,6 +21,7 @@ const Department = sequelize.define('Department', {
     },
     onDelete: 'CASCADE',
     field: 'company_id',
+    allowNull: false,
   },
   masterDepartmentId: {
     type: DataTypes.UUID,
@@ -27,6 +29,7 @@ const Department = sequelize.define('Department', {
       model: 'master_departments',
       key: 'id',
     },
+    allowNull: false,
     field: 'master_department_id',
   },
   createdByUserId: {
@@ -35,13 +38,14 @@ const Department = sequelize.define('Department', {
       model: 'users',
       key: 'id',
     },
-    allowNull: true,
+    allowNull: false,
     field: 'created_by_user_id',
   },
 }, {
   tableName: 'departments',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
 
 export default Department;

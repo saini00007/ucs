@@ -100,5 +100,6 @@ export {
   QuestionDepartmentLink,
   RoleResourceActionLink,
   Action,
-  Resource
+  Resource,
+  UserDepartmentLink
 };

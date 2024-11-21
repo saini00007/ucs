@@ -14,6 +14,7 @@ const Comment = sequelize.define('Comment', {
       model: 'assessment_questions',
       key: 'id',
     },
+    allowNull: false,
     onDelete: 'CASCADE',
     field: 'assessment_question_id',
   },
@@ -23,6 +24,7 @@ const Comment = sequelize.define('Comment', {
       model: 'users',
       key: 'id',
     },
+    allowNull: false,
     field: 'created_by_user_id',
   },
   commentText: {
@@ -31,26 +33,17 @@ const Comment = sequelize.define('Comment', {
     field: 'comment_text',
     get() {
       const deletedAt = this.getDataValue('deletedAt');
-      if (this.deleted || deletedAt) {
+      if (deletedAt) {
         return null;
       }
       return this.getDataValue('commentText');
-    }
-  },
-  deleted: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: false,
-    field: 'deleted',
-  },
-  deletedAt: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    field: 'deleted_at',
+    },
   },
 }, {
   tableName: 'comments',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
 
 export default Comment;

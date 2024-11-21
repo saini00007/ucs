@@ -1,4 +1,3 @@
-// models/Company.js
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
@@ -21,8 +20,13 @@ const Company = sequelize.define('Company', {
   },
   gstNumber: {
     type: DataTypes.TEXT,
-    allowNull: true,
+    allowNull: false,
     field: 'gst_number',
+  },
+  panNumber: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    field: 'pan_number', // PAN number field
   },
   primaryEmail: {
     type: DataTypes.TEXT,
@@ -31,7 +35,7 @@ const Company = sequelize.define('Company', {
   },
   secondaryEmail: {
     type: DataTypes.TEXT,
-    allowNull: true,
+    allowNull: false,
     field: 'secondary_email',
   },
   primaryPhone: {
@@ -41,8 +45,18 @@ const Company = sequelize.define('Company', {
   },
   secondaryPhone: {
     type: DataTypes.TEXT,
-    allowNull: true,
+    allowNull: false,
     field: 'secondary_phone',
+  },
+  primaryCountryCode: {
+    type: DataTypes.STRING(5),
+    allowNull: false,
+    field: 'primary_country_code',
+  },
+  secondaryCountryCode: {
+    type: DataTypes.STRING(5),
+    allowNull: false,
+    field: 'secondary_country_code',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -50,13 +64,14 @@ const Company = sequelize.define('Company', {
       model: 'users',
       key: 'id',
     },
-    allowNull: true,
+    allowNull: false,
     field: 'created_by_user_id',
   },
 }, {
   tableName: 'companies',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
 
 export default Company;

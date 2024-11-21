@@ -3,36 +3,45 @@ import Answer from '../models/Answer.js';
 import EvidenceFile from '../models/EvidenceFile.js';
 import AssessmentQuestion from '../models/AssessmentQuestion.js';
 import User from '../models/User.js';
+import sequelize from '../config/db.js';
 
 export const createAnswer = async (req, res) => {
   const { assessmentQuestionId } = req.params;
   const { answerText } = req.body;
   const userId = req.user.id;
 
+  const transaction = await sequelize.transaction();
+
   try {
     const question = await AssessmentQuestion.findOne({
       where: { id: assessmentQuestionId },
       attributes: ['assessmentId'],
+      transaction,
     });
 
     if (!question) {
+      await transaction.rollback();
       return res.status(404).json({ success: false, messages: ['Assessment question not found.'] });
     }
 
     const existingAnswer = await Answer.findOne({
       where: { assessmentQuestionId, createdByUserId: userId },
+      transaction,
     });
 
     if (existingAnswer) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, messages: ['Answer already exists for this question.'] });
     }
 
     if (!answerText) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, messages: ['Answer text is required.'] });
     }
 
     const isAnswerYes = answerText.toLowerCase() === "yes";
     if (isAnswerYes && (!req.files || req.files.length === 0)) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
         messages: ['Evidence files are required when the answer is "yes".'],
@@ -43,7 +52,7 @@ export const createAnswer = async (req, res) => {
       assessmentQuestionId,
       createdByUserId: userId,
       answerText,
-    });
+    }, { transaction });
 
     let evidenceFiles = [];
     if (isAnswerYes) {
@@ -53,7 +62,7 @@ export const createAnswer = async (req, res) => {
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
-        });
+        }, { transaction });
         return {
           id: evidenceFile.id,
           filePath: evidenceFile.filePath,
@@ -81,7 +90,10 @@ export const createAnswer = async (req, res) => {
         as: 'creator',
         attributes: ['id', 'username']
       }],
+      transaction,
     });
+
+    await transaction.commit();
 
     res.status(201).json({
       success: true,
@@ -90,15 +102,17 @@ export const createAnswer = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating answer:', error);
+    await transaction.rollback();
     res.status(500).json({ success: false, messages: ['Internal server error while creating answer.'] });
   }
 };
-
 
 export const updateAnswer = async (req, res) => {
   const { answerId } = req.params;
   const { answerText } = req.body;
   const userId = req.user.id;
+
+  const transaction = await sequelize.transaction();
 
   try {
     const answer = await Answer.findOne({
@@ -108,9 +122,11 @@ export const updateAnswer = async (req, res) => {
         as: 'evidenceFiles',
         attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
       }],
+      transaction,
     });
 
     if (!answer) {
+      await transaction.rollback();
       return res.status(404).json({ success: false, messages: ['Answer not found.'] });
     }
 
@@ -119,6 +135,7 @@ export const updateAnswer = async (req, res) => {
     const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
     if (isUpdatingToNo && req.files && req.files.length > 0) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
         messages: ['No evidence files should be uploaded when the answer is "no" or "not applicable".'],
@@ -127,14 +144,15 @@ export const updateAnswer = async (req, res) => {
 
     if (isUpdatingToNo && hasExistingEvidenceFiles) {
       await Promise.all(answer.evidenceFiles.map(async (file) => {
-        await EvidenceFile.destroy({ where: { id: file.id } });
+        await EvidenceFile.destroy({ where: { id: file.id }, transaction });
       }));
     }
 
     if (isUpdatingToYes && (req.files.length === 0)) {
+      await transaction.rollback();
       return res.status(400).json({
         success: false,
-        messages: ['no files uploaded'],
+        messages: ['No files uploaded'],
       });
     }
 
@@ -145,7 +163,7 @@ export const updateAnswer = async (req, res) => {
       answer.createdByUserId = userId;
     }
 
-    await answer.save();
+    await answer.save({ transaction });
 
     let newEvidenceFiles = [];
     if (isUpdatingToYes && req.files && req.files.length > 0) {
@@ -155,7 +173,7 @@ export const updateAnswer = async (req, res) => {
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
-        });
+        }, { transaction });
         return {
           id: evidenceFile.id,
           filePath: evidenceFile.filePath,
@@ -181,7 +199,10 @@ export const updateAnswer = async (req, res) => {
         as: 'creator',
         attributes: ['id', 'username']
       }],
+      transaction,
     });
+
+    await transaction.commit();
 
     res.status(200).json({
       success: true,
@@ -190,6 +211,7 @@ export const updateAnswer = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating answer:', error);
+    await transaction.rollback();
     res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
   }
 };
@@ -235,7 +257,6 @@ export const getAnswerByQuestion = async (req, res) => {
   }
 };
 
-
 export const serveFile = async (req, res) => {
   const { fileId } = req.params;
 
@@ -257,19 +278,19 @@ export const serveFile = async (req, res) => {
   }
 };
 
-export const deleteAnswer = async (req, res) => {
-  const { answerId } = req.params;
+// export const deleteAnswer = async (req, res) => {
+//   const { answerId } = req.params;
 
-  try {
-    const result = await Answer.destroy({ where: { id: answerId } });
+//   try {
+//     const result = await Answer.destroy({ where: { id: answerId } });
 
-    if (result === 0) {
-      return res.status(404).json({ success: false, messages: ['Answer not found.'] });
-    }
+//     if (result === 0) {
+//       return res.status(404).json({ success: false, messages: ['Answer not found.'] });
+//     }
 
-    res.status(200).json({ success: true, messages: ['Answer deleted successfully.'] });
-  } catch (error) {
-    console.error('Error deleting answer:', error);
-    res.status(500).json({ success: false, messages: ['Error deleting answer.'] });
-  }
-};
+//     res.status(200).json({ success: true, messages: ['Answer deleted successfully.'] });
+//   } catch (error) {
+//     console.error('Error deleting answer:', error);
+//     res.status(500).json({ success: false, messages: ['Error deleting answer.'] });
+//   }
+// };

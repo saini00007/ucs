@@ -61,10 +61,12 @@ export const getCommentById = async (req, res) => {
 
 export const getCommentsByAssessmentQuestionId = async (req, res) => {
   const { assessmentQuestionId } = req.params;
+
   try {
     const comments = await Comment.findAll({
       where: { assessmentQuestionId: assessmentQuestionId },
       include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
+      paranoid: false,
       order: [['createdAt', 'ASC']],
     });
 
@@ -78,6 +80,7 @@ export const getCommentsByAssessmentQuestionId = async (req, res) => {
     return res.status(500).json({ success: false, messages: ['Error retrieving comments'], error: error.message });
   }
 };
+
 
 export const updateComment = async (req, res) => {
   const { commentId } = req.params;
@@ -136,26 +139,16 @@ export const deleteComment = async (req, res) => {
   const { commentId } = req.params;
 
   try {
-    const comment = await Comment.findOne({
+    const rowsDeleted = await Comment.destroy({
       where: { id: commentId },
     });
 
-    if (!comment) {
+    if (rowsDeleted === 0) {
       return res.status(404).json({
         success: false,
-        messages: ['Comment not found'],
+        messages: ['Comment not found or already deleted'],
       });
     }
-
-    if (comment.deleted) {
-      return res.status(400).json({
-        success: false,
-        messages: ['This comment has already been deleted'],
-      });
-    }
-    comment.deletedAt = new Date();
-    comment.deleted = true;
-    await comment.save();
 
     return res.status(200).json({
       success: true,
@@ -170,5 +163,6 @@ export const deleteComment = async (req, res) => {
     });
   }
 };
+
 
 

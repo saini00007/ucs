@@ -14,6 +14,7 @@ const Assessment = sequelize.define('Assessment', {
       model: 'departments',
       key: 'id',
     },
+    allowNull: false,
     onDelete: 'CASCADE',
     field: 'department_id',
   },
@@ -41,11 +42,12 @@ const Assessment = sequelize.define('Assessment', {
     type: DataTypes.DATE,
     field: 'submitted_at',
     allowNull: true, 
-  },
+  }
 }, {
   tableName: 'assessments',
   timestamps: true,
   underscored: true,
+  paranoid: true,
 });
 
 export default Assessment;

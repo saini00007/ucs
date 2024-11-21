@@ -31,6 +31,15 @@ const baseCompanySchema = Joi.object({
             'any.required': 'GST number is required',
         }),
 
+    panNumber: Joi.string()
+        .length(10)
+        .required()
+        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/) // Assuming PAN number pattern: 5 letters, 4 digits, 1 letter
+        .messages({
+            'string.length': 'PAN number must be exactly 10 characters',
+            'string.pattern.base': 'PAN number must match the pattern XXXXX1234X',
+        }),
+
     primaryEmail: Joi.string()
         .email()
         .required()
@@ -59,10 +68,32 @@ const baseCompanySchema = Joi.object({
     secondaryPhone: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
-        .optional()
+        .required()
         .messages({
             'string.length': 'Secondary phone must be exactly 10 digits',
             'string.pattern.base': 'Secondary phone must contain only digits',
+        }),
+
+    primaryCountryCode: Joi.string()
+        .min(1)
+        .max(5)  // Correct usage for length range
+        .required()
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
+        }),
+
+    secondaryCountryCode: Joi.string()
+        .min(1)
+        .max(5)
+        .required()
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
 });
 
@@ -97,6 +128,16 @@ const updateCompanySchema = Joi.object({
             'string.pattern.base': 'GST number must contain only digits',
         }),
 
+    panNumber: Joi.string()
+        .length(10)
+        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
+        .allow('')
+        .optional()
+        .messages({
+            'string.length': 'PAN number must be exactly 10 characters',
+            'string.pattern.base': 'PAN number must match the pattern XXXXX1234X',
+        }),
+
     primaryEmail: Joi.string()
         .email()
         .allow('')
@@ -132,7 +173,30 @@ const updateCompanySchema = Joi.object({
             'string.length': 'Secondary phone must be exactly 10 digits',
             'string.pattern.base': 'Secondary phone must contain only digits',
         }),
-});
 
+    primaryCountryCode: Joi.string()
+        .min(1)
+        .max(5)
+        .optional()
+        .allow('')
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
+        }),
+
+    secondaryCountryCode: Joi.string()
+        .min(1)
+        .max(5)
+        .optional()
+        .allow('')
+        .pattern(/^\+?\d+$/)
+        .messages({
+            'string.min': 'Country code must be between 1 and 5 characters',
+            'string.max': 'Country code must be between 1 and 5 characters',
+            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
+        }),
+});
 
 export { createCompanySchema, updateCompanySchema };

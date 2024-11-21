@@ -1,5 +1,4 @@
-import { User, Department, Company } from '../models/index.js';
-import UserDepartmentLink from '../models/UserDepartmentLink.js';
+import { User, Department, Company, UserDepartmentLink } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
 import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';

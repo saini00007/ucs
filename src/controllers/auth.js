@@ -150,12 +150,11 @@ export const verifyOtp = async (req, res) => {
 
     await Otp.destroy({ where: { userId } });
 
-    // Set the cookie for the session token
     res.cookie('session_token', finalToken, {
-      httpOnly: true, // To prevent XSS attacks
-      secure: process.env.NODE_ENV === 'production', // Ensure this is true in production (HTTPS)
-      maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days (cookie expiry)
-      sameSite: 'Strict', // Cookie only sent for requests to the same site
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 2 * 24 * 60 * 60 * 1000, // 2 days
+      sameSite: 'Strict',
     });
 
     res.status(200).json({

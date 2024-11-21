@@ -36,6 +36,7 @@ const User = sequelize.define('User', {
       model: 'roles',
       key: 'id',
     },
+    allowNull: false,
     field: 'role_id',
   },
   companyId: {
@@ -47,16 +48,31 @@ const User = sequelize.define('User', {
     },
     onDelete: 'CASCADE',
     field: 'company_id',
+    validate: {
+      isRequiredIfNotSuperAdmin(value) {
+        if (this.roleId !== 'superadmin' && !value) {
+          throw new Error('Company ID is required for non-superadmin users');
+        }
+      },
+    },
   },
   phoneNumber: {
     type: DataTypes.STRING(10),
     allowNull: true,
     field: 'phone_number',
+    validate: {
+      isRequiredIfNotSuperAdmin(value) {
+        if (this.roleId !== 'superadmin' && !value) {
+          throw new Error('Phone number is required for non-superadmin users');
+        }
+      },
+    },
   },
 }, {
   tableName: 'users',
   timestamps: true,
   underscored: true,
+  paranoid: true,
   hooks: {
     beforeValidate: async (user, options) => {
       if (!user.id && user.username) {
