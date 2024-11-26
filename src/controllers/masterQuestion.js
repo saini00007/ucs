@@ -41,7 +41,7 @@ export const getMasterQuestions = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching master questions:', error);
-    return res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
 

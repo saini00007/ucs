@@ -3,11 +3,9 @@ import {
   addUser,
   deleteUser,
   updateUser,
-  getUsersByDepartment,
-  getUsersByCompany,
   getUserById,
   removeUserFromDepartment,
-  getDepartmentsByUser,
+  getDepartmentsByUserId,
   addUserToDepartment
 } from '../controllers/user.js';
 import validate from '../middleware/validate.js';
@@ -17,7 +15,7 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
-router.post('/users',
+router.post('/',
   (req, res, next) => {
     if (req.body.roleId === 'admin') {
       return attachResourceInfo('User', 'Company', 'companyId', 'create')(req, res, next);
@@ -30,7 +28,7 @@ router.post('/users',
 );
 
 // Route to update an existing user
-router.put('/users/:userId',
+router.put('/:userId',
   attachResourceInfo('User', 'User', 'userId', 'update'),
   checkAccess,
   validate(updateUserSchema),
@@ -38,44 +36,30 @@ router.put('/users/:userId',
 );
 
 // Route to delete a user
-router.delete('/users/:userId',
+router.delete('/:userId',
   attachResourceInfo('User', 'User', 'userId', 'remove'),
   checkAccess,
   deleteUser
 );
 
-// Route to get users by department
-router.get('/departments/:departmentId/users',
-  attachResourceInfo('User', 'Department', 'departmentId', 'list'),
-  checkAccess,
-  getUsersByDepartment
-);
-
-// Route to get users by company
-router.get('/companies/:companyId/users',
-  attachResourceInfo('User', 'Company', 'companyId', 'list'),
-  checkAccess,
-  getUsersByCompany
-);
-
 // Route to get a user by ID
-router.get('/users/:userId',
+router.get('/:userId',
   attachResourceInfo('User', 'User', 'userId', 'read'),
   checkAccess,
   getUserById
 );
 
-router.get('/users/:userId/departments',
+router.get('/:userId/departments',
   attachResourceInfo('User', 'User', 'userId', 'read'),
   checkAccess,
-  getDepartmentsByUser);
+  getDepartmentsByUserId);
 
-router.delete('/users/:userId/departments/:departmentId',
+router.delete('/:userId/departments/:departmentId',
   attachResourceInfo('UserDepartmentLink', 'User', 'userId', 'remove'),
   checkAccess,
   removeUserFromDepartment);
 
-router.post('/users/:userId/departments/:departmentId',
+router.post('/:userId/departments/:departmentId',
   attachResourceInfo('UserDepartmentLink', 'Department', 'departmentId', 'create'),
   checkAccess,
   addUserToDepartment);

@@ -68,7 +68,7 @@ export const getAssessmentQuestionById = async (req, res) => {
         {
           model: Answer,
           as: 'answer',
-          attributes: ['id', 'answerText','createdAt','updatedAt'],
+          attributes: ['id', 'answerText', 'createdAt', 'updatedAt'],
           include: [
             {
               model: EvidenceFile,
@@ -117,103 +117,68 @@ export const getAssessmentQuestionById = async (req, res) => {
   }
 };
 
-export const getAssessmentQuestions = async (req, res) => {
-  const { assessmentId } = req.params;
-  const { page = 1, limit = 10 } = req.query; 
+export const getAnswerByAssessmentQuestionId = async (req, res) => {
+  const { assessmentQuestionId } = req.params;
 
   try {
-    const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
-      where: { assessmentId },
-      attributes: ['id', 'assessmentId'],
-      include: [
-        {
-          model: MasterQuestion,
-          as: 'masterQuestion',
-          attributes: ['questionText'],
-        },
-        {
-          model: Answer,
-          as: 'answer',
-          attributes: ['id', 'answerText','createdAt','updatedAt'],
-          include: [
-            {
-              model: EvidenceFile,
-              as: 'evidenceFiles',
-              attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
-              order: [['createdAt', 'ASC']],
-              include: [{
-                model: User,
-                as: 'creator',
-                attributes: ['id', 'username']
-              }]
-            }, {
-              model: User,
-              as: 'creator',
-              attributes: ['id', 'username']
-            }
-          ],
-
-        },
-        {
-          model: Comment,
-          as: 'comments',
-          include: [
-            {
-              model: User,
-              as: 'creator',
-              attributes: ['id', 'username']
-            },
-          ],
-          order: [['createdAt', 'ASC']],
-        },
+    const answer = await Answer.findOne({
+      where: { assessmentQuestionId },
+      include: [{
+        model: EvidenceFile,
+        as: 'evidenceFiles',
+        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        order: [['createdAt', 'ASC']],
+        include: [{
+          model: User,
+          as: 'creator',
+          attributes: ['id', 'username']
+        }]
+      }, {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'username']
+      }
       ],
-      limit,
-      offset: (page - 1) * limit,
     });
 
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No questions found for the given assessment'],
-        questions: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
-    }
-
-    const totalPages = Math.ceil(count / limit);
-
-    if (page > totalPages) {
+    if (!answer) {
       return res.status(404).json({
         success: false,
-        messages: ['Page not found'],
+        messages: ['No Answer found'],
       });
     }
 
     res.status(200).json({
       success: true,
-      messages: ['Assessment questions retrieved successfully'],
-      questions,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: page,
-        itemsPerPage: limit,
-      },
+      answer: answer,
     });
   } catch (error) {
-    console.error('Error fetching assessment questions:', error);
-    res.status(500).json({
-      success: false,
-      messages: ['Internal server error'],
-    });
+    console.error('Error retrieving answer:', error);
+    res.status(500).json({ success: false, messages: ['Error retrieving answer.'], error: error.message });
   }
 };
 
+export const getCommentsByAssessmentQuestionId = async (req, res) => {
+  const { assessmentQuestionId } = req.params;
+
+  try {
+    const comments = await Comment.findAll({
+      where: { assessmentQuestionId: assessmentQuestionId },
+      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
+      paranoid: false,
+      order: [['createdAt', 'ASC']],
+    });
+
+    return res.status(200).json({
+      success: true,
+      messages: ['Comments retrieved successfully'],
+      comments,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, messages: ['Error retrieving comments'], error: error.message });
+  }
+};
 
 // export const deleteAssessmentQuestions = async (req, res) => {
 //   const { questionIds } = req.body;

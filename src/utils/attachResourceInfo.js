@@ -48,7 +48,7 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
             console.error('Error in attachResourceInfo middleware:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Internal Server Error: An unexpected error occurred.',
+                messages: ['Internal Server Error: An unexpected error occurred.'],
             });
         }
     };

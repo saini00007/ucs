@@ -2,52 +2,61 @@ import express from 'express';
 import validate from '../middleware/validate.js';
 import { createDepartmentSchema, updateDepartmentSchema } from '../joi/department.js';
 import {
-  getAllDepartmentsForCompany,
-  getDepartmentById,
-  createDepartment,
-  updateDepartment,
-  deleteDepartment
+    getDepartmentById,
+    createDepartment,
+    updateDepartment,
+    deleteDepartment,
+    getAssessmentByDepartmentId,
+    getUsersByDepartmentId,
+
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
-import  checkAccess  from '../middleware/authorize.js';
+import checkAccess from '../middleware/authorize.js';
 
 const router = express.Router();
 
-// Route to get all departments for a company
-router.get('/companies/:companyId/departments', 
-    attachResourceInfo('Department', 'Company', 'companyId', 'list'), 
-    checkAccess, 
-    getAllDepartmentsForCompany
-);
-
 // Route to get a department by its ID
-router.get('/departments/:departmentId', 
-    attachResourceInfo('Department', 'Department', 'departmentId', 'read'), 
-    checkAccess, 
+router.get('/:departmentId',
+    attachResourceInfo('Department', 'Department', 'departmentId', 'read'),
+    checkAccess,
     getDepartmentById
 );
 
 // Route to create a new department
-router.post('/departments', 
-    attachResourceInfo('Department', 'Company', 'companyId', 'create'), 
+router.post('/',
+    attachResourceInfo('Department', 'Company', 'companyId', 'create'),
     checkAccess,
-    validate(createDepartmentSchema), 
+    validate(createDepartmentSchema),
     createDepartment
 );
 
 // Route to update a department by its ID
-router.put('/departments/:departmentId', 
-    attachResourceInfo('Department', 'Department', 'departmentId', 'update'), 
-    checkAccess, 
-    validate(updateDepartmentSchema), 
+router.put('/:departmentId',
+    attachResourceInfo('Department', 'Department', 'departmentId', 'update'),
+    checkAccess,
+    validate(updateDepartmentSchema),
     updateDepartment
 );
 
 // Route to delete a department by its ID
-router.delete('/departments/:departmentId', 
-    attachResourceInfo('Department', 'Department', 'departmentId', 'remove'), 
-    checkAccess, 
+router.delete('/:departmentId',
+    attachResourceInfo('Department', 'Department', 'departmentId', 'remove'),
+    checkAccess,
     deleteDepartment
+);
+
+// Route to get all assessments for a department
+router.get('/:departmentId/assessments',
+    attachResourceInfo('Assessment', 'Department', 'departmentId', 'list'),
+    checkAccess,
+    getAssessmentByDepartmentId
+);
+
+// Route to get users by department
+router.get('/:departmentId/users',
+    attachResourceInfo('User', 'Department', 'departmentId', 'list'),
+    checkAccess,
+    getUsersByDepartmentId
 );
 
 export default router;

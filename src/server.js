@@ -33,15 +33,18 @@ app.use(express.urlencoded({ extended: true }));
 
 
 app.use('/', authRoutes);
+
 app.use(authMiddleware);
-app.use('/', companyRoutes);
-app.use('/', departmentRoutes);
-app.use('/', userRoutes);
-app.use('/', assessmentRoutes);
-app.use('/', assessmentQuestionRoutes);
+
+app.use('/companies', companyRoutes);
+app.use('/departments', departmentRoutes);
+app.use('/users', userRoutes);
+app.use('/assessments', assessmentRoutes);
+app.use('/questions', assessmentQuestionRoutes);
 app.use('/', answerRoutes);
-app.use('/', masterRoutes);
 app.use('/', commentRoutes);
+app.use('/', masterRoutes);
+
 
 const startServer = async () => {
   try {

@@ -1,7 +1,6 @@
 import express from 'express';
 import {
   createComment,
-  getCommentsByAssessmentQuestionId,
   getCommentById,
   updateComment,
   deleteComment,
@@ -18,11 +17,6 @@ router.post('/questions/:assessmentQuestionId/comments',
   checkAccess,
   validate(commentSchema),
   createComment);
-
-router.get('/questions/:assessmentQuestionId/comments',
-  attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'list'),
-  checkAccess,
-  getCommentsByAssessmentQuestionId);
 
 router.get('/comments/:commentId',
   attachResourceInfo('Comment', 'Comment', 'commentId', 'read'),

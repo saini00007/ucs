@@ -25,19 +25,41 @@ const checkAnswerAccess = async (user, resourceId) => {
             ],
         });
 
-        if (!answer || !answer?.assessmentQuestion?.assessment?.assessmentStarted || answer?.assessmentQuestion?.assessment?.submitted) {
+        if (!answer) {
+            console.log("Access denied: Answer not found.");
             return false;
         }
 
-        const departmentId = answer.assessmentQuestion.assessment.departmentId;
-        const companyId = answer.assessmentQuestion.assessment.department.companyId;
+        const assessment = answer.assessmentQuestion?.assessment;
+        if (!assessment) {
+            console.log("Access denied: Assessment not found.");
+            return false;
+        }
+
+        if (!assessment.assessmentStarted) {
+            console.log("Access denied: Assessment has not started.");
+            return false;
+        }
+
+        if (assessment.submitted) {
+            console.log("Access denied: Assessment has already been submitted.");
+            return false;
+        }
+
+        const departmentId = assessment.departmentId;
+        const companyId = assessment.department?.companyId;
 
         if (user.roleId === 'admin' && user.companyId === companyId) {
             return true;
         }
 
         const userDepartments = user.departments.map(department => department.id);
-        return userDepartments.includes(departmentId);
+        if (!userDepartments.includes(departmentId)) {
+            console.log("Access denied: User does not belong to the department.");
+            return false;
+        }
+
+        return true;
     } catch (error) {
         console.error("Error checking access to the answer:", error);
         return false;

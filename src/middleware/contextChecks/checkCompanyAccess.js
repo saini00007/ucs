@@ -4,9 +4,17 @@ const checkCompanyAccess = async (user, resourceId) => {
     try {
         const company = await Company.findByPk(resourceId);
 
-        if (!company) return false;
+        if (!company) {
+            console.log("Access denied: Company not found.");
+            return false;
+        }
 
-        return company.id === user.companyId;
+        const hasAccess = company.id === user.companyId;
+        if (!hasAccess) {
+            console.log("Access denied: User does not belong to the company.");
+        }
+
+        return hasAccess;
     } catch (error) {
         console.error("Error checking company access:", error);
         return false;
@@ -14,4 +22,3 @@ const checkCompanyAccess = async (user, resourceId) => {
 };
 
 export default checkCompanyAccess;
-

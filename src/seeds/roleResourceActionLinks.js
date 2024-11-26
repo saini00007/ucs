@@ -1,5 +1,5 @@
-import { RoleResourceActionLink} from "../models/index.js";
-import sequelize from "../config/db.js"; 
+import { RoleResourceActionLink } from "../models/index.js";
+import sequelize from "../config/db.js";
 
 const seedRoleResourceActionLinks = async () => {
   const roleActions = [
@@ -7,8 +7,8 @@ const seedRoleResourceActionLinks = async () => {
       roleId: 'superadmin', resourceActions: [
         { resourceId: 'company', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
         { resourceId: 'department', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
-        { resourceId: 'assessment', actionIds: ['start', 'submit', 'read', 'reopen'] },
-        { resourceId: 'assessmentquestion', actionIds: ['list', 'read', 'create', 'remove'] },
+        { resourceId: 'assessment', actionIds: ['start', 'submit', 'read', 'reopen', 'list'] },
+        { resourceId: 'assessmentquestion', actionIds: ['list', 'read',] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update', 'remove'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },
         { resourceId: 'comment', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
@@ -24,7 +24,7 @@ const seedRoleResourceActionLinks = async () => {
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['list', 'read'] },
-        { resourceId: 'assessment', actionIds: ['start', 'submit', 'read', 'reopen'] },
+        { resourceId: 'assessment', actionIds: ['start', 'submit', 'read', 'reopen', 'list'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },
@@ -39,7 +39,7 @@ const seedRoleResourceActionLinks = async () => {
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['read'] },
-        { resourceId: 'assessment', actionIds: ['start', 'read', 'submit', 'reopen'] },
+        { resourceId: 'assessment', actionIds: ['start', 'read', 'submit', 'reopen', 'list'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },
@@ -52,8 +52,9 @@ const seedRoleResourceActionLinks = async () => {
     {
       roleId: 'assessor',
       resourceActions: [
+        { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['read'] },
-        { resourceId: 'assessment', actionIds: ['start', 'read'] },
+        { resourceId: 'assessment', actionIds: ['start', 'read', 'list'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },
@@ -66,11 +67,11 @@ const seedRoleResourceActionLinks = async () => {
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['read'] },
-        { resourceId: 'assessment', actionIds: ['read'] },
+        { resourceId: 'assessment', actionIds: ['read', 'list'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },
-        { resourceId: 'comment', actionIds: ['list', 'read'] },
+        { resourceId: 'comment', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
         { resourceId: 'user', actionIds: ['list', 'read'] },
       ]
     },

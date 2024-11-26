@@ -8,63 +8,12 @@ import {
     QuestionDepartmentLink,
     Answer,
     EvidenceFile,
-    UserDepartmentLink
+    UserDepartmentLink,
+    Comment,
+    User
 } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
-
-export const getAllDepartmentsForCompany = async (req, res) => {
-    const { companyId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    try {
-        const { count, rows: departments } = await Department.findAndCountAll({
-            where: { companyId: companyId },
-            limit: limit,
-            offset: (page - 1) * limit,
-            include: [
-                {
-                    model: Company,
-                    as: 'company',
-                    attributes: ['companyName']
-                },
-                {
-                    model: MasterDepartment,
-                    as: 'masterDepartment',
-                    attributes: ['departmentName']
-                },
-            ],
-        });
-
-        if (count === 0) {
-            return res.status(200).json({
-                success: true,
-                messages: ['No departments found'],
-                departments: [],
-                pagination: {
-                    totalItems: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    itemsPerPage: limit,
-                },
-            });
-        }
-
-        const totalPages = Math.ceil(count / limit);
-
-        if (page > totalPages) {
-            return res.status(404).json({ success: false, messages: ['Page not found'] });
-        }
-
-        res.status(200).json({
-            success: true,
-            departments: departments,
-            pagination: { totalItems: count, totalPages, currentPage: page, itemsPerPage: limit }
-        });
-    } catch (error) {
-        console.error('Error fetching departments for company:', error);
-        res.status(500).json({ success: false, messages: ['Failed to fetch departments'] });
-    }
-};
 
 export const getDepartmentById = async (req, res) => {
     const { departmentId } = req.params;
@@ -327,4 +276,97 @@ export const deleteDepartment = async (req, res) => {
     }
 };
 
+export const getAssessmentByDepartmentId = async (req, res) => {
+    const { departmentId } = req.params;
 
+    try {
+        const assessments = await Assessment.findAll({
+            where: { departmentId },
+            include: [
+                { model: Department, as: 'department', attributes: ['id', 'departmentName'] },
+            ],
+        });
+
+        if (!assessments || assessments.length === 0) {
+            return res.status(404).json({
+                success: false,
+                messages: ['No assessments found for the given department'],
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            messages: ['Assessments retrieved successfully'],
+            assessments,
+        });
+    } catch (error) {
+        console.error('Error fetching assessments:', error);
+        res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
+    }
+};
+
+export const getUsersByDepartmentId = async (req, res) => {
+    const { departmentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    try {
+        const { count, rows: users } = await User.findAndCountAll({
+            include: [
+                {
+                    model: Department,
+                    as: 'departments',
+                    attributes: ['id'],
+                    through: {
+                        attributes: []
+                    },
+                    where: departmentId ? { id: departmentId } : {},
+                },
+            ],
+            attributes: { exclude: ['password', 'deletedAt'] },
+            limit: parseInt(limit, 10),
+            offset: (page - 1) * limit,
+        });
+
+        if (count === 0) {
+            return res.status(200).json({
+                success: true,
+                messages: ['No users found'],
+                users: [],
+                pagination: {
+                    totalItems: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    itemsPerPage: limit
+                },
+            });
+        }
+
+        const totalPages = Math.ceil(count / limit);
+
+        if (page > totalPages) {
+            return res.status(404).json({
+                success: false,
+                messages: ['Page not found'],
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            messages: ['Users retrieved successfully'],
+            users: users,
+            pagination: {
+                totalItems: count,
+                totalPages,
+                currentPage: page,
+                itemsPerPage: limit
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching users by department:', error);
+        res.status(500).json({
+            success: false,
+            messages: ['Error fetching users'],
+            error: error.message,
+        });
+    }
+};

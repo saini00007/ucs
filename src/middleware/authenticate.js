@@ -3,16 +3,17 @@ import { User, Department } from '../models/index.js';
 
 export const authenticate = async (req, res, next) => {
 
-  // Retrieve token from the cookies
-  const token = req.header("Authorization").replace("Bearer ", "");;
-
-  //if no token provided
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'No token provided' });
-  }
 
   try {
     // Verify the token using the JWT secret
+    // Retrieve token from the cookies
+    const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies.session_token;
+
+    //if no token provided
+    if (!token) {
+      return res.status(401).json({ success: false, messages: ['No token provided'] });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     //if token is not of session type
@@ -35,7 +36,7 @@ export const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'User not found' });
+      return res.status(401).json({ success: false, messages: ['User not found'] });
     }
 
     req.user = user;
@@ -45,11 +46,11 @@ export const authenticate = async (req, res, next) => {
     console.error('Authentication error:', error);
 
     if (error.name === 'TokenExpiredError') {
-      return res.status(403).json({ success: false, message: 'Token expired' });
+      return res.status(403).json({ success: false, messages: ['Token expired'] });
     } else if (error.name === 'JsonWebTokenError') {
-      return res.status(403).json({ success: false, message: 'Invalid token' });
+      return res.status(403).json({ success: false, messages: ['Invalid token'] });
     } else {
-      return res.status(500).json({ success: false, message: 'Failed to authenticate token' });
+      return res.status(500).json({ success: false, messages: ['Failed to authenticate token'] });
     }
   }
 };

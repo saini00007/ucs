@@ -59,29 +59,6 @@ export const getCommentById = async (req, res) => {
   }
 };
 
-export const getCommentsByAssessmentQuestionId = async (req, res) => {
-  const { assessmentQuestionId } = req.params;
-
-  try {
-    const comments = await Comment.findAll({
-      where: { assessmentQuestionId: assessmentQuestionId },
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
-      paranoid: false,
-      order: [['createdAt', 'ASC']],
-    });
-
-    return res.status(200).json({
-      success: true,
-      messages: ['Comments retrieved successfully'],
-      comments,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ success: false, messages: ['Error retrieving comments'], error: error.message });
-  }
-};
-
-
 export const updateComment = async (req, res) => {
   const { commentId } = req.params;
   const { commentText } = req.body;
@@ -133,7 +110,6 @@ export const updateComment = async (req, res) => {
     });
   }
 };
-
 
 export const deleteComment = async (req, res) => {
   const { commentId } = req.params;

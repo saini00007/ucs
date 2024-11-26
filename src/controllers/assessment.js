@@ -1,6 +1,6 @@
-import { Assessment, Company, Department } from '../models/index.js';
+import { Answer, Assessment, AssessmentQuestion, Company, Department, EvidenceFile, MasterQuestion, User ,Comment} from '../models/index.js';
 
-export const markAssessmentAsStarted = async (req, res) => {
+export const startAssessment = async (req, res) => {
   const { assessmentId } = req.params;
 
   try {
@@ -91,35 +91,6 @@ export const submitAssessment = async (req, res) => {
   }
 };
 
-export const getAssessmentByDepartmentId = async (req, res) => {
-  const { departmentId } = req.params;
-
-  try {
-    const assessments = await Assessment.findAll({
-      where: { departmentId },
-      include: [
-        { model: Department, as: 'department', attributes: ['id', 'departmentName'] },
-      ],
-    });
-
-    if (!assessments || assessments.length === 0) {
-      return res.status(404).json({
-        success: false,
-        messages: ['No assessments found for the given department'],
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      messages: ['Assessments retrieved successfully'],
-      assessments,
-    });
-  } catch (error) {
-    console.error('Error fetching assessments:', error);
-    res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
-  }
-};
-
 export const getAssessmentById = async (req, res) => {
   const { assessmentId } = req.params;
 
@@ -145,6 +116,7 @@ export const getAssessmentById = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Error fetching assessment'] });
   }
 };
+
 export const reopenAssessment = async (req, res) => {
   const { assessmentId } = req.params;
 
@@ -185,5 +157,126 @@ export const reopenAssessment = async (req, res) => {
   } catch (error) {
     console.error('Error reopening assessment:', error);
     res.status(500).json({ success: false, messages: ['Error reopening assessment'] });
+  }
+};
+
+export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
+  const { assessmentId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  try {
+    // Fetch the assessment details to check if it has started or been submitted
+    const assessment = await Assessment.findOne({
+      where: { id: assessmentId },
+      attributes: ['assessmentStarted', 'submitted'],
+    });
+
+    // If assessment is not found or not started or already submitted, deny access
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Assessment not found'],
+      });
+    }
+
+    const { assessmentStarted, submitted } = assessment;
+
+    if (!assessmentStarted || submitted) {
+      return res.status(403).json({
+        success: false,
+        messages: ['Access denied: Insufficient content access.'],
+      });
+    }
+    
+
+    // Fetch the questions for the assessment
+    const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
+      where: { assessmentId },
+      attributes: ['id', 'assessmentId'],
+      include: [
+        {
+          model: MasterQuestion,
+          as: 'masterQuestion',
+          attributes: ['questionText'],
+        },
+        {
+          model: Answer,
+          as: 'answer',
+          attributes: ['id', 'answerText', 'createdAt', 'updatedAt'],
+          include: [
+            {
+              model: EvidenceFile,
+              as: 'evidenceFiles',
+              attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+              order: [['createdAt', 'ASC']],
+              include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['id', 'username']
+              }]
+            }, {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
+            }
+          ],
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+      ],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    if (count === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No questions found for the given assessment'],
+        questions: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage: page,
+          itemsPerPage: limit,
+        },
+      });
+    }
+
+    const totalPages = Math.ceil(count / limit);
+
+    if (page > totalPages) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Page not found'],
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      messages: ['Assessment questions retrieved successfully'],
+      questions,
+      pagination: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching assessment questions:', error);
+    res.status(500).json({
+      success: false,
+      messages: ['Internal server error'],
+    });
   }
 };

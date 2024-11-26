@@ -12,19 +12,29 @@ const checkUserAccess = async (user, resourceId) => {
         });
 
         if (!userDb) {
-            console.error("User not found");
+            console.error("Access denied: User not found.");
             return false;
         }
 
-        if (user.roleId === 'admin' && user.companyId === userDb.companyId) return true;
-
-        if (user.roleId === 'departmentManager') {
-            return user.departments.some(department =>
-                userDb.departments.some(dbDept => dbDept.id === department.id)
-            );
+        if (user.roleId === 'admin' && user.companyId === userDb.companyId) {
+            return true;
         }
 
-        return user.id === userDb.id;
+        if (user.roleId === 'departmentmanager') {
+            const hasAccess = user.departments.some(department =>
+                userDb.departments.some(dbDept => dbDept.id === department.id)
+            );
+            if (!hasAccess) {
+                console.log("Access denied: Department manager does not belong to the same department.");
+            }
+            return hasAccess;
+        }
+
+        const hasAccess = user.id === userDb.id;
+        if (!hasAccess) {
+            console.log("Access denied: User is not the same as the resource user.");
+        }
+        return hasAccess;
     } catch (error) {
         console.error("Error checking user access:", error);
         return false;

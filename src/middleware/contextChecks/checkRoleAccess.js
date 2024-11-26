@@ -1,8 +1,12 @@
 const checkRoleAccess = (user) => {
     try {
-        return ['superadmin', 'admin'].includes(user.roleId);
+        const hasAccess = ['superadmin', 'admin', 'departmentmanager'].includes(user.roleId);
+        if (!hasAccess) {
+            console.log(`Access denied: User with role ${user.roleId} does not have the required access.`);
+        }
+        return hasAccess;
     } catch (error) {
-        console.error("Error checking Role access:", error);
+        console.error("Error checking role access:", error);
         return false;
     }
 };

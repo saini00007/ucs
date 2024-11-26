@@ -5,7 +5,7 @@ export const getRoles = async (req, res) => {
     const roles = await Role.findAll();
     
     if (roles.length === 0) {
-      return res.status(404).json({ success: false, message: ['No roles found'] });
+      return res.status(404).json({ success: false, messages: ['No roles found'] });
     }
 
     let filteredRoles;
@@ -14,40 +14,38 @@ export const getRoles = async (req, res) => {
       filteredRoles = roles;
     } else if (req.user.roleId === 'admin') {
       filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin');
-    } else if (req.user.roleId === 'department_manager') {
-      filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin' && role.id !== 'department_manager');
+    } else if (req.user.roleId === 'departmentmanager') {
+      filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin' && role.id !== 'departmentmanager');
     } else {
       filteredRoles = [];
     }
 
     res.status(200).json({
       success: true,
-      message: ['Roles retrieved successfully'],
+      messages: ['Roles retrieved successfully'],
       roles: filteredRoles,
     });
   } catch (error) {
     console.error('Error fetching roles:', error);
-    res.status(500).json({ success: false, message: ['Error fetching roles'] });
+    res.status(500).json({ success: false, messages: ['Error fetching roles'] });
   }
 };
-
-
 
 export const getMasterDepartments = async (req, res) => {
   try {
     const masterDepartments = await MasterDepartment.findAll();
 
     if (masterDepartments.length === 0) {
-      return res.status(404).json({ success: false, message: ['No master departments found'] });
+      return res.status(404).json({ success: false, messages: ['No master departments found'] });
     }
 
     res.status(200).json({
       success: true,
-      message: ['Master departments retrieved successfully'],
+      messages: ['Master departments retrieved successfully'],
       masterDepartments,
     });
   } catch (error) {
     console.error('Error fetching master departments:', error);
-    res.status(500).json({ success: false, message: ['Error fetching master departments'] });
+    res.status(500).json({ success: false, messages: ['Error fetching master departments'] });
   }
 };

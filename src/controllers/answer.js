@@ -216,47 +216,6 @@ export const updateAnswer = async (req, res) => {
   }
 };
 
-export const getAnswerByQuestion = async (req, res) => {
-  const { assessmentQuestionId } = req.params;
-
-  try {
-    const answer = await Answer.findOne({
-      where: { assessmentQuestionId },
-      include: [{
-        model: EvidenceFile,
-        as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
-        order: [['createdAt', 'ASC']],
-        include: [{
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'username']
-        }]
-      }, {
-        model: User,
-        as: 'creator',
-        attributes: ['id', 'username']
-      }
-      ],
-    });
-
-    if (!answer) {
-      return res.status(404).json({
-        success: false,
-        messages: ['No Answer found'],
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      answer: answer,
-    });
-  } catch (error) {
-    console.error('Error retrieving answer:', error);
-    res.status(500).json({ success: false, messages: ['Error retrieving answer.'], error: error.message });
-  }
-};
-
 export const serveFile = async (req, res) => {
   const { fileId } = req.params;
 

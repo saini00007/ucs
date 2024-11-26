@@ -1,24 +1,28 @@
 import express from 'express';
-import { 
-  getAssessmentQuestions,  
-  getAssessmentQuestionById
+import {
+  getAssessmentQuestionById,
+  getAnswerByAssessmentQuestionId,
+  getCommentsByAssessmentQuestionId,
 } from '../controllers/assessmentQuestion.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
-import checkAccess  from '../middleware/authorize.js';
+import checkAccess from '../middleware/authorize.js';
 
 const router = express.Router();
 
-router.get('/questions/:assessmentQuestionId', 
-    attachResourceInfo('AssessmentQuestion', 'AssessmentQuestion', 'assessmentQuestionId', 'read'), 
-    checkAccess, 
-    getAssessmentQuestionById
+router.get('/:assessmentQuestionId',
+  attachResourceInfo('AssessmentQuestion', 'AssessmentQuestion', 'assessmentQuestionId', 'read'),
+  checkAccess,
+  getAssessmentQuestionById
 );
 
-// Route to get all questions for a specific assessment
-router.get('/assessments/:assessmentId/questions', 
-    attachResourceInfo('AssessmentQuestion', 'Assessment', 'assessmentId', 'list'), 
-    checkAccess, 
-    getAssessmentQuestions
-);
+router.get('/:assessmentQuestionId/answers',
+  attachResourceInfo('Answer', 'AssessmentQuestion', 'assessmentQuestionId', 'read'),
+  checkAccess,
+  getAnswerByAssessmentQuestionId);
+
+router.get('/:assessmentQuestionId/comments',
+  attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'list'),
+  checkAccess,
+  getCommentsByAssessmentQuestionId);
 
 export default router;

@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { User, Otp,Department } from '../models/index.js';
+import { User, Otp, Department, Company } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
 import { generateToken } from '../utils/token.js';
 
@@ -140,7 +140,14 @@ export const verifyOtp = async (req, res) => {
             attributes: []
           },
         },
+        {
+          model: Company,
+          as: 'company',
+          attributes: ['id', 'companyName'],
+        }
+
       ],
+
     });
 
     if (!user) {

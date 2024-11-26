@@ -26,7 +26,7 @@ const checkAccess = async (req, res, next) => {
       // If the user lacks the required role permission, deny access
       return res.status(403).json({
         success: false,
-        message: 'Access denied: insufficient role permissions.'
+        messages: ['Access denied: insufficient role permissions.']
       });
     }
 
@@ -44,7 +44,7 @@ const checkAccess = async (req, res, next) => {
       // If the user lacks content access, deny access
       return res.status(403).json({
         success: false,
-        message: 'Access denied: insufficient content access.'
+        messages: ['Access denied: insufficient content access.']
       });
     }
 
@@ -54,7 +54,7 @@ const checkAccess = async (req, res, next) => {
     console.error('Error checking access:', error);
     return res.status(500).json({
       success: false,
-      message: 'Internal Server Error: An unexpected error occurred.',
+      messages: ['Internal Server Error: An unexpected error occurred.'],
     });
   }
 };

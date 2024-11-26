@@ -3,7 +3,6 @@ import { uploadFiles } from '../middleware/fileUpload.js';
 import {
   createAnswer,
   updateAnswer,
-  getAnswerByQuestion,
   serveFile
 } from '../controllers/answer.js';
 import validate from '../middleware/validate.js';
@@ -29,10 +28,6 @@ router.put('/answers/:answerId',
   validate(updateAnswerSchema),
   updateAnswer);
 
-router.get('/questions/:assessmentQuestionId/answers',
-  attachResourceInfo('Answer', 'AssessmentQuestion', 'assessmentQuestionId', 'read'),
-  checkAccess,
-  getAnswerByQuestion);
 
 router.get('/evidence-files/:fileId',
   attachResourceInfo('EvidenceFile', 'EvidenceFile', 'fileId', 'read'),
