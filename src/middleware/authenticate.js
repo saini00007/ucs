@@ -4,7 +4,7 @@ import { User, Department } from '../models/index.js';
 export const authenticate = async (req, res, next) => {
 
   // Retrieve token from the cookies
-  const token = req.cookies.token || req.cookies.session_token;
+  const token = req.header("Authorization").replace("Bearer ", "");;
 
   //if no token provided
   if (!token) {

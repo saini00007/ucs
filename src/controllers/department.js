@@ -16,12 +16,6 @@ import sequelize from '../config/db.js';
 export const getAllDepartmentsForCompany = async (req, res) => {
     const { companyId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    if (req.user.roleId === "admin" && req.user.companyId !== companyId) {
-        return res.status(403).json({
-            success: false,
-            message: 'Access denied: Admins can only manage their own company.',
-        });
-    }
     try {
         const { count, rows: departments } = await Department.findAndCountAll({
             where: { companyId: companyId },
@@ -74,29 +68,17 @@ export const getAllDepartmentsForCompany = async (req, res) => {
 
 export const getDepartmentById = async (req, res) => {
     const { departmentId } = req.params;
-
-    const userDepartmentId = req.user.departmentId;
-
-    if (req.user.roleId !== 'admin' && req.user.roleId !== 'superadmin') {
-        if (userDepartmentId !== departmentId) {
-            return res.status(403).json({
-                success: false,
-                messages: ['Access denied: You do not have permission to view this department.'],
-            });
-        }
-    }
-
     try {
         const department = await Department.findByPk(departmentId, {
             include: [
                 {
                     model: Company,
-                    as: 'company', // Specify the alias for Company
+                    as: 'company',
                     attributes: ['companyName']
                 },
                 {
                     model: MasterDepartment,
-                    as: 'masterDepartment', // Specify the alias for MasterDepartment
+                    as: 'masterDepartment',
                     attributes: ['departmentName']
                 },
             ],
@@ -106,7 +88,7 @@ export const getDepartmentById = async (req, res) => {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
         }
 
-        res.status(200).json({ success: true, department: department }); // Changed to lowercase
+        res.status(200).json({ success: true, department: department });
     } catch (error) {
         console.error('Error fetching department:', error);
         res.status(500).json({ success: false, messages: ['Failed to fetch department'] });
@@ -115,75 +97,75 @@ export const getDepartmentById = async (req, res) => {
 
 export const createDepartment = async (req, res) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
-    
+
     const transaction = await sequelize.transaction();
-  
+
     try {
-      const company = await Company.findByPk(companyId, { transaction });
-      if (!company) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, messages: ['Invalid company ID'] });
-      }
-  
-      const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
-      if (!masterDepartment) {
-        await transaction.rollback();
-        return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
-      }
-  
-      const newDepartment = await Department.create({
-        departmentName,
-        companyId,
-        masterDepartmentId,
-        createdByUserId: req.user.id,
-      }, { transaction });
-  
-      const newAssessment = await Assessment.create({
-        departmentId: newDepartment.id,
-      }, { transaction });
-  
-      const questions = await QuestionDepartmentLink.findAll({
-        where: { masterDepartmentId },
-        include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }],
-        transaction,
-      });
-  
-      if (questions.length === 0) {
-        console.warn('No questions found for the master department');
-      }
-  
-      await Promise.all(questions.map(async (qdl) => {
-        try {
-          await AssessmentQuestion.create({
-            assessmentId: newAssessment.id,
-            masterQuestionId: qdl.masterQuestionId,
-          }, { transaction });
-        } catch (err) {
-          console.error(`Failed to create assessment question for questionId: ${qdl.masterQuestionId}`, err);
+        const company = await Company.findByPk(companyId, { transaction });
+        if (!company) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, messages: ['Invalid company ID'] });
         }
-      }));
-  
-      await transaction.commit();
-  
-      const departmentWithAssociations = await Department.findByPk(newDepartment.id, {
-        include: [
-          { model: Company, as: 'company', attributes: ['companyName'] },
-          { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
-        ]
-      });
-  
-      res.status(201).json({
-        success: true,
-        department: departmentWithAssociations,
-        assessment: newAssessment,
-      });
+
+        const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
+        if (!masterDepartment) {
+            await transaction.rollback();
+            return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
+        }
+
+        const newDepartment = await Department.create({
+            departmentName,
+            companyId,
+            masterDepartmentId,
+            createdByUserId: req.user.id,
+        }, { transaction });
+
+        const newAssessment = await Assessment.create({
+            departmentId: newDepartment.id,
+        }, { transaction });
+
+        const questions = await QuestionDepartmentLink.findAll({
+            where: { masterDepartmentId },
+            include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }],
+            transaction,
+        });
+
+        if (questions.length === 0) {
+            console.warn('No questions found for the master department');
+        }
+
+        await Promise.all(questions.map(async (qdl) => {
+            try {
+                await AssessmentQuestion.create({
+                    assessmentId: newAssessment.id,
+                    masterQuestionId: qdl.masterQuestionId,
+                }, { transaction });
+            } catch (err) {
+                console.error(`Failed to create assessment question for questionId: ${qdl.masterQuestionId}`, err);
+            }
+        }));
+
+        await transaction.commit();
+
+        const departmentWithAssociations = await Department.findByPk(newDepartment.id, {
+            include: [
+                { model: Company, as: 'company', attributes: ['companyName'] },
+                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
+            ]
+        });
+
+        res.status(201).json({
+            success: true,
+            department: departmentWithAssociations,
+            assessment: newAssessment,
+        });
     } catch (error) {
-      console.error('Error creating department:', error);
-      await transaction.rollback();
-      res.status(500).json({ success: false, messages: ['Failed to create department'] });
+        console.error('Error creating department:', error);
+        await transaction.rollback();
+        res.status(500).json({ success: false, messages: ['Failed to create department'] });
     }
-  };
-  
+};
+
 export const updateDepartment = async (req, res) => {
     const { departmentId } = req.params;
     const { departmentName, masterDepartmentId } = req.body;

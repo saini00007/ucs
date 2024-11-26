@@ -32,7 +32,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 
-app.use('/', authRoutes); 
+app.use('/', authRoutes);
 app.use(authMiddleware);
 app.use('/', companyRoutes);
 app.use('/', departmentRoutes);
@@ -41,7 +41,6 @@ app.use('/', assessmentRoutes);
 app.use('/', assessmentQuestionRoutes);
 app.use('/', answerRoutes);
 app.use('/', masterRoutes);
-app.use('/', masterQuestionRoute);
 app.use('/', commentRoutes);
 
 const startServer = async () => {

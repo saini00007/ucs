@@ -30,26 +30,26 @@ const resourceAccessCheckMap = {
 
 const permissionsService = {
   // Method to check if a user has a specific role permission.
-  async hasRolePermission({ user, resourceIdDb, actionIdDb }) {
+  async hasRolePermission({ user, resourceId, actionId }) {
     try {
       // Find a matching permission in the RoleResourceActionLink table.
       const permission = await RoleResourceActionLink.findOne({
         where: {
           roleId: user.roleId,
-          resourceId: resourceIdDb,
-          actionId: actionIdDb,
+          resourceId: resourceId,
+          actionId: actionId,
         },
       });
       // Return true if a permission is found, otherwise return false.
       return !!permission;
     } catch (error) {
-      console.error(`Error checking role permission for user ${user.id} on resource ${resourceIdDb}:`, error);
+      console.error(`Error checking role permission for user ${user.id} on resource ${resourceId}:`, error);
       return false;
     }
   },
 
   // Method to check if a user has access to specific content.
-  async hasContentAccess({ user, resourceType, resourceId, actionIdDb }) {
+  async hasContentAccess({ user, resourceType, resourceId, actionId }) {
     // Retrieve the access check function for the given resource type.
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
@@ -59,7 +59,7 @@ const permissionsService = {
     }
     try {
       // Call the access check function and return its result.
-      return await contentAccessCheckFn(user, resourceId, actionIdDb);
+      return await contentAccessCheckFn(user, resourceId, actionId);
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
       return false;

@@ -1,4 +1,5 @@
 import { Resource } from "../models/index.js";
+import sequelize from "../config/db.js";
 
 const resources = [
     { id: 'company', resourceName: 'Company' },
@@ -13,20 +14,27 @@ const resources = [
     { id: 'masterdepartment', resourceName: 'MasterDepartment' },
     { id: 'role', resourceName: 'Role' },
     { id: 'userdepartmentlink', resourceName: 'UserDepartmentLink' }
-
 ];
 
 const seedResources = async () => {
-    for (const resource of resources) {
-        const [existingResource, created] = await Resource.findOrCreate({
-            where: { id: resource.id },
-            defaults: resource,
-        });
-        if (created) {
-            console.log(`Resource ${resource.resourceName} inserted.`);
-        } else {
-            console.log(`Resource ${resource.resourceName} already exists.`);
+    const transaction = await sequelize.transaction();
+    try {
+        for (const resource of resources) {
+            const [existingResource, created] = await Resource.findOrCreate({
+                where: { id: resource.id },
+                defaults: resource,
+                transaction,
+            });
+            if (created) {
+                console.log(`Resource ${resource.resourceName} inserted.`);
+            } else {
+                console.log(`Resource ${resource.resourceName} already exists.`);
+            }
         }
+        await transaction.commit();
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error seeding resources:', error);
     }
 };
 

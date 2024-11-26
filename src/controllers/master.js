@@ -14,6 +14,8 @@ export const getRoles = async (req, res) => {
       filteredRoles = roles;
     } else if (req.user.roleId === 'admin') {
       filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin');
+    } else if (req.user.roleId === 'department_manager') {
+      filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin' && role.id !== 'department_manager');
     } else {
       filteredRoles = [];
     }
@@ -28,6 +30,7 @@ export const getRoles = async (req, res) => {
     res.status(500).json({ success: false, message: ['Error fetching roles'] });
   }
 };
+
 
 
 export const getMasterDepartments = async (req, res) => {

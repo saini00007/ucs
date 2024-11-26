@@ -41,8 +41,15 @@ const User = sequelize.define('User', {
   },
   countryCode: {
     type: DataTypes.STRING(5),
-    allowNull: false,
+    allowNull: true,
     field: 'country_code',
+    validate: {
+      isRequiredIfNotSuperAdmin(value) {
+        if (this.roleId !== 'superadmin' && !value) {
+          throw new Error('Country code is required for non-superadmin users');
+        }
+      },
+    },
   },
   companyId: {
     type: DataTypes.UUID,

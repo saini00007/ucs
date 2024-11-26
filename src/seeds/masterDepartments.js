@@ -1,4 +1,5 @@
-import {MasterDepartment} from '../models/index.js';
+import { MasterDepartment} from '../models/index.js';
+import sequelize from '../config/db.js';
 
 const seedMasterDepartments = async () => {
   const departments = [
@@ -11,11 +12,13 @@ const seedMasterDepartments = async () => {
     'Human Resources',
   ];
 
+  const transaction = await sequelize.transaction();
   try {
     for (const departmentName of departments) {
       const [department, created] = await MasterDepartment.findOrCreate({
         where: { departmentName },
         defaults: { departmentName },
+        transaction,
       });
 
       if (created) {
@@ -24,7 +27,9 @@ const seedMasterDepartments = async () => {
         console.log(`Department "${departmentName}" already exists.`);
       }
     }
+    await transaction.commit();
   } catch (error) {
+    await transaction.rollback();
     console.error('Error seeding master departments:', error);
   }
 };

@@ -1,4 +1,5 @@
-import Role from '../models/Role';
+import { Role } from '../models/index.js';
+import sequelize from '../config/db.js';
 
 const roles = [
   { id: 'superadmin', roleName: 'superAdmin' },
@@ -9,16 +10,24 @@ const roles = [
 ];
 
 const seedRoles = async () => {
-  for (const role of roles) {
-    const [existingRole, created] = await Role.findOrCreate({
-      where: { id: role.id },
-      defaults: role,
-    });
-    if (created) {
-      console.log(`Role ${role.roleName} inserted.`);
-    } else {
-      console.log(`Role ${role.roleName} already exists.`);
+  const transaction = await sequelize.transaction();
+  try {
+    for (const role of roles) {
+      const [existingRole, created] = await Role.findOrCreate({
+        where: { id: role.id },
+        defaults: role,
+        transaction,
+      });
+      if (created) {
+        console.log(`Role ${role.roleName} inserted.`);
+      } else {
+        console.log(`Role ${role.roleName} already exists.`);
+      }
     }
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error seeding roles:', error);
   }
 };
 

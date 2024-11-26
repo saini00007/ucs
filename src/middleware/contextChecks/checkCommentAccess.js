@@ -1,6 +1,6 @@
 import { Comment, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 
-const checkCommentAccess = async (user, resourceId, action) => {
+const checkCommentAccess = async (user, resourceId, actionId) => {
     try {
         const comment = await Comment.findByPk(resourceId, {
             include: {
@@ -25,7 +25,7 @@ const checkCommentAccess = async (user, resourceId, action) => {
         const { departmentId } = comment.assessmentQuestion.assessment;
         const companyId = comment.assessmentQuestion.assessment.department.companyId;
 
-        if ((action === 'delete' || action === 'update') && comment.userId === user.id) return true;
+        if ((actionId === 'delete' || actionId === 'update') && comment.userId === user.id) return true;
 
         if (user.roleId === 'admin' && user.companyId === companyId) return true;
 
@@ -37,4 +37,3 @@ const checkCommentAccess = async (user, resourceId, action) => {
 };
 
 export default checkCommentAccess;
-

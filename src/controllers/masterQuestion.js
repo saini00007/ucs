@@ -1,7 +1,6 @@
-import { query } from 'express-validator';
-import MasterQuestion from '../models/MasterQuestion.js'; // Adjust the import based on your models' structure
+import MasterQuestion from '../models/MasterQuestion.js';
 
-const getMasterQuestions = async (req, res) => {
+export const getMasterQuestions = async (req, res) => {
   const { page = 1 } = req.query;
   const limit = 10;
 
@@ -46,4 +45,3 @@ const getMasterQuestions = async (req, res) => {
   }
 };
 
-export { getMasterQuestions };

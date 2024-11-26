@@ -8,25 +8,25 @@ import {
 } from '../controllers/answer.js';
 import validate from '../middleware/validate.js';
 import { createAnswerSchema, updateAnswerSchema } from '../joi/answer.js';
-import checkAccess  from '../middleware/authorize.js';
+import checkAccess from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
 // Route to create a new answer
 router.post('/questions/:assessmentQuestionId/answers',
-  uploadFiles,
-  validate(createAnswerSchema),
   attachResourceInfo('Answer', 'AssessmentQuestion', 'assessmentQuestionId', 'create'),
   checkAccess,
+  uploadFiles,
+  validate(createAnswerSchema),
   createAnswer);
 
 // Route to update an existing answer
 router.put('/answers/:answerId',
-  uploadFiles,
-  validate(updateAnswerSchema),
   attachResourceInfo('Answer', 'Answer', 'answerId', 'update'),
   checkAccess,
+  uploadFiles,
+  validate(updateAnswerSchema),
   updateAnswer);
 
 router.get('/questions/:assessmentQuestionId/answers',
@@ -34,7 +34,6 @@ router.get('/questions/:assessmentQuestionId/answers',
   checkAccess,
   getAnswerByQuestion);
 
-// Route to serve evidence files
 router.get('/evidence-files/:fileId',
   attachResourceInfo('EvidenceFile', 'EvidenceFile', 'fileId', 'read'),
   checkAccess,

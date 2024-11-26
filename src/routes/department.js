@@ -29,17 +29,17 @@ router.get('/departments/:departmentId',
 
 // Route to create a new department
 router.post('/departments', 
-    validate(createDepartmentSchema), 
     attachResourceInfo('Department', 'Company', 'companyId', 'create'), 
     checkAccess,
+    validate(createDepartmentSchema), 
     createDepartment
 );
 
 // Route to update a department by its ID
 router.put('/departments/:departmentId', 
-    validate(updateDepartmentSchema), 
     attachResourceInfo('Department', 'Department', 'departmentId', 'update'), 
     checkAccess, 
+    validate(updateDepartmentSchema), 
     updateDepartment
 );
 

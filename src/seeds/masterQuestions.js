@@ -1,5 +1,4 @@
-import {MasterQuestion,QuestionDepartmentLink,MasterDepartment} from '../models/index.js';
-
+import { MasterQuestion, QuestionDepartmentLink, MasterDepartment } from '../models/index.js';
 import { faker } from '@faker-js/faker';
 
 const generateFakeData = (count) => {
@@ -29,9 +28,9 @@ const generateFakeData = (count) => {
   }));
 };
 
-// Seed MasterQuestions table with fake data
 const seedMasterQuestions = async (count = 50) => {
   try {
+    console.log('-----------------------------------------------------');
     const data = generateFakeData(count);
 
     for (const row of data) {
@@ -67,27 +66,31 @@ const seedMasterQuestions = async (count = 50) => {
 
       console.log(`Processing Question: "${trimmedData.questionText}", Department: "${trimmedData.department}"`);
 
-      const question = await MasterQuestion.create(trimmedData);
-      console.log(`Question inserted with ID: ${question.id}`);
+      try {
+        const question = await MasterQuestion.create(trimmedData);
+        console.log(`Question inserted with ID: ${question.id}`);
 
-      if (trimmedData.department) {
-        const departmentRecord = await MasterDepartment.findOne({
-          where: { departmentName: trimmedData.department }
-        });
+        if (trimmedData.department) {
+          const departmentRecord = await MasterDepartment.findOne({
+            where: { departmentName: trimmedData.department }
+          });
 
-        if (departmentRecord) {
-          const questionDepartmentLink = {
-            masterQuestionId: question.id,
-            masterDepartmentId: departmentRecord.id,
-          };
+          if (departmentRecord) {
+            const questionDepartmentLink = {
+              masterQuestionId: question.id,
+              masterDepartmentId: departmentRecord.id,
+            };
 
-          await QuestionDepartmentLink.create(questionDepartmentLink);
-          console.log(`Link created for Question ID: ${question.id} and Department ID: ${departmentRecord.id}`);
+            await QuestionDepartmentLink.create(questionDepartmentLink);
+            console.log(`Link created for Question ID: ${question.id} and Department ID: ${departmentRecord.id}`);
+          } else {
+            console.warn(`Department "${trimmedData.department}" not found for Question ID: ${question.id}`);
+          }
         } else {
-          console.warn(`Department "${trimmedData.department}" not found for Question ID: ${question.id}`);
+          console.warn(`Department name is missing for Question ID: ${question.id}`);
         }
-      } else {
-        console.warn(`Department name is missing for Question ID: ${question.id}`);
+      } catch (innerError) {
+        console.error('Error inserting question or creating link:', innerError);
       }
     }
   } catch (error) {

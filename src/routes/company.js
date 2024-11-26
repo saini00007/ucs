@@ -16,17 +16,17 @@ const router = express.Router();
 
 // Route to create a new company
 router.post('/companies', 
-    validate(createCompanySchema), 
     attachResourceInfo('Company', 'Company', null, 'create'),
     checkAccess, 
+    validate(createCompanySchema), 
     createCompany
 );
 
 // Route to update a company by its ID
 router.put('/companies/:companyId',
-    validate(updateCompanySchema), 
     attachResourceInfo('Company', 'Company', 'companyId', 'update'), 
     checkAccess, 
+    validate(updateCompanySchema), 
     updateCompany
 );
 

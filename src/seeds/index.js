@@ -1,3 +1,4 @@
+import sequelize from '../config/db.js';
 import express from 'express';
 import dotenv from 'dotenv';
 import seedRoles from './roles.js';
@@ -15,13 +16,22 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 const runSeeds = async () => {
-    await seedRoles();
-    await seedResources();
-    await seedActions();
-    await seedRoleResourceActionLinks();
-    await seedSuperAdmins();
-    await seedMasterDepartments();
-    await seedMasterQuestions();
+    const transaction = await sequelize.transaction();
+    try {
+        // await seedRoles({ transaction });
+        // await seedResources({ transaction });
+        // await seedActions({ transaction });
+         await seedRoleResourceActionLinks({ transaction });
+        // await seedSuperAdmins({ transaction });
+        // await seedMasterDepartments({ transaction });
+        // await seedMasterQuestions();
+        // await transaction.commit();
+        console.log('Seeding completed successfully!');
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error occurred during seeding:', error.message || error);
+        throw error;
+    }
 };
 
 const startServerAndSeed = async () => {
@@ -31,7 +41,6 @@ const startServerAndSeed = async () => {
         app.listen(PORT, async () => {
             console.log(`Server is running on port ${PORT}`);
             await runSeeds();
-            console.log('Seeding completed successfully!');
             process.exit(0);
         });
     } catch (error) {

@@ -64,6 +64,7 @@ export const resetPassword = async (req, res) => {
 
 export const login = async (req, res) => {
   const { identifier, password } = req.body;
+  console.log(req.body);
 
   if (!identifier || !password) {
     return res.status(400).json({ success: false, messages: ['Identifier and password are required.'] });

@@ -43,7 +43,7 @@ export const addUser = async (req, res) => {
             if (!department) {
                 return res.status(404).json({ success: false, messages: ['Department not found.'] });
             }
-            return await createUser({ username, password, email, roleId, departmentId, companyId: department.companyId, phoneNumber }, res);
+            return await createUser({ username, password, email, roleId, departmentId, companyId: department.companyId, phoneNumber, countryCode }, res);
         }
     } catch (error) {
         console.error('Error adding user:', error);
@@ -55,6 +55,8 @@ const createUser = async (userData, res) => {
     try {
         const hashedPassword = await bcrypt.hash(userData.password, 10);
         const { departmentId, ...trimmedUserData } = userData;
+        console.log(trimmedUserData)
+        console.log('------------------------')
 
         const user = await User.create({
             ...trimmedUserData,
@@ -67,10 +69,12 @@ const createUser = async (userData, res) => {
 
         const userWithDepartments = await User.findOne({
             where: { id: user.id },
+            attributes: { exclude: ['password', 'deletedAt'] },
             include: [
                 {
                     model: Department,
                     as: 'departments',
+                    through: { attributes: [] },
                     attributes: ['id'],
                 }
             ]
@@ -84,19 +88,16 @@ const createUser = async (userData, res) => {
 
         await sendEmail(userData.email, emailSubject, emailText);
 
-        const { password, ...userWithoutPassword } = userWithDepartments.get({ plain: true });
-
         res.status(201).json({
             success: true,
             messages: ['User added successfully, password setup email sent'],
-            user: userWithoutPassword
+            user: userWithDepartments
         });
     } catch (error) {
         console.error('Error adding user:', error);
         res.status(500).json({ success: false, messages: ['Error adding user'], error: error.message });
     }
 };
-
 
 export const updateUser = async (req, res) => {
     const { userId } = req.params;
@@ -142,18 +143,30 @@ export const updateUser = async (req, res) => {
 
         await user.save();
 
-        const { password, ...userWithoutPassword } = user.get({ plain: true });
+        const updatedUser = await User.findOne({
+            where: { id: userId },
+            attributes: { exclude: ['password', 'deletedAt'] },
+            include: [
+                {
+                    model: Department,
+                    as: 'departments',
+                    through: { attributes: [] },
+                    attributes: ['id'],
+                }
+            ]
+        });
 
         res.status(200).json({
             success: true,
             messages: ['User updated successfully'],
-            user: userWithoutPassword,
+            user: updatedUser
         });
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ success: false, messages: ['Error updating user'], error: error.message });
     }
 };
+
 
 
 
@@ -191,7 +204,7 @@ export const getUsersByDepartment = async (req, res) => {
                     where: departmentId ? { id: departmentId } : {},
                 },
             ],
-            attributes: ['id', 'username', 'roleId', 'phoneNumber', 'email', 'companyId'],
+            attributes: { exclude: ['password', 'deletedAt'] },
             limit: parseInt(limit, 10),
             offset: (page - 1) * limit,
         });
@@ -247,7 +260,7 @@ export const getUsersByCompany = async (req, res) => {
     try {
         const { count, rows: users } = await User.findAndCountAll({
             where: { companyId },
-            attributes: ['id', 'username', 'roleId', 'phoneNumber', 'email', 'companyId'],
+            attributes: { exclude: ['password', 'deletedAt'] },
             include: [{
                 model: Department,
                 as: 'departments',
@@ -309,7 +322,7 @@ export const getUserById = async (req, res) => {
 
     try {
         const user = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'email', 'roleId', 'phoneNumber', 'companyId'],
+            attributes: { exclude: ['password', 'deletedAt'] },
             include: [{
                 model: Department,
                 as: 'departments',
@@ -345,6 +358,7 @@ export const addUserToDepartment = async (req, res) => {
                 messages: ['User or department not found']
             });
         }
+
         if (user.companyId !== department.companyId) {
             return res.status(400).json({
                 success: false,
@@ -359,22 +373,64 @@ export const addUserToDepartment = async (req, res) => {
             });
         }
 
+        // Check if the user is already linked to the department (even if soft-deleted)
         const existingLink = await UserDepartmentLink.findOne({
-            where: { userId, departmentId }
+            where: { userId, departmentId },
+            paranoid: false // Include soft-deleted records
         });
 
         if (existingLink) {
-            return res.status(409).json({
-                success: false,
-                messages: ['User is already associated with this department']
-            });
+            if (existingLink.deletedAt === null) {
+                // If the link exists and is not soft-deleted, return a message saying the user is already associated
+                return res.status(409).json({
+                    success: false,
+                    messages: ['User is already associated with this department']
+                });
+            } else {
+                // If the link exists but is soft-deleted, restore it
+                await existingLink.restore();
+
+                // After restoring, fetch the updated user again to include the department association
+                const updatedUser = await User.findByPk(userId, {
+                    attributes: { exclude: ['password', 'deletedAt'] },
+                    include: [
+                        {
+                            model: Department,
+                            as: 'departments',
+                            through: { attributes: [] },
+                            attributes: ['id'],
+                        }
+                    ]
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    messages: ['User re-associated with department successfully'],
+                    user: updatedUser
+                });
+            }
         }
 
+        // If no existing link, create a new one
         await UserDepartmentLink.create({ userId, departmentId });
+
+        // Fetch the updated user data after association
+        const updatedUser = await User.findByPk(userId, {
+            attributes: { exclude: ['password', 'deletedAt'] },
+            include: [
+                {
+                    model: Department,
+                    as: 'departments',
+                    through: { attributes: [] },
+                    attributes: ['id'],
+                }
+            ]
+        });
 
         res.status(200).json({
             success: true,
-            messages: ['User added to department successfully']
+            messages: ['User added to department successfully'],
+            user: updatedUser
         });
     } catch (error) {
         console.error('Error adding user to department:', error);

@@ -18,7 +18,6 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 const router = express.Router();
 
 router.post('/users',
-  validate(createUserSchema),
   (req, res, next) => {
     if (req.body.roleId === 'admin') {
       return attachResourceInfo('User', 'Company', 'companyId', 'create')(req, res, next);
@@ -26,14 +25,15 @@ router.post('/users',
     return attachResourceInfo('User', 'Department', 'departmentId', 'create')(req, res, next);
   },
   checkAccess,
+  validate(createUserSchema),
   addUser
 );
 
 // Route to update an existing user
 router.put('/users/:userId',
-  validate(updateUserSchema),
   attachResourceInfo('User', 'User', 'userId', 'update'),
   checkAccess,
+  validate(updateUserSchema),
   updateUser
 );
 

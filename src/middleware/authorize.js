@@ -7,21 +7,20 @@ const checkAccess = async (req, res, next) => {
   const roleResourceType = req.roleResourceType;
   const contentResourceType = req.contentResourceType;
   const contentResourceId = req.contentResourceId;
-  const actionType = req.actionType;
+  const actionId = req.actionId;
 
   try {
-    // Retrieve the resource ID and action ID from the database
-    const resourceIdDb = await getResourceId(roleResourceType);
-    const actionIdDb = await getActionId(actionType);
+
+    const roleResourceId = roleResourceType.toLowerCase();
 
     // Log access attempt details
-    console.log(chalk.green(`Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionType}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`));
+    console.log(chalk.green(`Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`));
 
     // Check if the user has the required role permission
     const hasRolePermission = await permissionsService.hasRolePermission({
       user: req.user,
-      resourceIdDb,
-      actionIdDb,
+      resourceId: roleResourceId,
+      actionId,
     });
     if (!hasRolePermission) {
       // If the user lacks the required role permission, deny access
@@ -39,9 +38,8 @@ const checkAccess = async (req, res, next) => {
       user: req.user,
       resourceType: contentResourceType,
       resourceId: contentResourceId,
-      actionIdDb
+      actionId
     });
-
     if (!hasContentAccess) {
       // If the user lacks content access, deny access
       return res.status(403).json({

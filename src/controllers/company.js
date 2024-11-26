@@ -126,7 +126,7 @@ export const getCompanyById = async (req, res) => {
 
 export const updateCompany = async (req, res) => {
   const { companyId } = req.params;
-  const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone, primaryCountryCode, secondaryCountryCode,panNumber } = req.body;
+  const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone, primaryCountryCode, secondaryCountryCode, panNumber } = req.body;
 
   try {
     const company = await Company.findOne({ where: { id: companyId } });
@@ -147,7 +147,7 @@ export const updateCompany = async (req, res) => {
     if (secondaryPhone) company.secondaryPhone = secondaryPhone;
     if (primaryCountryCode) company.primaryCountryCode = primaryCountryCode;
     if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
-    if (panNumber) company.panNumber=panNumber;
+    if (panNumber) company.panNumber = panNumber;
 
     await company.save();
 

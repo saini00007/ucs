@@ -1,16 +1,15 @@
-import User from '../models/User';
+import {  User, Role } from '../models/index.js';
+import sequelize from '../config/db.js';
 import bcrypt from 'bcrypt';
-import Role from '../models/Role';
 
 const seedSuperAdmins = async () => {
+  const transaction = await sequelize.transaction();
   try {
-
     const superAdminsData = [
       {
         id: 'abcd12345678',
         username: 'root',
         email: 'testingbygeek@gmail.com',
-        phoneNumber: '1234567890',
         password: 'root',
       },
       {
@@ -18,20 +17,20 @@ const seedSuperAdmins = async () => {
         username: 'admin1',
         email: 'admin1@example.com',
         password: 'admin1Pass456',
-
       },
       {
         id: 'ijkl34567890',
         username: 'admin2',
         email: 'admin2@example.com',
-        phoneNumber: '1122334455',
         password: 'admin2Pass789',
-
       },
     ];
 
     for (const superAdminData of superAdminsData) {
-      const existingSuperAdmin = await User.findOne({ where: { username: superAdminData.username } });
+      const existingSuperAdmin = await User.findOne({
+        where: { username: superAdminData.username },
+        transaction,
+      });
 
       if (existingSuperAdmin) {
         console.log(`Super admin already exists with username: ${existingSuperAdmin.username}`);
@@ -47,11 +46,13 @@ const seedSuperAdmins = async () => {
         companyId: null,
       };
 
-      const superAdmin = await User.create(newSuperAdminData);
+      const superAdmin = await User.create(newSuperAdminData, { transaction });
       console.log(`Super admin inserted with user ID: ${superAdmin.id}`);
     }
 
+    await transaction.commit();
   } catch (error) {
+    await transaction.rollback();
     console.error('Error seeding super admins:', error.message || error);
   }
 };

@@ -14,9 +14,9 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 const router = express.Router();
 
 router.post('/questions/:assessmentQuestionId/comments',
-  validate(commentSchema),
   attachResourceInfo('Comment', 'AssessmentQuestion', 'assessmentQuestionId', 'create'),
   checkAccess,
+  validate(commentSchema),
   createComment);
 
 router.get('/questions/:assessmentQuestionId/comments',
@@ -30,9 +30,9 @@ router.get('/comments/:commentId',
   getCommentById);
 
 router.put('/comments/:commentId',
-  validate(commentSchema),
   attachResourceInfo('Comment', 'Comment', 'commentId', 'update'),
   checkAccess,
+  validate(commentSchema),
   updateComment);
 
 router.delete('/comments/:commentId',
