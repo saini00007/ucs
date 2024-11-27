@@ -18,6 +18,7 @@ import sequelize from '../config/db.js';
 export const getDepartmentById = async (req, res) => {
     const { departmentId } = req.params;
     try {
+        // Fetch the department by its ID, including associated Company and MasterDepartment details
         const department = await Department.findByPk(departmentId, {
             include: [
                 {
@@ -33,10 +34,12 @@ export const getDepartmentById = async (req, res) => {
             ],
         });
 
+        // If the department is not found, return a 404 response
         if (!department) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
         }
 
+        // Return the department details in the response
         res.status(200).json({ success: true, department: department });
     } catch (error) {
         console.error('Error fetching department:', error);
@@ -44,24 +47,29 @@ export const getDepartmentById = async (req, res) => {
     }
 };
 
+
 export const createDepartment = async (req, res) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
 
+    // Start a new transaction
     const transaction = await sequelize.transaction();
 
     try {
+        // Check if the company exists
         const company = await Company.findByPk(companyId, { transaction });
         if (!company) {
             await transaction.rollback();
             return res.status(400).json({ success: false, messages: ['Invalid company ID'] });
         }
 
+        // Check if the master department exists
         const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
         if (!masterDepartment) {
             await transaction.rollback();
             return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
         }
 
+        // Create the new department
         const newDepartment = await Department.create({
             departmentName,
             companyId,
@@ -69,10 +77,12 @@ export const createDepartment = async (req, res) => {
             createdByUserId: req.user.id,
         }, { transaction });
 
+        // Create a new assessment for the new department
         const newAssessment = await Assessment.create({
             departmentId: newDepartment.id,
         }, { transaction });
 
+        // Find questions linked to the master department
         const questions = await QuestionDepartmentLink.findAll({
             where: { masterDepartmentId },
             include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }],
@@ -83,6 +93,7 @@ export const createDepartment = async (req, res) => {
             console.warn('No questions found for the master department');
         }
 
+        // Create assessment questions for each linked question
         await Promise.all(questions.map(async (qdl) => {
             try {
                 await AssessmentQuestion.create({
@@ -94,8 +105,10 @@ export const createDepartment = async (req, res) => {
             }
         }));
 
+        // Commit the transaction
         await transaction.commit();
 
+        // Retrieve the newly created department with associated data
         const departmentWithAssociations = await Department.findByPk(newDepartment.id, {
             include: [
                 { model: Company, as: 'company', attributes: ['companyName'] },
@@ -103,6 +116,7 @@ export const createDepartment = async (req, res) => {
             ]
         });
 
+        // Send a successful response
         res.status(201).json({
             success: true,
             department: departmentWithAssociations,
@@ -115,26 +129,33 @@ export const createDepartment = async (req, res) => {
     }
 };
 
+
 export const updateDepartment = async (req, res) => {
     const { departmentId } = req.params;
     const { departmentName, masterDepartmentId } = req.body;
 
     try {
+        // Find the department by its primary key
         const department = await Department.findByPk(departmentId);
         if (!department) {
             return res.status(404).json({ success: false, messages: ['Department not found'] });
         }
+
+        // Update the department name if provided
         if (departmentName) {
             department.departmentName = departmentName;
         }
 
+        // Update the master department ID if provided
         if (masterDepartmentId) {
             const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
             if (!masterDepartment) {
                 return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
             }
-            if (department.masterDepartmentId != masterDepartmentId) {
 
+            // Check if the master department ID is changing
+            if (department.masterDepartmentId !== masterDepartmentId) {
+                // Ensure no assessments are in progress for the department
                 const startedAssessments = await Assessment.findAll({
                     where: {
                         departmentId: departmentId,
@@ -149,12 +170,15 @@ export const updateDepartment = async (req, res) => {
                     });
                 }
 
+                // Update the master department ID
+                department.masterDepartmentId = masterDepartmentId;
             }
-            department.masterDepartmentId = masterDepartmentId;
         }
 
+        // Save the updated department
         await department.save();
 
+        // Retrieve the updated department with associated data
         const updatedDepartment = await Department.findByPk(department.id, {
             include: [
                 { model: Company, as: 'company', attributes: ['companyName'] },
@@ -162,6 +186,7 @@ export const updateDepartment = async (req, res) => {
             ]
         });
 
+        // Send a successful response
         res.status(200).json({
             success: true,
             messages: ['Department updated successfully'],
@@ -176,12 +201,14 @@ export const updateDepartment = async (req, res) => {
     }
 };
 
+
 export const deleteDepartment = async (req, res) => {
     const { departmentId } = req.params;
 
     const transaction = await sequelize.transaction();
 
     try {
+        // Find all assessments associated with the department
         const assessments = await Assessment.findAll({
             where: { departmentId },
             attributes: ['id'],
@@ -190,6 +217,7 @@ export const deleteDepartment = async (req, res) => {
 
         const assessmentIds = assessments.map(assessment => assessment.id);
 
+        // Find all assessment questions related to the assessments
         const assessmentQuestions = await AssessmentQuestion.findAll({
             where: { assessmentId: { [Op.in]: assessmentIds } },
             attributes: ['id'],
@@ -198,6 +226,7 @@ export const deleteDepartment = async (req, res) => {
 
         const assessmentQuestionIds = assessmentQuestions.map(q => q.id);
 
+        // Find all answers related to the assessment questions
         const answers = await Answer.findAll({
             where: { assessmentQuestionId: { [Op.in]: assessmentQuestionIds } },
             attributes: ['id'],
@@ -206,6 +235,7 @@ export const deleteDepartment = async (req, res) => {
 
         const answerIds = answers.map(a => a.id);
 
+        // Find all evidence files related to the answers
         const evidenceFiles = await EvidenceFile.findAll({
             where: { answerId: { [Op.in]: answerIds } },
             attributes: ['id'],
@@ -214,42 +244,50 @@ export const deleteDepartment = async (req, res) => {
 
         const evidenceFileIds = evidenceFiles.map(e => e.id);
 
+        // Find all comments related to the assessment questions
         const comments = await Comment.findAll({
             where: { assessmentQuestionId: { [Op.in]: assessmentQuestionIds } },
             attributes: ['id'],
             transaction,
         });
 
+        // Delete comments
         await Comment.destroy({
             where: { id: { [Op.in]: comments.map(c => c.id) } },
             transaction,
         });
 
+        // Delete evidence files
         await EvidenceFile.destroy({
             where: { id: { [Op.in]: evidenceFileIds } },
             transaction,
         });
 
+        // Delete answers
         await Answer.destroy({
             where: { id: { [Op.in]: answerIds } },
             transaction,
         });
 
+        // Delete assessment questions
         await AssessmentQuestion.destroy({
             where: { id: { [Op.in]: assessmentQuestionIds } },
             transaction,
         });
 
+        // Delete assessments
         await Assessment.destroy({
             where: { id: { [Op.in]: assessmentIds } },
             transaction,
         });
 
+        // Delete user-department links
         await UserDepartmentLink.destroy({
             where: { departmentId },
             transaction,
         });
 
+        // Delete the department
         const deleted = await Department.destroy({
             where: { id: departmentId },
             transaction,
@@ -276,10 +314,12 @@ export const deleteDepartment = async (req, res) => {
     }
 };
 
+
 export const getAssessmentByDepartmentId = async (req, res) => {
     const { departmentId } = req.params;
 
     try {
+        // Find all assessments associated with the given department ID
         const assessments = await Assessment.findAll({
             where: { departmentId },
             include: [
@@ -287,6 +327,7 @@ export const getAssessmentByDepartmentId = async (req, res) => {
             ],
         });
 
+        // If no assessments are found, return a 404 error response
         if (!assessments || assessments.length === 0) {
             return res.status(404).json({
                 success: false,
@@ -294,22 +335,26 @@ export const getAssessmentByDepartmentId = async (req, res) => {
             });
         }
 
+        // Return the assessments with a success message
         res.status(200).json({
             success: true,
             messages: ['Assessments retrieved successfully'],
             assessments,
         });
     } catch (error) {
+        // Log and return an error response in case of any issues
         console.error('Error fetching assessments:', error);
         res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
     }
 };
+
 
 export const getUsersByDepartmentId = async (req, res) => {
     const { departmentId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
     try {
+        // Fetch users associated with the given department ID, including pagination
         const { count, rows: users } = await User.findAndCountAll({
             include: [
                 {
@@ -319,14 +364,18 @@ export const getUsersByDepartmentId = async (req, res) => {
                     through: {
                         attributes: []
                     },
+                    // Filter by departmentId if provided
                     where: departmentId ? { id: departmentId } : {},
                 },
             ],
+            // Exclude sensitive information from the user attributes
             attributes: { exclude: ['password', 'deletedAt'] },
+            // Apply pagination
             limit: parseInt(limit, 10),
             offset: (page - 1) * limit,
         });
 
+        // If no users are found, return an empty response with pagination info
         if (count === 0) {
             return res.status(200).json({
                 success: true,
@@ -341,8 +390,10 @@ export const getUsersByDepartmentId = async (req, res) => {
             });
         }
 
+        // Calculate total number of pages based on the limit
         const totalPages = Math.ceil(count / limit);
 
+        // If the requested page exceeds total pages, return a 404 error
         if (page > totalPages) {
             return res.status(404).json({
                 success: false,
@@ -350,6 +401,7 @@ export const getUsersByDepartmentId = async (req, res) => {
             });
         }
 
+        // Return the users with success message and pagination info
         res.status(200).json({
             success: true,
             messages: ['Users retrieved successfully'],
@@ -362,6 +414,7 @@ export const getUsersByDepartmentId = async (req, res) => {
             },
         });
     } catch (error) {
+        // Log and return an error response in case of any issues
         console.error('Error fetching users by department:', error);
         res.status(500).json({
             success: false,

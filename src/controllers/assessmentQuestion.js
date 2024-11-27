@@ -56,6 +56,7 @@ export const getAssessmentQuestionById = async (req, res) => {
   const { assessmentQuestionId } = req.params;
 
   try {
+    // Fetch the assessment question by ID along with associated data like master question, answers, evidence files, and comments
     const assessmentQuestion = await AssessmentQuestion.findOne({
       where: { id: assessmentQuestionId },
       attributes: ['id', 'assessmentId'],
@@ -63,7 +64,7 @@ export const getAssessmentQuestionById = async (req, res) => {
         {
           model: MasterQuestion,
           as: 'masterQuestion',
-          attributes: ['questionText'],
+          attributes: ['questionText'], // Include question text from master question
         },
         {
           model: Answer,
@@ -74,19 +75,19 @@ export const getAssessmentQuestionById = async (req, res) => {
               model: EvidenceFile,
               as: 'evidenceFiles',
               attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
-              order: [['createdAt', 'ASC']],
+              order: [['createdAt', 'ASC']], // Order evidence files by creation date
               include: [{
                 model: User,
                 as: 'creator',
-                attributes: ['id', 'username']
+                attributes: ['id', 'username'], // Include creator information for evidence files
               }]
-            }, {
+            },
+            {
               model: User,
               as: 'creator',
-              attributes: ['id', 'username']
+              attributes: ['id', 'username'], // Include creator information for the answer
             }
           ],
-
         },
         {
           model: Comment,
@@ -95,52 +96,62 @@ export const getAssessmentQuestionById = async (req, res) => {
             {
               model: User,
               as: 'creator',
-              attributes: ['id', 'username']
+              attributes: ['id', 'username'], // Include creator information for comments
             },
           ],
-          order: [['createdAt', 'ASC']],
+          order: [['createdAt', 'ASC']], // Order comments by creation date
         },
       ],
     });
 
+    // Return 404 if the assessment question is not found
     if (!assessmentQuestion) {
       return res.status(404).json({ success: false, messages: ['Assessment question not found'] });
     }
 
+    // Send back the assessment question data
     res.status(200).json({
       success: true,
       assessmentQuestion,
     });
   } catch (error) {
+    // Handle errors and return a server error response
     console.error('Error fetching assessment question:', error);
     res.status(500).json({ success: false, messages: ['Server error'] });
   }
 };
 
+
 export const getAnswerByAssessmentQuestionId = async (req, res) => {
   const { assessmentQuestionId } = req.params;
 
   try {
+    // Fetch the answer associated with the given assessment question ID
     const answer = await Answer.findOne({
       where: { assessmentQuestionId },
-      include: [{
-        model: EvidenceFile,
-        as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
-        order: [['createdAt', 'ASC']],
-        include: [{
+      include: [
+        {
+          model: EvidenceFile,
+          as: 'evidenceFiles',
+          attributes: ['id', 'filePath', 'createdAt', 'updatedAt'], // Include evidence file details
+          order: [['createdAt', 'ASC']], // Order evidence files by creation date
+          include: [
+            {
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username'], // Include creator information for evidence files
+            }
+          ]
+        },
+        {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username']
-        }]
-      }, {
-        model: User,
-        as: 'creator',
-        attributes: ['id', 'username']
-      }
+          attributes: ['id', 'username'], // Include creator information for the answer
+        }
       ],
     });
 
+    // If no answer is found for the given assessment question ID, return a 404 response
     if (!answer) {
       return res.status(404).json({
         success: false,
@@ -148,37 +159,44 @@ export const getAnswerByAssessmentQuestionId = async (req, res) => {
       });
     }
 
+    // Return the found answer along with creator and evidence file information
     res.status(200).json({
       success: true,
       answer: answer,
     });
   } catch (error) {
+    // Handle errors and return a 500 server error response with error details
     console.error('Error retrieving answer:', error);
     res.status(500).json({ success: false, messages: ['Error retrieving answer.'], error: error.message });
   }
 };
 
+
 export const getCommentsByAssessmentQuestionId = async (req, res) => {
   const { assessmentQuestionId } = req.params;
 
   try {
+    // Fetch all comments related to the given assessment question ID
     const comments = await Comment.findAll({
       where: { assessmentQuestionId: assessmentQuestionId },
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
-      paranoid: false,
-      order: [['createdAt', 'ASC']],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }], // Include creator info for each comment
+      paranoid: false, // Include both soft-deleted and active comments
+      order: [['createdAt', 'ASC']], // Order comments by creation date in ascending order
     });
 
+    // Return success response with the list of comments
     return res.status(200).json({
       success: true,
       messages: ['Comments retrieved successfully'],
       comments,
     });
   } catch (error) {
+    // Handle errors and return a 500 server error response with the error message
     console.error(error);
     return res.status(500).json({ success: false, messages: ['Error retrieving comments'], error: error.message });
   }
 };
+
 
 // export const deleteAssessmentQuestions = async (req, res) => {
 //   const { questionIds } = req.body;

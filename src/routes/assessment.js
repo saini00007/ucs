@@ -26,6 +26,7 @@ router.put('/:assessmentId/submit',
     submitAssessment
 );
 
+//Route to reopen an assessment
 router.put('/:assessmentId/reopen',
     attachResourceInfo('Assessment', 'Assessment', 'assessmentId', 'reopen'),
     checkAccess,

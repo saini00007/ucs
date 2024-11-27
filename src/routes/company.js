@@ -60,7 +60,7 @@ router.get('/:companyId/departments',
     getDepartmentsByCompanyId
 );
 
-// Route to get users by company
+// Route to get users of a company
 router.get('/:companyId/users',
     attachResourceInfo('User', 'Company', 'companyId', 'list'),
     checkAccess,

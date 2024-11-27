@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
+//generating user id for users
 const generateUserId = async (username) => {
   const prefix = username.slice(0, 4).toLowerCase();
   let uniqueId = prefix + Math.floor(Math.random() * 9000 + 1000).toString();
@@ -44,6 +45,7 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'country_code',
     validate: {
+      //allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
         if (this.roleId !== 'superadmin' && !value) {
           throw new Error('Country code is required for non-superadmin users');
@@ -61,6 +63,7 @@ const User = sequelize.define('User', {
     onDelete: 'CASCADE',
     field: 'company_id',
     validate: {
+      //allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
         if (this.roleId !== 'superadmin' && !value) {
           throw new Error('Company ID is required for non-superadmin users');
@@ -73,6 +76,7 @@ const User = sequelize.define('User', {
     allowNull: true,
     field: 'phone_number',
     validate: {
+      //allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
         if (this.roleId !== 'superadmin' && !value) {
           throw new Error('Phone number is required for non-superadmin users');

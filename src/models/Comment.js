@@ -34,6 +34,7 @@ const Comment = sequelize.define('Comment', {
     get() {
       const deletedAt = this.getDataValue('deletedAt');
       if (deletedAt) {
+        //mark comment text null while get operations if the comment is deleted
         return null;
       }
       return this.getDataValue('commentText');

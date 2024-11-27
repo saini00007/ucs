@@ -20,6 +20,7 @@ export const authenticate = async (req, res, next) => {
     if (decoded.type !== 'session') {
       return res.status(400).json({ success: false, messages: ['Invalid token type'] });
     }
+    
     const user = await User.findOne({
       where: {
         id: decoded.userId,

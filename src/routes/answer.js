@@ -28,7 +28,7 @@ router.put('/answers/:answerId',
   validate(updateAnswerSchema),
   updateAnswer);
 
-
+// Route to serve file
 router.get('/evidence-files/:fileId',
   attachResourceInfo('EvidenceFile', 'EvidenceFile', 'fileId', 'read'),
   checkAccess,

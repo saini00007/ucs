@@ -40,7 +40,6 @@ const permissionsService = {
           actionId: actionId,
         },
       });
-      // Return true if a permission is found, otherwise return false.
       return !!permission;
     } catch (error) {
       console.error(`Error checking role permission for user ${user.id} on resource ${resourceId}:`, error);
@@ -53,7 +52,6 @@ const permissionsService = {
     // Retrieve the access check function for the given resource type.
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
-      // If no access check function is found, log the issue and return false.
       console.log('Content access check function not found for resource type:', resourceType);
       return false;
     }

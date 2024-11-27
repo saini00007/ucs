@@ -1,5 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 import initializeDatabase from './initializeDatabase.js';
 import cookieParser from 'cookie-parser';
@@ -7,7 +8,7 @@ import cookieParser from 'cookie-parser';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 443;
+const PORT = process.env.PORT || 3000;
 
 //authentication
 import mockAuthenticate from './middleware/mockAuth.js';
@@ -26,7 +27,9 @@ import masterRoutes from './routes/master.js'
 import masterQuestionRoute from './routes/masterQuestion.js';
 import commentRoutes from './routes/comment.js';
 
-
+app.use(cors({
+  origin: '*' // Allows all origins
+}));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));

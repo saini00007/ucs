@@ -15,6 +15,7 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 
 const router = express.Router();
 
+// Route to add a new user
 router.post('/',
   (req, res, next) => {
     if (req.body.roleId === 'admin') {
@@ -49,19 +50,25 @@ router.get('/:userId',
   getUserById
 );
 
+// Route to get departments associated with a user by user ID
 router.get('/:userId/departments',
   attachResourceInfo('User', 'User', 'userId', 'read'),
   checkAccess,
-  getDepartmentsByUserId);
+  getDepartmentsByUserId
+);
 
+// Route to remove a user from a department
 router.delete('/:userId/departments/:departmentId',
   attachResourceInfo('UserDepartmentLink', 'User', 'userId', 'remove'),
   checkAccess,
-  removeUserFromDepartment);
+  removeUserFromDepartment
+);
 
+// Route to add a user to a department
 router.post('/:userId/departments/:departmentId',
   attachResourceInfo('UserDepartmentLink', 'Department', 'departmentId', 'create'),
   checkAccess,
-  addUserToDepartment);
+  addUserToDepartment
+);
 
 export default router;
