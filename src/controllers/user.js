@@ -1,7 +1,9 @@
 import { User, Department, Company, UserDepartmentLink } from '../models/index.js';
+import { Op } from 'sequelize';
 import sendEmail from '../utils/mailer.js';
 import { generateToken } from '../utils/token.js';
 import bcrypt from 'bcrypt';
+
 
 export const addUser = async (req, res) => {
     const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
@@ -65,6 +67,20 @@ export const addUser = async (req, res) => {
                 return res.status(404).json({ success: false, messages: ['Company associated with department not found.'] });
             }
 
+            // Check if the email exists in any company (both primaryEmail and secondaryEmail)
+            const existingCompanyEmail = await Company.findOne({
+                where: {
+                    [Op.or]: [
+                        { primaryEmail: email },
+                        { secondaryEmail: email }
+                    ]
+                }, paranoid: false
+            });
+
+            if (existingCompanyEmail) {
+                return res.status(403).json({ success: false, messages: ['Email is already in use by a company.'] });
+            }
+
             // Ensure user's email doesn't match the company admin emails
             if (currentUser.roleId !== 'admin' && [company.primaryEmail, company.secondaryEmail].includes(email)) {
                 return res.status(403).json({ success: false, messages: ['Email cannot match the company admin emails.'] });
@@ -82,7 +98,6 @@ export const addUser = async (req, res) => {
                 countryCode
             }, res);
         }
-
         // For admin role, create user with companyId
         return await createUser({
             username,
@@ -177,20 +192,40 @@ export const updateUser = async (req, res) => {
                 paranoid: false
             });
 
-            if (existingUser) {
+            if (existingUser && existingUser.id !== userId) {
                 return res.status(400).json({ success: false, messages: ['Email is already in use by another user.'] });
             }
 
-            // If the user is not an admin, ensure the email isn't the company's email
-            if (roleId !== 'admin') {
-                const companyId = user.companyId;
-                const company = await Company.findOne({ where: { id: companyId } });
-                if (!company) {
-                    return res.status(404).json({ success: false, messages: ['Company not found.'] });
-                }
+            // Get the company associated with the user
+            const companyId = user.companyId;
+            const company = await Company.findOne({ where: { id: companyId } });
+            if (!company) {
+                return res.status(404).json({ success: false, messages: ['Company not found.'] });
+            }
 
+            if (roleId === 'admin') {
+                // For admin roles, email must match the company's primary or secondary email
+                if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
+                    return res.status(400).json({ success: false, messages: ['Admin email must match one of the company admin emails.'] });
+                }
+            } else {
+                // For non-admin roles, email must not match the company's primary or secondary email
                 if ([company.primaryEmail, company.secondaryEmail].includes(email)) {
                     return res.status(400).json({ success: false, messages: ['Email cannot match the company admin emails.'] });
+                }
+
+                // Check if the email exists in any company (both primaryEmail and secondaryEmail)
+                const existingCompanyEmail = await Company.findOne({
+                    where: {
+                        [Op.or]: [
+                            { primaryEmail: email },
+                            { secondaryEmail: email }
+                        ]
+                    }, paranoid: false
+                });
+
+                if (existingCompanyEmail) {
+                    return res.status(403).json({ success: false, messages: ['Email is already in use by a company.'] });
                 }
             }
         }
@@ -207,18 +242,6 @@ export const updateUser = async (req, res) => {
 
             if (user.roleId === 'admin' && roleId !== 'admin') {
                 return res.status(400).json({ success: false, messages: ['Cannot change admin role.'] });
-            }
-
-            if (roleId === 'admin') {
-                const companyId = user.companyId;
-                const company = await Company.findOne({ where: { id: companyId } });
-                if (!company) {
-                    return res.status(404).json({ success: false, messages: ['Company not found.'] });
-                }
-
-                if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
-                    return res.status(403).json({ success: false, messages: ['Email must be one of the company admin emails.'] });
-                }
             }
 
             // Prevent assigning departmentmanager role to users who are not currently department managers
@@ -267,6 +290,7 @@ export const updateUser = async (req, res) => {
         res.status(500).json({ success: false, messages: ['Error updating user'], error: error.message });
     }
 };
+
 
 export const deleteUser = async (req, res) => {
     const { userId } = req.params;

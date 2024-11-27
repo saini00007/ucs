@@ -254,6 +254,7 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
         {
           model: Comment, // Include comments related to the question
           as: 'comments',
+          paranoid: false,
           include: [
             {
               model: User, // Include the creator of the comment

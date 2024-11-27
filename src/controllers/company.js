@@ -3,6 +3,46 @@ import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import UserDepartmentLink from '../models/UserDepartmentLink.js';
 
+const checkEmailConflict = async (email, emailType = 'primaryEmail', companyId = null) => {
+  try {
+    // Prepare the condition to check for primaryEmail or secondaryEmail
+    const whereClause = emailType === 'primaryEmail' ? { primaryEmail: email } : { secondaryEmail: email };
+
+    // Check the Company table for the email conflict (include soft-deleted records)
+    const existingCompanyEmail = await Company.findOne({
+      where: whereClause,
+    });
+
+    // Check the User table for the email conflict (include soft-deleted records)
+    const existingUserEmail = await User.findOne({
+      where: { email },
+    });
+
+    // If the email exists in the Company table and is associated with a different company
+    if (existingCompanyEmail && existingCompanyEmail.companyId !== companyId) {
+      return {
+        conflict: true,
+        message: `${emailType === 'primaryEmail' ? 'Primary' : 'Secondary'} email already exists in another company.`,
+      };
+    }
+
+    // If the email exists in the User table
+    if (existingUserEmail) {
+      return {
+        conflict: true,
+        message: `${emailType === 'primaryEmail' ? 'Primary' : 'Secondary'} email is already in use by a user.`,
+      };
+    }
+
+    // No conflict found
+    return { conflict: false };
+
+  } catch (error) {
+    console.error('Error checking email conflict:', error);
+    return { conflict: false };
+  }
+};
+
 export const createCompany = async (req, res) => {
   const {
     companyName,
@@ -18,7 +58,25 @@ export const createCompany = async (req, res) => {
   } = req.body;
 
   try {
-    // Create a new company record in the database
+    // Check for primary email conflict
+    const primaryEmailConflict = await checkEmailConflict(primaryEmail, 'primaryEmail');
+    if (primaryEmailConflict.conflict) {
+      return res.status(409).json({
+        success: false,
+        messages: [primaryEmailConflict.message],
+      });
+    }
+
+    // Check for secondary email conflict
+    const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, 'secondaryEmail');
+    if (secondaryEmailConflict.conflict) {
+      return res.status(409).json({
+        success: false,
+        messages: [secondaryEmailConflict.message],
+      });
+    }
+
+    // Create the company
     const newCompany = await Company.create({
       companyName,
       postalAddress,
@@ -33,7 +91,6 @@ export const createCompany = async (req, res) => {
       createdByUserId: req.user.id,
     });
 
-    // Send a success response with the newly created company details
     res.status(201).json({
       success: true,
       messages: ['Company created successfully!'],
@@ -135,17 +192,24 @@ export const getCompanyById = async (req, res) => {
   }
 };
 
-
 export const updateCompany = async (req, res) => {
-
   const { companyId } = req.params;
-  const { companyName, postalAddress, gstNumber, primaryEmail, secondaryEmail, primaryPhone, secondaryPhone, primaryCountryCode, secondaryCountryCode, panNumber } = req.body;
+  const {
+    companyName,
+    postalAddress,
+    gstNumber,
+    primaryEmail,
+    secondaryEmail,
+    primaryPhone,
+    secondaryPhone,
+    primaryCountryCode,
+    secondaryCountryCode,
+    panNumber,
+  } = req.body;
 
   try {
-    // Find the company by its ID in the database
     const company = await Company.findByPk(companyId);
 
-    // If the company is not found, return a 404 error with a message
     if (!company) {
       return res.status(404).json({
         success: false,
@@ -153,7 +217,29 @@ export const updateCompany = async (req, res) => {
       });
     }
 
-    // Update the company's fields if the new values are provided in the request body
+    // Check for primary email conflict (if changed)
+    if (primaryEmail && primaryEmail !== company.primaryEmail) {
+      const primaryEmailConflict = await checkEmailConflict(primaryEmail, 'primaryEmail', companyId);
+      if (primaryEmailConflict.conflict) {
+        return res.status(409).json({
+          success: false,
+          messages: [primaryEmailConflict.message],
+        });
+      }
+    }
+
+    // Check for secondary email conflict (if changed)
+    if (secondaryEmail && secondaryEmail !== company.secondaryEmail) {
+      const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, 'secondaryEmail', companyId);
+      if (secondaryEmailConflict.conflict) {
+        return res.status(409).json({
+          success: false,
+          messages: [secondaryEmailConflict.message],
+        });
+      }
+    }
+
+    // Update the company with provided fields
     if (companyName) company.companyName = companyName;
     if (postalAddress) company.postalAddress = postalAddress;
     if (gstNumber) company.gstNumber = gstNumber;
@@ -165,10 +251,9 @@ export const updateCompany = async (req, res) => {
     if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
     if (panNumber) company.panNumber = panNumber;
 
-    // Save the updated company details to the database
+    // Save the updated company
     await company.save();
 
-    // Return a success response with the updated company data
     res.status(200).json({
       success: true,
       messages: ['Company updated successfully'],
@@ -182,7 +267,6 @@ export const updateCompany = async (req, res) => {
     });
   }
 };
-
 
 export const deleteCompany = async (req, res) => {
   const { companyId } = req.params;
@@ -322,7 +406,6 @@ export const deleteCompany = async (req, res) => {
   }
 };
 
-
 export const getDepartmentsByCompanyId = async (req, res) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
@@ -380,7 +463,6 @@ export const getDepartmentsByCompanyId = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Failed to fetch departments'] });
   }
 };
-
 
 export const getUsersByCompanyId = async (req, res) => {
   const { companyId } = req.params;

@@ -26,16 +26,18 @@ const Company = sequelize.define('Company', {
   panNumber: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'pan_number', // PAN number field
+    field: 'pan_number',
   },
   primaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
+    unique: true,
     field: 'primary_email',
   },
   secondaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
+    unique: true, 
     field: 'secondary_email',
   },
   primaryPhone: {
@@ -72,6 +74,12 @@ const Company = sequelize.define('Company', {
   timestamps: true,
   underscored: true,
   paranoid: true,
+  indexes: [
+    {
+      unique: true,
+      fields: ['primary_email', 'secondary_email'],
+    }
+  ],
 });
 
 export default Company;
