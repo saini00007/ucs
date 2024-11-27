@@ -4,13 +4,13 @@ import User from '../models/User.js';
 import AssessmentQuestion from '../models/AssessmentQuestion.js';
 
 export const createComment = async (req, res) => {
-  const { assessmentQuestionId } = req.params; 
+  const { assessmentQuestionId } = req.params;
   const { commentText } = req.body;
 
   try {
     // Find the assessment question by its ID
     const assessmentQuestion = await AssessmentQuestion.findOne({ where: { id: assessmentQuestionId } });
-    
+
     // If no assessment question is found, return a 404 error
     if (!assessmentQuestion) {
       return res.status(404).json({ success: false, messages: ['No associated assessmentQuestion found'] });
@@ -19,7 +19,7 @@ export const createComment = async (req, res) => {
     // Create a new comment associated with the assessment question and user
     const newComment = await Comment.create({
       assessmentQuestionId: assessmentQuestion.id,
-      createdByUserId: req.user.id, 
+      createdByUserId: req.user.id,
       commentText,
     });
 
@@ -44,7 +44,7 @@ export const createComment = async (req, res) => {
 
 
 export const getCommentById = async (req, res) => {
-  const { commentId } = req.params; 
+  const { commentId } = req.params;
 
   try {
     // Retrieve the comment by its ID and include the user (creator) data
@@ -73,7 +73,7 @@ export const getCommentById = async (req, res) => {
 
 export const updateComment = async (req, res) => {
   const { commentId } = req.params;
-  const { commentText } = req.body; 
+  const { commentText } = req.body;
 
   const UPDATE_TIME_LIMIT = 20 * 60 * 1000; // Set the time limit (20 minutes) for updating the comment
 

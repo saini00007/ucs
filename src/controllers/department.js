@@ -294,7 +294,11 @@ export const deleteDepartment = async (req, res) => {
         });
 
         if (deleted === 0) {
-            throw new Error('Department not found or already deleted');
+            await transaction.rollback();
+            return res.status(404).json({
+                success: false,
+                messages: ['Department not found or already deleted'],
+            });
         }
 
         await transaction.commit();

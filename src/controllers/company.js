@@ -11,11 +11,13 @@ const checkEmailConflict = async (email, emailType = 'primaryEmail', companyId =
     // Check the Company table for the email conflict (include soft-deleted records)
     const existingCompanyEmail = await Company.findOne({
       where: whereClause,
+      paranoid: false
     });
 
     // Check the User table for the email conflict (include soft-deleted records)
     const existingUserEmail = await User.findOne({
       where: { email },
+      paranoid: false
     });
 
     // If the email exists in the Company table and is associated with a different company
@@ -75,7 +77,6 @@ export const createCompany = async (req, res) => {
         messages: [secondaryEmailConflict.message],
       });
     }
-
     // Create the company
     const newCompany = await Company.create({
       companyName,
@@ -375,9 +376,12 @@ export const deleteCompany = async (req, res) => {
       transaction,
     });
 
-    // Check if the company was actually deleted
     if (companyDeleted === 0) {
-      throw new Error('Company not found or already deleted');
+      await transaction.rollback();  // Rollback if the company wasn't deleted
+      return res.status(404).json({
+        success: false,
+        messages: ['Company not found or already deleted'],
+      });
     }
 
     // Delete all users associated with the company

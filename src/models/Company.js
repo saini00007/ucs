@@ -74,12 +74,6 @@ const Company = sequelize.define('Company', {
   timestamps: true,
   underscored: true,
   paranoid: true,
-  indexes: [
-    {
-      unique: true,
-      fields: ['primary_email', 'secondary_email'],
-    }
-  ],
 });
 
 export default Company;
