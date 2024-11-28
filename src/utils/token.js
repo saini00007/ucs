@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-export const generateToken = (userId, type, expiresIn = '15m') => {
+const  generateToken = (userId, type, expiresIn = '15m') => {
   try {
     if (!userId || !type) {
       throw new Error('userId and type are required to generate a token');
@@ -18,3 +18,4 @@ export const generateToken = (userId, type, expiresIn = '15m') => {
     throw new Error('Token generation failed');
   }
 };
+export default generateToken;

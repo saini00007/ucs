@@ -95,7 +95,16 @@ const baseCompanySchema = Joi.object({
             'string.max': 'Country code must be between 1 and 5 characters',
             'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
-});
+})
+    .custom((value, helpers) => {
+        if (value.primaryEmail && value.secondaryEmail && value.primaryEmail === value.secondaryEmail) {
+            return helpers.message('Primary email and secondary email must be different');
+        }
+        if (value.primaryPhone && value.secondaryPhone && value.primaryPhone === value.secondaryPhone) {
+            return helpers.message('Primary phone and secondary phone must be different');
+        }
+        return value;
+    }, 'Custom validation');
 
 const createCompanySchema = baseCompanySchema;
 
@@ -197,6 +206,15 @@ const updateCompanySchema = Joi.object({
             'string.max': 'Country code must be between 1 and 5 characters',
             'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
-});
+})
+    .custom((value, helpers) => {
+        if (value.primaryEmail && value.secondaryEmail && value.primaryEmail === value.secondaryEmail) {
+            return helpers.message('Primary email and secondary email must be different');
+        }
+        if (value.primaryPhone && value.secondaryPhone && value.primaryPhone === value.secondaryPhone) {
+            return helpers.message('Primary phone and secondary phone must be different');
+        }
+        return value;
+    }, 'Custom validation');
 
 export { createCompanySchema, updateCompanySchema };

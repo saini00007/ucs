@@ -2,15 +2,20 @@ import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, E
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import UserDepartmentLink from '../models/UserDepartmentLink.js';
+import sendEmail from '../utils/mailer.js';
+import generateToken from '../utils/token.js';
 
-const checkEmailConflict = async (email, emailType = 'primaryEmail', companyId = null) => {
+const checkEmailConflict = async (email, companyId = null) => {
   try {
-    // Prepare the condition to check for primaryEmail or secondaryEmail
-    const whereClause = emailType === 'primaryEmail' ? { primaryEmail: email } : { secondaryEmail: email };
-
     // Check the Company table for the email conflict (include soft-deleted records)
-    const existingCompanyEmail = await Company.findOne({
-      where: whereClause,
+    const existingCompany = await Company.findOne({
+      where: {
+        [Op.or]: [
+          { primaryEmail: email },
+          { secondaryEmail: email }
+        ],
+        ...(companyId && { id: { [Op.ne]: companyId } }) // Exclude the current company if companyId is provided
+      },
       paranoid: false
     });
 
@@ -20,11 +25,11 @@ const checkEmailConflict = async (email, emailType = 'primaryEmail', companyId =
       paranoid: false
     });
 
-    // If the email exists in the Company table and is associated with a different company
-    if (existingCompanyEmail && existingCompanyEmail.companyId !== companyId) {
+    // If the email exists in the Company table
+    if (existingCompany) {
       return {
         conflict: true,
-        message: `${emailType === 'primaryEmail' ? 'Primary' : 'Secondary'} email already exists in another company.`,
+        message: `Email already exist in another company.`,
       };
     }
 
@@ -32,7 +37,7 @@ const checkEmailConflict = async (email, emailType = 'primaryEmail', companyId =
     if (existingUserEmail) {
       return {
         conflict: true,
-        message: `${emailType === 'primaryEmail' ? 'Primary' : 'Secondary'} email is already in use by a user.`,
+        message: 'Email is already in use by a user.',
       };
     }
 
@@ -61,20 +66,20 @@ export const createCompany = async (req, res) => {
 
   try {
     // Check for primary email conflict
-    const primaryEmailConflict = await checkEmailConflict(primaryEmail, 'primaryEmail');
+    const primaryEmailConflict = await checkEmailConflict(primaryEmail);
     if (primaryEmailConflict.conflict) {
       return res.status(409).json({
         success: false,
-        messages: [primaryEmailConflict.message],
+        messages: ["Primary " + primaryEmailConflict.message],
       });
     }
 
     // Check for secondary email conflict
-    const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, 'secondaryEmail');
+    const secondaryEmailConflict = await checkEmailConflict(secondaryEmail);
     if (secondaryEmailConflict.conflict) {
       return res.status(409).json({
         success: false,
-        messages: [secondaryEmailConflict.message],
+        messages: ["Secondary" + secondaryEmailConflict.message],
       });
     }
     // Create the company
@@ -208,34 +213,68 @@ export const updateCompany = async (req, res) => {
     panNumber,
   } = req.body;
 
+  const transaction = await sequelize.transaction();
+
   try {
-    const company = await Company.findByPk(companyId);
+    const company = await Company.findByPk(companyId, { transaction });
 
     if (!company) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         messages: ['Company not found.'],
       });
     }
 
+    // Check for primary and secondary email conflicts within the same company
+    if (
+      (primaryEmail && primaryEmail === company.secondaryEmail) ||
+      (secondaryEmail && secondaryEmail === company.primaryEmail)
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        messages: [
+          'Primary email is same as secondary email in database and vice versa.',
+        ],
+      });
+    }
+
+    // Check for primary and secondary phone conflicts within the same company
+    if (
+      (primaryPhone && primaryPhone === company.secondaryPhone) ||
+      (secondaryPhone && secondaryPhone === company.primaryPhone)
+    ) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        messages: ['Primary email is same as secondary email in database and vice versa.'],
+      });
+    }
+
+    const originalPrimaryEmail = company.primaryEmail;
+    const originalSecondaryEmail = company.secondaryEmail;
+
     // Check for primary email conflict (if changed)
-    if (primaryEmail && primaryEmail !== company.primaryEmail) {
-      const primaryEmailConflict = await checkEmailConflict(primaryEmail, 'primaryEmail', companyId);
+    if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
+      const primaryEmailConflict = await checkEmailConflict(primaryEmail, companyId, transaction);
       if (primaryEmailConflict.conflict) {
+        await transaction.rollback();
         return res.status(409).json({
           success: false,
-          messages: [primaryEmailConflict.message],
+          messages: ['Primary email conflict: ' + primaryEmailConflict.message],
         });
       }
     }
 
     // Check for secondary email conflict (if changed)
-    if (secondaryEmail && secondaryEmail !== company.secondaryEmail) {
-      const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, 'secondaryEmail', companyId);
+    if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
+      const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, companyId, transaction);
       if (secondaryEmailConflict.conflict) {
+        await transaction.rollback();
         return res.status(409).json({
           success: false,
-          messages: [secondaryEmailConflict.message],
+          messages: ['Secondary email conflict: ' + secondaryEmailConflict.message],
         });
       }
     }
@@ -253,14 +292,58 @@ export const updateCompany = async (req, res) => {
     if (panNumber) company.panNumber = panNumber;
 
     // Save the updated company
-    await company.save();
+    await company.save({ transaction });
+
+    // Array to hold emails and associated user IDs for password reset
+    const usersToReset = [];
+    let isPrimaryEmailUpdated = false;
+    let isSecondaryEmailUpdated = false;
+
+    // Update associated admin's email if company's email is updated
+    if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
+      const primaryAdminUser = await User.findOne({
+        where: { email: originalPrimaryEmail, companyId: companyId, roleId: 'admin' },
+        transaction,
+      });
+
+      if (primaryAdminUser) {
+        primaryAdminUser.email = primaryEmail;
+        await primaryAdminUser.save({ transaction });
+        usersToReset.push({ email: primaryEmail, userId: primaryAdminUser.id, username: primaryAdminUser.username });
+        isPrimaryEmailUpdated = true;
+      }
+    }
+
+    if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
+      const secondaryAdminUser = await User.findOne({
+        where: { email: originalSecondaryEmail, companyId: companyId, roleId: 'admin' },
+        transaction,
+      });
+
+      if (secondaryAdminUser) {
+        secondaryAdminUser.email = secondaryEmail;
+        await secondaryAdminUser.save({ transaction });
+        usersToReset.push({ email: secondaryEmail, userId: secondaryAdminUser.id, username: secondaryAdminUser.username });
+        isSecondaryEmailUpdated = true;
+      }
+    }
+
+    // Commit the transaction
+    await transaction.commit();
 
     res.status(200).json({
       success: true,
-      messages: ['Company updated successfully'],
+      messages: [
+        'Company updated successfully',
+        ...(isPrimaryEmailUpdated ? ['Admin email associated with the primary email has been updated.'] : []),
+        ...(isSecondaryEmailUpdated ? ['Admin email associated with the secondary email has been updated.'] : [])
+      ],
       company,
     });
+
   } catch (error) {
+    // Rollback the transaction in case of error
+    await transaction.rollback();
     console.error('Error updating company:', error);
     res.status(500).json({
       success: false,

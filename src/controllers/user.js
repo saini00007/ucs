@@ -1,7 +1,7 @@
 import { User, Department, Company, UserDepartmentLink } from '../models/index.js';
 import { Op } from 'sequelize';
 import sendEmail from '../utils/mailer.js';
-import { generateToken } from '../utils/token.js';
+import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
 
@@ -149,7 +149,7 @@ const createUser = async (userData, res) => {
 
         // Generate a reset password token for the user
         const token = generateToken(user.id, 'reset-password');
-        const resetLink = `${process.env.CLIENT_URL}/set-password?token=${token}`;
+        const resetLink = `http://localhost:3000/set-password?token=${token}`;
 
         // Email subject and content for setting the password
         const emailSubject = 'Set Your Password';
@@ -185,6 +185,7 @@ export const updateUser = async (req, res) => {
         }
 
         // Check if the email is being updated
+
         if (email && email !== user.email) {
             // If the email is being updated, check if it's already in use by another user
             const existingUser = await User.findOne({
