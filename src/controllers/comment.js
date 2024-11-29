@@ -1,7 +1,4 @@
-import Comment from '../models/Comment.js';
-import Answer from '../models/Answer.js';
-import User from '../models/User.js';
-import AssessmentQuestion from '../models/AssessmentQuestion.js';
+import {User,Comment,AssessmentQuestion} from '../models/index.js';
 
 export const createComment = async (req, res) => {
   const { assessmentQuestionId } = req.params;

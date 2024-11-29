@@ -1,8 +1,4 @@
-import { validationResult } from 'express-validator';
-import Answer from '../models/Answer.js';
-import EvidenceFile from '../models/EvidenceFile.js';
-import AssessmentQuestion from '../models/AssessmentQuestion.js';
-import User from '../models/User.js';
+import {AssessmentQuestion,EvidenceFile,Answer,User} from '../models/index.js';
 import sequelize from '../config/db.js';
 
 export const createAnswer = async (req, res) => {

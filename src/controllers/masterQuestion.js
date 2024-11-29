@@ -1,4 +1,4 @@
-import MasterQuestion from '../models/MasterQuestion.js';
+import {MasterQuestion} from '../models/index.js';
 
 export const getMasterQuestions = async (req, res) => {
   const { page = 1 } = req.query;

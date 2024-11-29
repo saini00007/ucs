@@ -1,4 +1,4 @@
-import { Assessment, AssessmentQuestion, Department, MasterQuestion, Answer, EvidenceFile, Comment, User } from '../models/index.js';
+import { AssessmentQuestion, MasterQuestion, Answer, EvidenceFile, Comment, User } from '../models/index.js';
 
 // export const addAssessmentQuestions = async (req, res) => {
 //   const { assessmentId } = req.params;

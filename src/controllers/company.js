@@ -1,8 +1,6 @@
 import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
-import sendEmail from '../utils/mailer.js';
-import generateToken from '../utils/token.js';
 
 const checkEmailConflict = async (email, companyId = null) => {
   try {

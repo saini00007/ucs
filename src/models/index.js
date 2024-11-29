@@ -68,6 +68,8 @@ User.hasMany(EvidenceFile, { foreignKey: 'createdByUserId', as: 'createdEvidence
 Answer.hasMany(EvidenceFile, { foreignKey: 'answerId', as: 'evidenceFiles' });
 EvidenceFile.belongsTo(Answer, { foreignKey: 'answerId', as: 'answer' });
 
+//many to many association between master question and master department **have to change later to direct association instead of indirect**
+
 // 14. QuestionDepartmentLink and MasterQuestion
 QuestionDepartmentLink.belongsTo(MasterQuestion, { foreignKey: 'masterQuestionId', targetKey: 'id', as: 'masterQuestion' });
 MasterQuestion.hasMany(QuestionDepartmentLink, { foreignKey: 'masterQuestionId', as: 'questionDepartmentLinks' });
