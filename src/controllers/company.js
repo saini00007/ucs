@@ -1,7 +1,6 @@
-import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment } from '../models/index.js';
+import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
-import UserDepartmentLink from '../models/UserDepartmentLink.js';
 import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 
@@ -554,40 +553,76 @@ export const getDepartmentsByCompanyId = async (req, res) => {
 export const getUsersByCompanyId = async (req, res) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
+  const { roleId, departments } = req.user;
 
   try {
-    // Fetch users for the given companyId with pagination and exclude sensitive fields
-    const { count, rows: users } = await User.findAndCountAll({
-      where: { companyId },
-      attributes: { exclude: ['password', 'deletedAt'] },
-      include: [{
-        model: Department,
-        as: 'departments',
-        attributes: ['id'],
-        through: { attributes: [] },
-      }],
-      limit: limit,
-      offset: (page - 1) * limit,
-    });
+    const departmentIds = departments.map(department => department.id);
+    const isSpecialRole = ['superadmin', 'admin', 'departmentmanager'].includes(roleId);
 
-    // If no users are found, return an empty response with pagination
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No users found'],
-        users: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
+    let adjustedLimit = limit;
+
+    // Fetch number of admins if not a special role
+    let adminCount = 0;
+    if (!isSpecialRole) {
+      adminCount = await User.count({
+        where: { companyId, roleId: 'admin' },
       });
+
+      // Adjust the limit based on the number of admins
+      adjustedLimit = limit - adminCount;
     }
 
-    const totalPages = Math.ceil(count / limit);
+    const queryOptions = {
+      where: { companyId },
+      attributes: { exclude: ['password', 'deletedAt'] },
+      include: [
+        {
+          model: Department,
+          as: 'departments',
+          attributes: ['id'],
+          through: { attributes: [] }, // Exclude join table columns
+        }
+      ],
+      limit: adjustedLimit,
+      offset: (page - 1) * adjustedLimit,
+    };
 
-    // If the page exceeds total pages, return an error
+    // If the user is neither a superadmin, admin, nor departmentmanager, filter by their departments
+    if (!isSpecialRole) {
+      queryOptions.include[0].where = {
+        id: {
+          [Op.in]: departmentIds,
+        }
+      };
+    }
+
+    // Fetch users for the given companyId with pagination
+    const { count, rows: users } = await User.findAndCountAll(queryOptions);
+
+    let finalUsers = [...users];
+
+    // If the logged-in user is not an admin, superadmin, or department manager, add admins on the first page
+    if (!isSpecialRole && page === 1) {
+      const admins = await User.findAll({
+        where: { companyId, roleId: 'admin' },
+        attributes: { exclude: ['password', 'deletedAt'] },
+        include: [
+          {
+            model: Department,
+            as: 'departments',
+            attributes: ['id'],
+            through: { attributes: [] },
+          }
+        ]
+      });
+
+      finalUsers = [...admins, ...users];
+    }
+
+    // Calculate total pages based on the count of regular users and the number of admins
+    const totalItems = isSpecialRole ? count : count + adminCount;
+    const totalPages = Math.ceil(totalItems / limit);
+
     if (page > totalPages) {
       return res.status(404).json({
         success: false,
@@ -599,9 +634,9 @@ export const getUsersByCompanyId = async (req, res) => {
     res.status(200).json({
       success: true,
       messages: ['Users retrieved successfully'],
-      users: users,
+      users: finalUsers.slice(0, limit),
       pagination: {
-        totalItems: count,
+        totalItems,
         totalPages,
         currentPage: page,
         itemsPerPage: limit,
@@ -616,3 +651,12 @@ export const getUsersByCompanyId = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+
+
+
