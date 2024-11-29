@@ -6,13 +6,13 @@ const MasterDepartment = sequelize.define('MasterDepartment', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id', 
+    field: 'id',
   },
   departmentName: {
     type: DataTypes.TEXT,
     allowNull: false,
     unique: true,
-    field: 'department_name', 
+    field: 'department_name',
   },
 }, {
   tableName: 'master_departments',

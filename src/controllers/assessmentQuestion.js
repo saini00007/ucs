@@ -92,6 +92,7 @@ export const getAssessmentQuestionById = async (req, res) => {
         {
           model: Comment,
           as: 'comments',
+          paranoid: false,
           include: [
             {
               model: User,

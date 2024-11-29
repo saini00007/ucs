@@ -85,7 +85,6 @@ export const createDepartment = async (req, res) => {
         // Find questions linked to the master department
         const questions = await QuestionDepartmentLink.findAll({
             where: { masterDepartmentId },
-            include: [{ model: MasterQuestion, as: 'masterQuestion', required: true }],
             transaction,
         });
 

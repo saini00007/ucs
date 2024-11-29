@@ -1,4 +1,4 @@
-import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User ,Comment} from '../models/index.js';
+import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment } from '../models/index.js';
 
 export const startAssessment = async (req, res) => {
   const { assessmentId } = req.params;
@@ -209,9 +209,8 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
     }
 
     const { assessmentStarted, submitted } = assessment;
-
     // If the assessment has not started or has already been submitted, deny access
-    if (!assessmentStarted || submitted) {
+    if ((!assessmentStarted || submitted) && req.user.roleId !== 'superadmin') {
       return res.status(403).json({
         success: false,
         messages: ['Access denied: Insufficient content access.'],
