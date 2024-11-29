@@ -556,95 +556,105 @@ export const getUsersByCompanyId = async (req, res) => {
   const { roleId, departments } = req.user;
 
   try {
+    // Get department IDs from the user's departments
     const departmentIds = departments.map(department => department.id);
-    const isSpecialRole = ['superadmin', 'admin', 'departmentmanager'].includes(roleId);
 
-    let adjustedLimit = limit;
-
-    // Fetch number of admins if not a special role
-    let adminCount = 0;
-    if (!isSpecialRole) {
-      adminCount = await User.count({
-        where: { companyId, roleId: 'admin' },
-      });
-
-      // Adjust the limit based on the number of admins
-      adjustedLimit = limit - adminCount;
-    }
-
-    const queryOptions = {
-      where: { companyId },
-      attributes: { exclude: ['password', 'deletedAt'] },
+    // Define base query options
+    let queryOptions = {
+      where: {
+        companyId,
+      },
+      attributes: {
+        exclude: ['password', 'deletedAt']
+      },
       include: [
         {
           model: Department,
           as: 'departments',
+          through: {
+            attributes: [], // Exclude junction table attributes
+          },
+          required: false,
           attributes: ['id'],
-          through: { attributes: [] }, // Exclude join table columns
         }
       ],
-      limit: adjustedLimit,
-      offset: (page - 1) * adjustedLimit,
+      limit: parseInt(limit, 10),
+      offset: (parseInt(page, 10) - 1) * parseInt(limit, 10),
+      distinct: true,
+      subQuery: false,
     };
 
-    // If the user is neither a superadmin, admin, nor departmentmanager, filter by their departments
-    if (!isSpecialRole) {
-      queryOptions.include[0].where = {
-        id: {
-          [Op.in]: departmentIds,
+    // Apply role-based filtering
+    if (['admin', 'superadmin', 'departmentmanager'].includes(roleId)) {
+      // These roles can see all users in the company
+      // No additional filtering needed
+    } else if (['assessor', 'reviewer'].includes(roleId)) {
+      // These roles can only see:
+      // 1. Company admins
+      // 2. Users from their own departments
+      queryOptions.where[Op.or] = [
+        { roleId: 'admin' }, // Can see admins
+        {
+          [Op.and]: [
+            { '$departments.id$': { [Op.in]: departmentIds } }, // Users from their departments
+          ]
         }
-      };
+      ];
+    } else {
+      // Unknown role - return error
+      return res.status(403).json({
+        success: false,
+        messages: ['Unauthorized access'],
+      });
     }
 
-    // Fetch users for the given companyId with pagination
+    // Fetch users based on the query options
     const { count, rows: users } = await User.findAndCountAll(queryOptions);
 
-    let finalUsers = [...users];
+    // Calculate pagination values
+    const totalItems = count;
+    const totalPages = Math.ceil(totalItems / limit);
+    const currentPage = parseInt(page, 10);
 
-    // If the logged-in user is not an admin, superadmin, or department manager, add admins on the first page
-    if (!isSpecialRole && page === 1) {
-      const admins = await User.findAll({
-        where: { companyId, roleId: 'admin' },
-        attributes: { exclude: ['password', 'deletedAt'] },
-        include: [
-          {
-            model: Department,
-            as: 'departments',
-            attributes: ['id'],
-            through: { attributes: [] },
-          }
-        ]
+    // Handle no users found
+    if (totalItems === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No users found'],
+        users: [],
+        pagination: {
+          totalItems: 0,
+          totalPages: 0,
+          currentPage,
+          itemsPerPage: parseInt(limit, 10),
+        },
       });
-
-      finalUsers = [...admins, ...users];
     }
 
-    // Calculate total pages based on the count of regular users and the number of admins
-    const totalItems = isSpecialRole ? count : count + adminCount;
-    const totalPages = Math.ceil(totalItems / limit);
-
-    if (page > totalPages) {
+    // Handle invalid page number
+    if (currentPage > totalPages) {
       return res.status(404).json({
         success: false,
         messages: ['Page not found'],
       });
     }
 
-    // Return users with pagination details
-    res.status(200).json({
+    // Return successful response
+    return res.status(200).json({
       success: true,
       messages: ['Users retrieved successfully'],
-      users: finalUsers.slice(0, limit),
+      users,
       pagination: {
         totalItems,
         totalPages,
-        currentPage: page,
-        itemsPerPage: limit,
+        currentPage,
+        itemsPerPage: parseInt(limit, 10),
       },
     });
+
   } catch (error) {
     console.error('Error fetching users by company:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       messages: ['Error fetching users'],
       error: error.message,

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import url from 'url'; 
+import url from 'url';
 import sequelize from './config/db.js'; // Configured Sequelize instance.
 
 const initializeDatabase = async () => {

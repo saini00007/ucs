@@ -84,15 +84,6 @@ MasterDepartment.hasMany(Department, { foreignKey: 'masterDepartmentId', as: 'de
 Otp.belongsTo(User, { foreignKey: 'userId', targetKey: 'id', as: 'user' });
 User.hasMany(Otp, { foreignKey: 'userId', as: 'otps' });
 
-// 18. UserDepartmentLink and User
-UserDepartmentLink.belongsTo(User, { foreignKey: 'userId', targetKey: 'id', as: 'user' });
-User.hasMany(UserDepartmentLink, { foreignKey: 'userId', as: 'userDepartmentLinks' });
-
-// 19. UserDepartmentLink and Department
-UserDepartmentLink.belongsTo(Department, { foreignKey: 'departmentId', targetKey: 'id', as: 'department' });
-Department.hasMany(UserDepartmentLink, { foreignKey: 'departmentId', as: 'userDepartmentLinks' });
-
-
 export {
   User,
   Company,
