@@ -1,5 +1,6 @@
 import { User, Department, Company, UserDepartmentLink } from '../models/index.js';
 import { Op } from 'sequelize';
+import sequelize from '../config/db.js';
 import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
@@ -292,28 +293,56 @@ export const updateUser = async (req, res) => {
     }
 };
 
-
 export const deleteUser = async (req, res) => {
     const { userId } = req.params;
+    const requestingUserRoleId = req.user.roleId;
+
+    const transaction = await sequelize.transaction();
 
     try {
-        // Attempt to delete the user from the database by their ID
-        const deleted = await User.destroy({ where: { id: userId } });
+        // Fetch the user to be deleted
+        const userToDelete = await User.findByPk(userId);
 
-        // If no rows were deleted, the user was not found
-        if (!deleted) {
+        if (!userToDelete) {
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
 
-        // If deletion was successful, return a success response
+        const userToDeleteRoleId = userToDelete.roleId;
+
+        // Check if the requesting user has the right to delete the target user
+        const canDelete =
+            (requestingUserRoleId === 'superadmin') ||
+            (requestingUserRoleId === 'admin' && ['departmentmanager', 'assessor', 'reviewer'].includes(userToDeleteRoleId)) ||
+            (requestingUserRoleId === 'departmentmanager' && ['assessor', 'reviewer'].includes(userToDeleteRoleId));
+
+        if (!canDelete) {
+            return res.status(403).json({ success: false, messages: ['Unauthorized to delete this user'] });
+        }
+
+        // Delete UserDepartmentLink records associated with the user
+        await UserDepartmentLink.destroy({
+            where: { userId },
+            transaction
+        });
+
+        // Delete the user record
+        const deleted = await User.destroy({ where: { id: userId }, transaction });
+
+        if (!deleted) {
+            await transaction.rollback();
+            return res.status(404).json({ success: false, messages: ['User not found'] });
+        }
+
+        // Commit the transaction if all deletions succeeded
+        await transaction.commit();
         res.status(200).json({ success: true, messages: ['User deleted successfully'] });
     } catch (error) {
-        // Log any errors and return a 500 response with the error message
+        // Rollback the transaction in case of any error
+        await transaction.rollback();
         console.error('Error deleting user:', error);
-        res.status(500).json({ success: false, messages: ['Error deleting user'], error: error.message });
+        res.status(500).json({ success: false, messages: ['Error deleting user'] });
     }
 };
-
 
 export const getUserById = async (req, res) => {
     const { userId } = req.params;
@@ -343,7 +372,6 @@ export const getUserById = async (req, res) => {
     }
 };
 
-
 export const addUserToDepartment = async (req, res) => {
     const { userId, departmentId } = req.params;
 
@@ -357,6 +385,13 @@ export const addUserToDepartment = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 messages: ['User or department not found']
+            });
+        }
+
+        if (!['assessor', 'reviewer'].includes(user.roleId)) {
+            return res.status(400).json({
+                success: false,
+                messages: ['User must have a role of assessor or reviewer']
             });
         }
 
@@ -493,7 +528,6 @@ export const removeUserFromDepartment = async (req, res) => {
     }
 };
 
-
 export const getDepartmentsByUserId = async (req, res) => {
     const { userId } = req.params;
 
@@ -528,4 +562,3 @@ export const getDepartmentsByUserId = async (req, res) => {
         res.status(500).json({ success: false, messages: ['Server error'] });
     }
 };
-
