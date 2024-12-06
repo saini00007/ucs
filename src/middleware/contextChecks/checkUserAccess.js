@@ -2,6 +2,7 @@ import { User, Department } from "../../models/index.js";
 
 const checkUserAccess = async (user, resourceId) => {
     try {
+        
         const userDb = await User.findByPk(resourceId, {
             include: [{
                 model: Department,

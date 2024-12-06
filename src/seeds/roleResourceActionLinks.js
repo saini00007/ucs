@@ -54,7 +54,7 @@ const seedRoleResourceActionLinks = async () => {
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['read'] },
-        { resourceId: 'assessment', actionIds: ['start', 'read', 'list'] },
+        { resourceId: 'assessment', actionIds: ['start', 'read', 'list', 'submit'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },
         { resourceId: 'evidencefile', actionIds: ['read'] },

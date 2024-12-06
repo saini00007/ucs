@@ -18,13 +18,13 @@ const PORT = process.env.PORT || 4000;
 const runSeeds = async () => {
     const transaction = await sequelize.transaction();
     try {
-         await seedRoles({ transaction });
-         await seedResources({ transaction });
-         await seedActions({ transaction });
+        //  await seedRoles({ transaction });
+        //  await seedResources({ transaction });
+        //  await seedActions({ transaction });
          await seedRoleResourceActionLinks({ transaction });
-         await seedSuperAdmins({ transaction });
-         await seedMasterDepartments({ transaction });
-         await seedMasterQuestions();
+        //  await seedSuperAdmins({ transaction });
+        //  await seedMasterDepartments({ transaction });
+        //  await seedMasterQuestions();
          await transaction.commit();
         console.log('Seeding completed successfully!');
     } catch (error) {

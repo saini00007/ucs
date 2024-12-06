@@ -5,7 +5,6 @@ import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
-
 export const addUser = async (req, res) => {
     const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
     const currentUser = req.user; // Current user making the request
@@ -304,6 +303,7 @@ export const deleteUser = async (req, res) => {
         const userToDelete = await User.findByPk(userId);
 
         if (!userToDelete) {
+            await transaction.rollback();
             return res.status(404).json({ success: false, messages: ['User not found'] });
         }
 
@@ -316,6 +316,7 @@ export const deleteUser = async (req, res) => {
             (requestingUserRoleId === 'departmentmanager' && ['assessor', 'reviewer'].includes(userToDeleteRoleId));
 
         if (!canDelete) {
+            await transaction.rollback();
             return res.status(403).json({ success: false, messages: ['Unauthorized to delete this user'] });
         }
 
