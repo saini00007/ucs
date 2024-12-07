@@ -27,7 +27,7 @@ const Otp = sequelize.define('Otp', {
     field: 'expires_at',
   },
 }, {
-  tableName: 'otp',
+  tableName: 'otps',
   timestamps: true,
   underscored: true,
 });

@@ -1,30 +1,9 @@
 const attachResourceInfo = (roleResourceType, contentResourceType, contentResourceId, actionId) => {
     return (req, res, next) => {
         try {
-            // Mapping for cases where specific resource types and actions should result in a null contentResourceId.
-            const nullResourceIdMappings = {
-                'Company': {
-                    'list': ['Company'],
-                    'create': ['Company'],
-                },
-                'MasterQuestion': {
-                    'list': ['MasterQuestion'],
-                },
-                'MasterDepartment': {
-                    'list': ['MasterDepartment'],
-                },
-                'Role': {
-                    'list': ['Role'],
-                },
-            };
-
-            // Check if the combination of roleResourceType, action, and contentResourceType exists in the nullResourceIdMappings.
             if (
-                nullResourceIdMappings[roleResourceType] &&
-                nullResourceIdMappings[roleResourceType][actionId] &&
-                nullResourceIdMappings[roleResourceType][actionId].includes(contentResourceType)
+                !contentResourceId
             ) {
-                // If it exists, set contentResourceId to null.
                 req.contentResourceId = null;
             } else {
                 // Otherwise, attempt to get the contentResourceId from request parameters.

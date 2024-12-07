@@ -1,4 +1,4 @@
-import {AssessmentQuestion,EvidenceFile,Answer,User} from '../models/index.js';
+import { AssessmentQuestion, EvidenceFile, Answer, User } from '../models/index.js';
 import sequelize from '../config/db.js';
 
 export const createAnswer = async (req, res) => {
@@ -56,23 +56,15 @@ export const createAnswer = async (req, res) => {
       answerText,
     }, { transaction });
 
-    let evidenceFiles = [];
     if (isAnswerYes) {
       // Save evidence files if the answer is "yes"
-      evidenceFiles = await Promise.all(req.files.map(async (file) => {
-        const evidenceFile = await EvidenceFile.create({
+      await Promise.all(req.files.map(async (file) => {
+        await EvidenceFile.create({
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
         }, { transaction });
-        return {
-          id: evidenceFile.id,
-          filePath: evidenceFile.filePath,
-          createdAt: evidenceFile.createdAt,
-          updatedAt: evidenceFile.updatedAt,
-          creator: { id: userId, username: req.user.username },
-        };
       }));
     }
 
@@ -160,7 +152,7 @@ export const updateAnswer = async (req, res) => {
     }
 
     // Validation: Ensure evidence files are uploaded when updating to "yes"
-    if (isUpdatingToYes && (req.files.length === 0)) {
+    if (isUpdatingToYes && (!req.files || req.files.length === 0)) {
       await transaction.rollback(); // Rollback if no files uploaded when the answer is "yes"
       return res.status(400).json({
         success: false,
@@ -182,20 +174,14 @@ export const updateAnswer = async (req, res) => {
     await answer.save({ transaction });
 
     // Create new evidence files if the answer is "yes" and files are uploaded
-    let newEvidenceFiles = [];
-    if (isUpdatingToYes && req.files && req.files.length > 0) {
-      newEvidenceFiles = await Promise.all(req.files.map(async (file) => {
-        const evidenceFile = await EvidenceFile.create({
+    if (isUpdatingToYes) {
+      await Promise.all(req.files.map(async (file) => {
+        await EvidenceFile.create({
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
         }, { transaction });
-        return {
-          id: evidenceFile.id,
-          filePath: evidenceFile.filePath,
-          creator: { id: userId, username: req.user.username },
-        };
       }));
     }
 

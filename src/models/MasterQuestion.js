@@ -6,56 +6,148 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id', 
+    field: 'id',
   },
   srNo: {
     type: DataTypes.INTEGER,
-    field: 'srno', 
+    field: 'srno',
   },
   sp80053ControlNumber: {
     type: DataTypes.TEXT,
-    field: 'sp_800_53_control_number', 
+    field: 'sp_800_53_control_number',
   },
   questionText: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'question_text', 
+    field: 'question_text',
   },
-  iso270012022ControlIdNumber: {
+  vulnerabilityDescription: {
     type: DataTypes.TEXT,
-    field: 'iso_27001_2022_control_id_number', 
+    field: 'vulnerability_description',
   },
-  nistCsfControlId: {
+  vulnerabilityRating: {
     type: DataTypes.TEXT,
-    field: 'nist_csf_control_id', 
+    field: 'vulnerability_rating', 
   },
-  mitreDefendControlId: {
-    type: DataTypes.TEXT,
-    field: 'mitre_defend_control_id', 
+  vulnerabilityValue: {
+    type: DataTypes.INTEGER,
+    field: 'vulnerability_value',
   },
-  nist80082ControlId: {
-    type: DataTypes.TEXT,
-    field: 'nist_800_82_control_id', 
+  riskLikelihoodScore: {
+    type: DataTypes.INTEGER,
+    field: 'risk_likelihood_score',
   },
-  iec62443ControlId: {
-    type: DataTypes.TEXT,
-    field: 'iec_62443_control_id', 
+  riskLikelihoodValue: {
+    type: DataTypes.INTEGER,
+    field: 'risk_likelihood_value',
   },
-  pcidss: {
+  riskLikelihoodRating: {
     type: DataTypes.TEXT,
-    field: 'pcidss', 
+    field: 'risk_likelihood_rating', 
   },
-  suggestedEvidence: {
+  ermLikelihoodRating: {
     type: DataTypes.TEXT,
-    field: 'suggested_evidence', 
+    field: 'erm_likelihood_rating', 
+  },
+  operationalImpactDescription: {
+    type: DataTypes.TEXT,
+    field: 'operational_impact_description',
+  },
+  businessImpactDescription: {
+    type: DataTypes.TEXT,
+    field: 'business_impact_description',
+  },
+  healthSafetyRating: {
+    type: DataTypes.INTEGER,
+    field: 'health_safety_rating',
+  },
+  environmentImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'environment_impact_rating',
+  },
+  financialImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'financial_impact_rating',
+  },
+  reputationalImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'reputational_impact_rating',
+  },
+  legalImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'legal_impact_rating',
+  },
+  complianceImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'compliance_impact_rating',
+  },
+  objectivesAndProductionOperationsImpactRating: {
+    type: DataTypes.INTEGER,
+    field: 'objectives_and_production_operations_impact_rating',
+  },
+  riskImpactValue: {
+    type: DataTypes.INTEGER,
+    field: 'risk_impact_value',
+  },
+  riskImpactRating: {
+    type: DataTypes.TEXT,
+    field: 'risk_impact_rating', 
+  },
+  inherentRisk: {
+    type: DataTypes.TEXT,
+    field: 'inherent_risk', 
+  },
+  currentRiskValue: {
+    type: DataTypes.INTEGER,
+    field: 'current_risk_value',
+  },
+  currentRiskRating: {
+    type: DataTypes.TEXT,
+    field: 'current_risk_rating', 
+  },
+  ermRiskRating: {
+    type: DataTypes.TEXT,
+    field: 'erm_risk_rating', 
+  },
+  riskOwner: {
+    type: DataTypes.TEXT,
+    field: 'risk_owner',
+  },
+  riskTreatmentPlan1: {
+    type: DataTypes.TEXT,
+    field: 'risk_treatment_plan_1',
+  },
+  riskTreatmentPlan2: {
+    type: DataTypes.TEXT,
+    field: 'risk_treatment_plan_2',
+  },
+  riskTreatmentPlan3: {
+    type: DataTypes.TEXT,
+    field: 'risk_treatment_plan_3',
+  },
+  riskTreatmentPlan4: {
+    type: DataTypes.TEXT,
+    field: 'risk_treatment_plan_4',
+  },
+  riskTreatmentPlan5: {
+    type: DataTypes.TEXT,
+    field: 'risk_treatment_plan_5',
+  },
+  revisedRiskLikelihoodRating: {
+    type: DataTypes.TEXT,
+    field: 'revised_risk_likelihood_rating', 
+  },
+  revisedRiskImpactRating: {
+    type: DataTypes.TEXT,
+    field: 'revised_risk_impact_rating', 
+  },
+  targetRiskRating: {
+    type: DataTypes.TEXT,
+    field: 'target_risk_rating', 
   },
   department: {
     type: DataTypes.TEXT,
-    field: 'department', 
-  },
-  controlFamilyFullForm: {
-    type: DataTypes.TEXT,
-    field: 'control_family_full_form', 
+    field: 'department',
   },
 }, {
   tableName: 'master_questions',

@@ -6,16 +6,16 @@ import checkAccess from '../middleware/authorize.js';
 const router = express.Router();
 
 // Route to get a list of roles
-router.get('/roles', 
-  attachResourceInfo('Role', 'Role', null, 'list'), 
-  checkAccess, 
+router.get('/roles',
+  attachResourceInfo('Role', null, null, 'list'),
+  checkAccess,
   getRoles
 );
 
 // Route to get a list of master departments
-router.get('/master-departments', 
-  attachResourceInfo('MasterDepartment', 'MasterDepartment', null, 'list'), 
-  checkAccess, 
+router.get('/master-departments',
+  attachResourceInfo('MasterDepartment', null, null, 'list'),
+  checkAccess,
   getMasterDepartments
 );
 

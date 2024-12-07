@@ -24,7 +24,6 @@ import assessmentRoutes from './routes/assessment.js';
 import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
 import masterRoutes from './routes/master.js'
-import masterQuestionRoute from './routes/masterQuestion.js';
 import commentRoutes from './routes/comment.js';
 
 app.use(cors({

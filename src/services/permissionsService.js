@@ -1,4 +1,4 @@
-import { AssessmentQuestion, MasterDepartment, MasterQuestion, RoleResourceActionLink } from "../models/index.js";
+import { RoleResourceActionLink } from "../models/index.js";
 import {
   checkAssessmentAccess,
   checkDepartmentAccess,
@@ -7,9 +7,6 @@ import {
   checkAnswerAccess,
   checkEvidenceFileAccess,
   checkCommentAccess,
-  checkMasterQuestionAccess,
-  checkMasterDepartmentAccess,
-  checkRoleAccess,
   checkUserAccess
 } from "../middleware/contextChecks/index.js";
 
@@ -22,9 +19,6 @@ const resourceAccessCheckMap = {
   Answer: checkAnswerAccess,
   EvidenceFile: checkEvidenceFileAccess,
   Comment: checkCommentAccess,
-  MasterQuestion: checkMasterQuestionAccess,
-  MasterDepartment: checkMasterDepartmentAccess,
-  Role: checkRoleAccess,
   User: checkUserAccess
 };
 

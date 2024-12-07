@@ -7,6 +7,7 @@ import {
     updateCompany,
     getDepartmentsByCompanyId,
     getUsersByCompanyId,
+    getReportByCompanyId,
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -18,7 +19,7 @@ const router = express.Router();
 
 // Route to create a new company
 router.post('/',
-    attachResourceInfo('Company', 'Company', null, 'create'),
+    attachResourceInfo('Company', null, null, 'create'),
     checkAccess,
     validate(createCompanySchema),
     createCompany
@@ -34,7 +35,7 @@ router.put('/:companyId',
 
 // Route to get all companies
 router.get('/',
-    attachResourceInfo('Company', 'Company', null, 'list'),
+    attachResourceInfo('Company', null, null, 'list'),
     checkAccess,
     getAllCompanies
 );
@@ -66,5 +67,12 @@ router.get('/:companyId/users',
     checkAccess,
     getUsersByCompanyId
 );
+
+//Route to get report
+router.get('/:companyId/report',
+    attachResourceInfo('Report', 'Company', 'companyId', 'read'),
+    checkAccess,
+    getReportByCompanyId
+)
 
 export default router;

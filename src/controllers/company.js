@@ -1,50 +1,169 @@
-import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink } from '../models/index.js';
+import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 
-const checkEmailConflict = async (email, companyId = null) => {
+const validateEmailForCompany = async (email, companyId = null) => {
   try {
-    // Check the Company table for the email conflict (include soft-deleted records)
+    // Check the Company table for the email conflict
     const existingCompany = await Company.findOne({
       where: {
         [Op.or]: [
           { primaryEmail: email },
           { secondaryEmail: email }
         ],
-        ...(companyId && { id: { [Op.ne]: companyId } }) // Exclude the current company if companyId is provided
+        ...(companyId && { id: { [Op.ne]: companyId } })
       },
       paranoid: false
     });
 
-    // Check the User table for the email conflict (include soft-deleted records)
+    // Check the User table for the email conflict
     const existingUserEmail = await User.findOne({
       where: { email },
       paranoid: false
     });
 
-    // If the email exists in the Company table
     if (existingCompany) {
       return {
-        conflict: true,
-        message: `Email already exist in another company.`,
+        isValid: false,
+        message: 'Email already exists in another company'
       };
     }
 
-    // If the email exists in the User table
     if (existingUserEmail) {
       return {
-        conflict: true,
-        message: 'Email is already in use by a user.',
+        isValid: false,
+        message: 'Email is already in use by a user'
       };
     }
 
-    // No conflict found
-    return { conflict: false };
+    return { isValid: true };
 
   } catch (error) {
-    console.error('Error checking email conflict:', error);
-    return { conflict: false };
+    throw new Error('Error validating company email: ' + error.message);
   }
+};
+
+const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, transaction) => {
+  const originalPrimaryEmail = company.primaryEmail;
+  const originalSecondaryEmail = company.secondaryEmail;
+  const emailUpdates = [];
+
+  // If primary wants secondary's current email, update secondary first
+  if (primaryEmail === originalSecondaryEmail) {
+    // Verify new secondary email is provided
+    if (!secondaryEmail) {
+      throw new Error('New secondary email required when swapping with primary');
+    }
+
+    const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
+    if (!secondaryEmailValidation.isValid) {
+      throw new Error('Secondary email ' + secondaryEmailValidation.message);
+    }
+
+    // Update secondary first
+    const secondaryAdmin = await User.findOne({
+      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (secondaryAdmin) {
+      secondaryAdmin.email = secondaryEmail;
+      await secondaryAdmin.save({ transaction });
+      emailUpdates.push('Secondary admin email updated');
+    }
+
+    // Then update primary
+    const primaryAdmin = await User.findOne({
+      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (primaryAdmin) {
+      primaryAdmin.email = primaryEmail;
+      await primaryAdmin.save({ transaction });
+      emailUpdates.push('Primary admin email updated');
+    }
+
+    company.secondaryEmail = secondaryEmail;
+    company.primaryEmail = primaryEmail;
+    return emailUpdates;
+  }
+
+  // If secondary wants primary's current email, update primary first
+  if (secondaryEmail === originalPrimaryEmail) {
+    // Verify new primary email is provided
+    if (!primaryEmail) {
+      throw new Error('New primary email required when swapping with secondary');
+    }
+
+    const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
+    if (!primaryEmailValidation.isValid) {
+      throw new Error('Primary email ' + primaryEmailValidation.message);
+    }
+
+    // Update primary first
+    const primaryAdmin = await User.findOne({
+      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (primaryAdmin) {
+      primaryAdmin.email = primaryEmail;
+      await primaryAdmin.save({ transaction });
+      emailUpdates.push('Primary admin email updated');
+    }
+
+    // Then update secondary
+    const secondaryAdmin = await User.findOne({
+      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (secondaryAdmin) {
+      secondaryAdmin.email = secondaryEmail;
+      await secondaryAdmin.save({ transaction });
+      emailUpdates.push('Secondary admin email updated');
+    }
+
+    company.primaryEmail = primaryEmail;
+    company.secondaryEmail = secondaryEmail;
+    return emailUpdates;
+  }
+
+  // Handle regular updates
+  if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
+    const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
+    if (!primaryEmailValidation.isValid) {
+      throw new Error('Primary email ' + primaryEmailValidation.message);
+    }
+
+    const primaryAdmin = await User.findOne({
+      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (primaryAdmin) {
+      primaryAdmin.email = primaryEmail;
+      await primaryAdmin.save({ transaction });
+      emailUpdates.push('Primary admin email updated');
+    }
+    company.primaryEmail = primaryEmail;
+  }
+
+  if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
+    const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
+    if (!secondaryEmailValidation.isValid) {
+      throw new Error('Secondary email ' + secondaryEmailValidation.message);
+    }
+
+    const secondaryAdmin = await User.findOne({
+      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
+      transaction,
+    });
+    if (secondaryAdmin) {
+      secondaryAdmin.email = secondaryEmail;
+      await secondaryAdmin.save({ transaction });
+      emailUpdates.push('Secondary admin email updated');
+    }
+    company.secondaryEmail = secondaryEmail;
+  }
+
+  return emailUpdates;
 };
 
 export const createCompany = async (req, res) => {
@@ -60,25 +179,25 @@ export const createCompany = async (req, res) => {
     secondaryCountryCode,
     panNumber
   } = req.body;
-
   try {
-    // Check for primary email conflict
-    const primaryEmailConflict = await checkEmailConflict(primaryEmail);
-    if (primaryEmailConflict.conflict) {
+    // Validate primary email
+    const primaryEmailValidation = await validateEmailForCompany(primaryEmail);
+    if (!primaryEmailValidation.isValid) {
       return res.status(409).json({
         success: false,
-        messages: ["Primary " + primaryEmailConflict.message],
+        messages: ["Primary " + primaryEmailValidation.message],
       });
     }
 
-    // Check for secondary email conflict
-    const secondaryEmailConflict = await checkEmailConflict(secondaryEmail);
-    if (secondaryEmailConflict.conflict) {
+    // Validate secondary email
+    const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail);
+    if (!secondaryEmailValidation.isValid) {
       return res.status(409).json({
         success: false,
-        messages: ["Secondary" + secondaryEmailConflict.message],
+        messages: ["Secondary " + secondaryEmailValidation.message],
       });
     }
+
     // Create the company
     const newCompany = await Company.create({
       companyName,
@@ -223,24 +342,23 @@ export const updateCompany = async (req, res) => {
       });
     }
 
-    // Check for primary and secondary email conflicts within the same company
-    if (
-      (primaryEmail && primaryEmail === company.secondaryEmail) ||
-      (secondaryEmail && secondaryEmail === company.primaryEmail)
-    ) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        messages: [
-          'Primary email is same as secondary email in database and vice versa.',
-        ],
-      });
+    // Handle all email updates
+    let emailUpdates = [];
+    if (primaryEmail || secondaryEmail) {
+      try {
+        emailUpdates = await handleCompanyEmailUpdates(company, primaryEmail, secondaryEmail, transaction);
+      } catch (error) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          messages: [error.message],
+        });
+      }
     }
 
-    // Check for primary and secondary phone conflicts within the same company
     if (
-      (primaryPhone && primaryPhone === company.secondaryPhone) ||
-      (secondaryPhone && secondaryPhone === company.primaryPhone)
+      (primaryPhone && primaryPhone === company.secondaryPhone && !secondaryPhone) ||
+      (secondaryPhone && secondaryPhone === company.primaryPhone && !primaryPhone)
     ) {
       await transaction.rollback();
       return res.status(400).json({
@@ -249,102 +367,35 @@ export const updateCompany = async (req, res) => {
       });
     }
 
-    const originalPrimaryEmail = company.primaryEmail;
-    const originalSecondaryEmail = company.secondaryEmail;
-
-    // Check for primary email conflict (if changed)
-    if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
-      const primaryEmailConflict = await checkEmailConflict(primaryEmail, companyId, transaction);
-      if (primaryEmailConflict.conflict) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          messages: ['Primary email conflict: ' + primaryEmailConflict.message],
-        });
-      }
-    }
-
-    // Check for secondary email conflict (if changed)
-    if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
-      const secondaryEmailConflict = await checkEmailConflict(secondaryEmail, companyId, transaction);
-      if (secondaryEmailConflict.conflict) {
-        await transaction.rollback();
-        return res.status(409).json({
-          success: false,
-          messages: ['Secondary email conflict: ' + secondaryEmailConflict.message],
-        });
-      }
-    }
-
-    // Update the company with provided fields
+    // Update other fields
     if (companyName) company.companyName = companyName;
     if (postalAddress) company.postalAddress = postalAddress;
     if (gstNumber) company.gstNumber = gstNumber;
-    if (primaryEmail) company.primaryEmail = primaryEmail;
-    if (secondaryEmail) company.secondaryEmail = secondaryEmail;
     if (primaryPhone) company.primaryPhone = primaryPhone;
     if (secondaryPhone) company.secondaryPhone = secondaryPhone;
     if (primaryCountryCode) company.primaryCountryCode = primaryCountryCode;
     if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
     if (panNumber) company.panNumber = panNumber;
 
-    // Save the updated company
     await company.save({ transaction });
-
-    // Array to hold emails and associated user IDs for password reset
-    const usersToReset = [];
-    let isPrimaryEmailUpdated = false;
-    let isSecondaryEmailUpdated = false;
-
-    // Update associated admin's email if company's email is updated
-    if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
-      const primaryAdminUser = await User.findOne({
-        where: { email: originalPrimaryEmail, companyId: companyId, roleId: 'admin' },
-        transaction,
-      });
-
-      if (primaryAdminUser) {
-        primaryAdminUser.email = primaryEmail;
-        await primaryAdminUser.save({ transaction });
-        usersToReset.push({ email: primaryEmail, userId: primaryAdminUser.id, username: primaryAdminUser.username });
-        isPrimaryEmailUpdated = true;
-      }
-    }
-
-    if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
-      const secondaryAdminUser = await User.findOne({
-        where: { email: originalSecondaryEmail, companyId: companyId, roleId: 'admin' },
-        transaction,
-      });
-
-      if (secondaryAdminUser) {
-        secondaryAdminUser.email = secondaryEmail;
-        await secondaryAdminUser.save({ transaction });
-        usersToReset.push({ email: secondaryEmail, userId: secondaryAdminUser.id, username: secondaryAdminUser.username });
-        isSecondaryEmailUpdated = true;
-      }
-    }
-
-    // Commit the transaction
     await transaction.commit();
 
     res.status(200).json({
       success: true,
       messages: [
         'Company updated successfully',
-        ...(isPrimaryEmailUpdated ? ['Admin email associated with the primary email has been updated.'] : []),
-        ...(isSecondaryEmailUpdated ? ['Admin email associated with the secondary email has been updated.'] : [])
+        ...emailUpdates
       ],
       company,
     });
 
   } catch (error) {
-    // Rollback the transaction in case of error
     await transaction.rollback();
     console.error('Error updating company:', error);
     res.status(500).json({
       success: false,
       messages: ['Error updating company'],
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -656,6 +707,84 @@ export const getUsersByCompanyId = async (req, res) => {
       success: false,
       messages: ['Error fetching users'],
       error: error.message,
+    });
+  }
+};
+
+export const getReportByCompanyId = async (req, res) => {
+  const { companyId } = req.params;
+
+  try {
+    // Find all departments
+    const departments = await Department.findAll({
+      where: { companyId },
+      attributes: ['id'],
+    });
+
+    if (!departments.length) {
+      return res.status(404).json({
+        success: false,
+        message: `No departments found for company ID: ${companyId}`,
+      });
+    }
+
+    // Get department IDs
+    const departmentIds = departments.map(dept => dept.id);
+
+    // Find all assessments for these departments
+    const assessments = await Assessment.findAll({
+      where: {
+        departmentId: { [Op.in]: departmentIds }
+      },
+      attributes: ['id', 'submitted']
+    });
+
+    // Check if all assessments are submitted
+    const unsubmittedAssessment = assessments.find(assessment => !assessment.submitted);
+    if (unsubmittedAssessment) {
+      return res.status(400).json({
+        success: false,
+        message: 'All assessments must be submitted before generating report'
+      });
+    }
+
+    // Get assessment IDs
+    const assessmentIds = assessments.map(assessment => assessment.id);
+
+    // Fetch questions answered as "No" with related data
+    const questionsAnsweredAsNo = await AssessmentQuestion.findAll({
+      where: {
+        assessmentId: { [Op.in]: assessmentIds },
+      },
+      include: [{
+        model: MasterQuestion,
+        required: true,
+        as: 'masterQuestion',
+        attributes: {
+          exclude: ['id', 'srNo', 'sp80053ControlNumber', 'department']
+        }
+      }, {
+        model: Answer,
+        required: true,
+        as: 'answer',
+        where: {
+          answerText: 'no'
+        },
+        attributes: []
+      }],
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Report data successfully fetched',
+      data: questionsAnsweredAsNo
+    });
+
+  } catch (error) {
+    console.error('Error fetching report data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while fetching report data'
     });
   }
 };

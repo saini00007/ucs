@@ -31,13 +31,11 @@ const Company = sequelize.define('Company', {
   primaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
-    unique: true,
     field: 'primary_email',
   },
   secondaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
-    unique: true, 
     field: 'secondary_email',
   },
   primaryPhone: {

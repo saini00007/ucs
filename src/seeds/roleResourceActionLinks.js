@@ -17,6 +17,7 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'masterquestion', actionIds: ['list'] },
         { resourceId: 'role', actionIds: ['list'] },
         { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
+        {resourceId: 'report',actionIds: ['read']}
       ]
     },
     {
@@ -32,6 +33,7 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'user', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
         { resourceId: 'role', actionIds: ['list'] },
         { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
+        { resourceId: 'report', actionIds: ['read'] }
       ]
     },
     {

@@ -5,88 +5,221 @@ import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
-export const addUser = async (req, res) => {
-    const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
-    const currentUser = req.user; // Current user making the request
-    const password = "root"; // Default password
-
+export const validateEmailForUser = async (email, userId = null, roleId = null, companyId = null) => {
     try {
-        // Check if email already exists (including soft-deleted users)
+        // Check existing user
         const existingUser = await User.findOne({
-            where: { email },
+            where: {
+                email,
+                ...(userId && { id: { [Op.ne]: userId } })
+            },
             paranoid: false
         });
 
         if (existingUser) {
-            return res.status(409).json({ success: false, messages: ['Email already in use'] });
+            return { isValid: false, message: 'Email already in use' };
         }
 
-        // Ensure 'superadmin' cannot be assigned here
-        if (roleId === 'superadmin') {
-            return res.status(422).json({ success: false, messages: ['Invalid roleId'] });
-        }
-
-        // Admin users cannot assign another admin role
-        if (currentUser.roleId === 'admin' && (roleId === 'admin')) {
-            return res.status(403).json({ success: false, messages: ['Admin cannot add admin'] });
-        }
-
-        // Department managers cannot assign admin or department manager roles
-        if (currentUser.roleId === 'departmentmanager' && ['admin', 'departmentmanager'].includes(roleId)) {
-            return res.status(403).json({ success: false, messages: ['Department Manager cannot add admin, or department manager'] });
-        }
-
-        // Additional checks for admin role
-        if (roleId === 'admin') {
-            const company = await Company.findOne({ where: { id: companyId } });
+        // Admin email validation
+        if (roleId === 'admin' && companyId) {
+            const company = await Company.findByPk(companyId);
             if (!company) {
-                return res.status(404).json({ success: false, messages: ['Company not found.'] });
+                return { isValid: false, message: 'Company not found' };
             }
 
-            // Ensure the company allows only two admins
-            const existingAdmins = await User.findAll({ where: { companyId, roleId: 'admin' } });
-            if (existingAdmins.length >= 2) {
-                return res.status(422).json({ success: false, messages: ['Only two admins are allowed for this company.'] });
-            }
-
-            // Validate the admin's email matches the company admin emails
             if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
-                return res.status(403).json({ success: false, messages: ['Invalid email for admin role.'] });
+                return { isValid: false, message: 'Invalid email for admin role' };
             }
-        }
-
-        // For non-admin roles, check department and company email restrictions
-        if (roleId !== 'admin') {
-            const department = await Department.findOne({ where: { id: departmentId } });
-            if (!department) {
-                return res.status(404).json({ success: false, messages: ['Department not found.'] });
-            }
-
-            const company = await Company.findOne({ where: { id: department.companyId } });
-            if (!company) {
-                return res.status(404).json({ success: false, messages: ['Company associated with department not found.'] });
-            }
-
-            // Check if the email exists in any company (both primaryEmail and secondaryEmail)
+        } else {
+            // Non-admin email validations
             const existingCompanyEmail = await Company.findOne({
                 where: {
                     [Op.or]: [
                         { primaryEmail: email },
                         { secondaryEmail: email }
                     ]
-                }, paranoid: false
+                },
+                paranoid: false
             });
 
             if (existingCompanyEmail) {
-                return res.status(403).json({ success: false, messages: ['Email is already in use by a company.'] });
+                return { isValid: false, message: 'Email is already in use by a company' };
+            }
+        }
+
+        return { isValid: true };
+    } catch (error) {
+        throw new Error('Error validating email: ' + error.message);
+    }
+};
+
+export const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
+    try {
+        // Superadmin validation
+        if (targetRoleId === 'superadmin') {
+            return { isValid: false, message: 'Cannot assign superadmin role' };
+        }
+
+        // Admin role validations
+        if (currentUser.roleId === 'admin' && targetRoleId === 'admin') {
+            return { isValid: false, message: 'Admin cannot add admin' };
+        }
+
+        // Department manager validations
+        if (currentUser.roleId === 'departmentmanager' &&
+            ['admin', 'departmentmanager'].includes(targetRoleId)) {
+            return { isValid: false, message: 'Department Manager cannot add admin or department manager' };
+        }
+
+        // Role change validations
+        if (existingRoleId) {
+            if (existingRoleId === 'admin' && targetRoleId !== 'admin') {
+                return { isValid: false, message: 'Cannot change admin role' };
             }
 
-            // Ensure user's email doesn't match the company admin emails
-            if (currentUser.roleId !== 'admin' && [company.primaryEmail, company.secondaryEmail].includes(email)) {
-                return res.status(403).json({ success: false, messages: ['Email cannot match the company admin emails.'] });
+            if (targetRoleId === 'admin' && existingRoleId !== 'admin') {
+                return { isValid: false, message: 'Cannot assign admin role' };
             }
 
-            // Proceed with user creation for non-admin roles
+            if (existingRoleId === 'departmentmanager' && targetRoleId !== 'departmentmanager') {
+                return { isValid: false, message: 'Cannot change departmentmanager role' };
+            }
+
+            if (targetRoleId === 'departmentmanager' && existingRoleId !== 'departmentmanager') {
+                return { isValid: false, message: 'Cannot assign departmentmanager role' };
+            }
+        }
+
+        return { isValid: true };
+    } catch (error) {
+        throw new Error('Error validating role assignment: ' + error.message);
+    }
+};
+
+export const validateAdminAssignment = async (companyId) => {
+    try {
+        const company = await Company.findByPk(companyId);
+        if (!company) {
+            return { isValid: false, message: 'Company not found' };
+        }
+
+        const existingAdmins = await User.findAll({
+            where: { companyId, roleId: 'admin' }
+        });
+
+        if (existingAdmins.length >= 2) {
+            return { isValid: false, message: 'Only two admins are allowed for this company' };
+        }
+
+        return { isValid: true };
+    } catch (error) {
+        throw new Error('Error validating admin assignment: ' + error.message);
+    }
+};
+
+// Helper function to create user and send password reset email
+const createUser = async (userData, res) => {
+    const transaction = await sequelize.transaction();
+    try {
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        const { departmentId, ...trimmedUserData } = userData;
+
+        const user = await User.create({
+            ...trimmedUserData,
+            password: hashedPassword,
+        }, { transaction });
+
+        if (departmentId) {
+            await UserDepartmentLink.create({
+                userId: user.id,
+                departmentId
+            }, { transaction });
+        }
+
+        const userWithDepartments = await User.findOne({
+            where: { id: user.id },
+            attributes: { exclude: ['password', 'deletedAt'] },
+            include: [{
+                model: Department,
+                as: 'departments',
+                through: { attributes: [] },
+                attributes: ['id'],
+            }],
+            transaction
+        });
+
+        // Send password setup email
+        const token = generateToken(user.id, 'reset-password');
+        const resetLink = `http://localhost:3000/set-password?token=${token}`;
+        await sendEmail(
+            userData.email,
+            'Set Your Password',
+            `Hi ${userData.username},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`
+        );
+
+        // Commit the transaction
+        await transaction.commit();
+
+        return res.status(201).json({
+            success: true,
+            messages: ['User added successfully, password setup email sent'],
+            user: userWithDepartments
+        });
+    } catch (error) {
+        await transaction.rollback();
+        console.error('Error creating user:', error);
+        return res.status(500).json({
+            success: false,
+            messages: ['Error adding user'],
+            error: error.message
+        });
+    }
+};
+
+export const addUser = async (req, res) => {
+    const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
+    const currentUser = req.user;
+    const password = "root";
+
+    try {
+        // Email validation
+        const emailValidation = await validateEmailForUser(email, null, roleId, companyId);
+        if (!emailValidation.isValid) {
+            return res.status(409).json({
+                success: false,
+                messages: [emailValidation.message]
+            });
+        }
+
+        // Role validation
+        const roleValidation = await validateRoleAssignment(currentUser, roleId);
+        if (!roleValidation.isValid) {
+            return res.status(403).json({
+                success: false,
+                messages: [roleValidation.message]
+            });
+        }
+
+        // Admin validation 
+        if (roleId === 'admin') {
+            const adminValidation = await validateAdminAssignment(companyId);
+            if (!adminValidation.isValid) {
+                return res.status(422).json({
+                    success: false,
+                    messages: [adminValidation.message]
+                });
+            }
+        } else {
+            // For non-admin roles, check department exists
+            const department = await Department.findOne({ where: { id: departmentId } });
+            if (!department) {
+                return res.status(404).json({
+                    success: false,
+                    messages: ['Department not found']
+                });
+            }
+
+            // For non-admin roles, create user with department's company
             return await createUser({
                 username,
                 password,
@@ -98,7 +231,8 @@ export const addUser = async (req, res) => {
                 countryCode
             }, res);
         }
-        // For admin role, create user with companyId
+
+        // For admin role, create user with provided company
         return await createUser({
             username,
             password,
@@ -111,63 +245,10 @@ export const addUser = async (req, res) => {
 
     } catch (error) {
         console.error('Error adding user:', error);
-        res.status(500).json({ success: false, messages: ['Server error'] });
-    }
-};
-
-const createUser = async (userData, res) => {
-    try {
-        // Hash the user's password with bcrypt before storing it
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-
-        const { departmentId, ...trimmedUserData } = userData;
-
-        // Create a new user with the provided data and hashed password
-        const user = await User.create({
-            ...trimmedUserData,
-            password: hashedPassword,
+        res.status(500).json({
+            success: false,
+            messages: ['Server error']
         });
-
-        // If a departmentId is provided, associate the user with the department
-        if (departmentId) {
-            await UserDepartmentLink.create({ userId: user.id, departmentId });
-        }
-
-        // Fetch the user along with their associated departments, excluding sensitive data
-        const userWithDepartments = await User.findOne({
-            where: { id: user.id },
-            attributes: { exclude: ['password', 'deletedAt'] },
-            include: [
-                {
-                    model: Department,
-                    as: 'departments', // Alias for the association
-                    through: { attributes: [] }, // Exclude join table attributes
-                    attributes: ['id'], // Only include department IDs
-                }
-            ]
-        });
-
-        // Generate a reset password token for the user
-        const token = generateToken(user.id, 'reset-password');
-        const resetLink = `http://localhost:3000/set-password?token=${token}`;
-
-        // Email subject and content for setting the password
-        const emailSubject = 'Set Your Password';
-        const emailText = `Hi ${userData.username},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`;
-
-        // Send the email with the reset password link
-        await sendEmail(userData.email, emailSubject, emailText);
-
-        // Respond with a success message and the user with their departments
-        res.status(201).json({
-            success: true,
-            messages: ['User added successfully, password setup email sent'],
-            user: userWithDepartments
-        });
-    } catch (error) {
-        // Catch any errors and respond with a failure message
-        console.error('Error adding user:', error);
-        res.status(500).json({ success: false, messages: ['Error adding user'], error: error.message });
     }
 };
 
@@ -175,120 +256,79 @@ export const updateUser = async (req, res) => {
     const { userId } = req.params;
     const { username, email, roleId, phoneNumber } = req.body;
 
+    const transaction = await sequelize.transaction();
     try {
-        // Find the user by ID
-        const user = await User.findOne({ where: { id: userId } });
-
+        const user = await User.findOne({ where: { id: userId }, transaction });
         if (!user) {
-            // If the user doesn't exist, return a 404 response
-            return res.status(404).json({ success: false, messages: ['User not found'] });
-        }
-
-        // Check if the email is being updated
-
-        if (email && email !== user.email) {
-            // If the email is being updated, check if it's already in use by another user
-            const existingUser = await User.findOne({
-                where: { email },
-                paranoid: false
+            await transaction.rollback();
+            return res.status(404).json({
+                success: false,
+                messages: ['User not found']
             });
+        }
 
-            if (existingUser && existingUser.id !== userId) {
-                return res.status(400).json({ success: false, messages: ['Email is already in use by another user.'] });
-            }
-
-            // Get the company associated with the user
-            const companyId = user.companyId;
-            const company = await Company.findOne({ where: { id: companyId } });
-            if (!company) {
-                return res.status(404).json({ success: false, messages: ['Company not found.'] });
-            }
-
-            if (roleId === 'admin') {
-                // For admin roles, email must match the company's primary or secondary email
-                if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
-                    return res.status(400).json({ success: false, messages: ['Admin email must match one of the company admin emails.'] });
-                }
-            } else {
-                // For non-admin roles, email must not match the company's primary or secondary email
-                if ([company.primaryEmail, company.secondaryEmail].includes(email)) {
-                    return res.status(400).json({ success: false, messages: ['Email cannot match the company admin emails.'] });
-                }
-
-                // Check if the email exists in any company (both primaryEmail and secondaryEmail)
-                const existingCompanyEmail = await Company.findOne({
-                    where: {
-                        [Op.or]: [
-                            { primaryEmail: email },
-                            { secondaryEmail: email }
-                        ]
-                    }, paranoid: false
+        // Email validation if email is being updated
+        if (email && email !== user.email) {
+            const emailValidation = await validateEmailForUser(email, userId, roleId || user.roleId, user.companyId);
+            if (!emailValidation.isValid) {
+                await transaction.rollback();
+                return res.status(409).json({
+                    success: false,
+                    messages: [emailValidation.message]
                 });
-
-                if (existingCompanyEmail) {
-                    return res.status(403).json({ success: false, messages: ['Email is already in use by a company.'] });
-                }
             }
         }
 
-        // Check if role assignments are valid
-        if (roleId) {
-            if (roleId === 'superadmin') {
-                return res.status(400).json({ success: false, messages: ['Cannot assign superadmin role.'] });
-            }
-
-            if (roleId === 'admin' && user.roleId !== 'admin') {
-                return res.status(400).json({ success: false, messages: ['Cannot assign admin role to this user.'] });
-            }
-
-            if (user.roleId === 'admin' && roleId !== 'admin') {
-                return res.status(400).json({ success: false, messages: ['Cannot change admin role.'] });
-            }
-
-            // Prevent assigning departmentmanager role to users who are not currently department managers
-            if (roleId === 'departmentmanager' && user.roleId !== 'departmentmanager') {
-                return res.status(400).json({ success: false, messages: ['Cannot assign departmentmanager role.'] });
-            }
-
-            // Prevent changing role if the user is already a departmentmanager
-            if (user.roleId === 'departmentmanager' && roleId !== 'departmentmanager') {
-                return res.status(400).json({ success: false, messages: ['Cannot change departmentmanager role.'] });
+        // Role validation if role is being updated
+        if (roleId && roleId !== user.roleId) {
+            const roleValidation = await validateRoleAssignment(req.user, roleId, user.roleId);
+            if (!roleValidation.isValid) {
+                await transaction.rollback();
+                return res.status(403).json({
+                    success: false,
+                    messages: [roleValidation.message]
+                });
             }
         }
 
-        // Update user details if provided
+        // Update user fields
         if (username) user.username = username;
         if (email) user.email = email;
         if (phoneNumber) user.phoneNumber = phoneNumber;
         if (roleId) user.roleId = roleId;
 
-        // Save the updated user information to the database
-        await user.save();
+        await user.save({ transaction });
 
-        // Fetch the updated user details, excluding password and deletedAt fields
+        // Fetch updated user with departments
         const updatedUser = await User.findOne({
             where: { id: userId },
             attributes: { exclude: ['password', 'deletedAt'] },
-            include: [
-                {
-                    model: Department,
-                    as: 'departments',
-                    through: { attributes: [] },
-                    attributes: ['id'],
-                }
-            ]
+            include: [{
+                model: Department,
+                as: 'departments',
+                through: { attributes: [] },
+                attributes: ['id'],
+            }],
+            transaction
         });
 
-        // Return the updated user data
+        // Commit the transaction
+        await transaction.commit();
+
         res.status(200).json({
             success: true,
             messages: ['User updated successfully'],
             user: updatedUser
         });
+
     } catch (error) {
-        // Log the error and return a 500 response if an unexpected error occurs
+        await transaction.rollback(); 
         console.error('Error updating user:', error);
-        res.status(500).json({ success: false, messages: ['Error updating user'], error: error.message });
+        res.status(500).json({
+            success: false,
+            messages: ['Error updating user'],
+            error: error.message
+        });
     }
 };
 

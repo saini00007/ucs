@@ -47,7 +47,6 @@ export const getDepartmentById = async (req, res) => {
     }
 };
 
-
 export const createDepartment = async (req, res) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
 
@@ -94,14 +93,12 @@ export const createDepartment = async (req, res) => {
 
         // Create assessment questions for each linked question
         await Promise.all(questions.map(async (qdl) => {
-            try {
-                await AssessmentQuestion.create({
-                    assessmentId: newAssessment.id,
-                    masterQuestionId: qdl.masterQuestionId,
-                }, { transaction });
-            } catch (err) {
-                console.error(`Failed to create assessment question for questionId: ${qdl.masterQuestionId}`, err);
-            }
+
+            await AssessmentQuestion.create({
+                assessmentId: newAssessment.id,
+                masterQuestionId: qdl.masterQuestionId,
+            }, { transaction });
+
         }));
 
         // Commit the transaction
@@ -128,78 +125,130 @@ export const createDepartment = async (req, res) => {
     }
 };
 
-
 export const updateDepartment = async (req, res) => {
     const { departmentId } = req.params;
     const { departmentName, masterDepartmentId } = req.body;
 
+    const transaction = await sequelize.transaction();
+
     try {
-        // Find the department by its primary key
-        const department = await Department.findByPk(departmentId);
+        const department = await Department.findByPk(departmentId, { transaction });
         if (!department) {
-            return res.status(404).json({ success: false, messages: ['Department not found'] });
+            await transaction.rollback();
+            return res.status(404).json({
+                success: false,
+                messages: ['Department not found']
+            });
         }
 
-        // Update the department name if provided
         if (departmentName) {
             department.departmentName = departmentName;
         }
 
-        // Update the master department ID if provided
         if (masterDepartmentId) {
-            const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId);
+            const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
             if (!masterDepartment) {
-                return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
+                await transaction.rollback();
+                return res.status(400).json({
+                    success: false,
+                    messages: ['Invalid master department ID']
+                });
             }
 
-            // Check if the master department ID is changing
+            // Check if master department is changing
             if (department.masterDepartmentId !== masterDepartmentId) {
-                // Ensure no assessments are in progress for the department
+                // Check for started assessments
                 const startedAssessments = await Assessment.findAll({
                     where: {
-                        departmentId: departmentId,
-                        assessmentStarted: true,
-                    }
+                        departmentId,
+                        assessmentStarted: true
+                    },
+                    transaction
                 });
 
                 if (startedAssessments.length > 0) {
+                    await transaction.rollback();
                     return res.status(400).json({
                         success: false,
                         messages: ['Could not update department because some assessments are in progress']
                     });
                 }
 
-                // Update the master department ID
+                const assessments = await Assessment.findAll({
+                    where: { departmentId },
+                    attributes: ['id'],
+                    transaction
+                });
+
+                const assessmentIds = assessments.map(assessment => assessment.id);
+
+                //  Delete associated assessment questions
+                await AssessmentQuestion.destroy({
+                    where: {
+                        assessmentId: {
+                            [Op.in]: assessmentIds
+                        }
+                    },
+                    transaction
+                });
+
+
+                // Delete old assessment
+                await Assessment.destroy({
+                    where: { departmentId },
+                    transaction
+                });
+
+                // Create new assessment
+                const newAssessment = await Assessment.create({
+                    departmentId
+                }, { transaction });
+
+                // Get questions for new master department
+                const questions = await QuestionDepartmentLink.findAll({
+                    where: { masterDepartmentId },
+                    transaction
+                });
+
+                // Create new assessment questions
+                await Promise.all(questions.map(async (qdl) => {
+                    await AssessmentQuestion.create({
+                        assessmentId: newAssessment.id,
+                        masterQuestionId: qdl.masterQuestionId
+                    }, { transaction });
+                }));
+
                 department.masterDepartmentId = masterDepartmentId;
             }
         }
 
-        // Save the updated department
-        await department.save();
+        await department.save({ transaction });
 
-        // Retrieve the updated department with associated data
         const updatedDepartment = await Department.findByPk(department.id, {
             include: [
                 { model: Company, as: 'company', attributes: ['companyName'] },
                 { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
-            ]
+            ],
+            transaction
         });
 
-        // Send a successful response
+        await transaction.commit();
+
         res.status(200).json({
             success: true,
             messages: ['Department updated successfully'],
-            department: updatedDepartment,
+            department: updatedDepartment
         });
+
     } catch (error) {
+        await transaction.rollback();
         console.error('Error updating department:', error);
         res.status(500).json({
             success: false,
-            messages: ['Failed to update department'],
+            messages: ['Failed to update department']
         });
     }
 };
-
 
 export const deleteDepartment = async (req, res) => {
     const { departmentId } = req.params;

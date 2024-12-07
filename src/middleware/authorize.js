@@ -34,6 +34,11 @@ const checkAccess = async (req, res, next) => {
     // Skip further checks if the user is a superadmin
     if (roleId == 'superadmin') return next();
 
+    //role based access check is enough for these resources
+    if (roleResourceType === 'Role' || roleResourceType === 'MasterDepartment') {
+      return next();
+    }
+
     // Check if the user has the necessary content access for the specific resource
     const hasContentAccess = await permissionsService.hasContentAccess({
       user: req.user,
