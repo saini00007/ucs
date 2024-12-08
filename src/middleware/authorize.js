@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import permissionsService from '../services/permissionsService.js';
 import { getResourceId, getActionId } from '../utils/resourceActionUtils.js'
 
@@ -13,9 +12,7 @@ const checkAccess = async (req, res, next) => {
 
     const roleResourceId = roleResourceType.toLowerCase();
 
-    // Log access attempt details
-    //have to remove chalk later on
-    console.log(chalk.green(`Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`));
+    console.log(`Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
 
     // Check if the user has the required role permission
     const hasRolePermission = await permissionsService.hasRolePermission({

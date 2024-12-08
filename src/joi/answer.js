@@ -1,4 +1,3 @@
-// joi/answerValidation.js
 import Joi from 'joi';
 
 const createAnswerSchema = Joi.object({

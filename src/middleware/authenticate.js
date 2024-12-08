@@ -3,7 +3,6 @@ import { User, Department } from '../models/index.js';
 
 export const authenticate = async (req, res, next) => {
 
-
   try {
     // Verify the token using the JWT secret
     // Retrieve token from the cookies
@@ -13,7 +12,6 @@ export const authenticate = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({ success: false, messages: ['No token provided'] });
     }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     //if token is not of session type
