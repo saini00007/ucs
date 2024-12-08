@@ -11,8 +11,7 @@ const checkAccess = async (req, res, next) => {
   try {
 
     const roleResourceId = roleResourceType.toLowerCase();
-
-    console.log(`Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
+    console.log(`User Id: ${req.user.id}, Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
 
     // Check if the user has the required role permission
     const hasRolePermission = await permissionsService.hasRolePermission({

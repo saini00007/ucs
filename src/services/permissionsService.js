@@ -8,7 +8,7 @@ import {
   checkEvidenceFileAccess,
   checkCommentAccess,
   checkUserAccess
-} from "../middleware/contextChecks/index.js";
+} from "./contextChecks/index.js";
 
 // Mapping of resource types to their corresponding access check functions.
 const resourceAccessCheckMap = {

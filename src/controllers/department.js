@@ -366,7 +366,6 @@ export const deleteDepartment = async (req, res) => {
     }
 };
 
-
 export const getAssessmentByDepartmentId = async (req, res) => {
     const { departmentId } = req.params;
 
@@ -399,7 +398,6 @@ export const getAssessmentByDepartmentId = async (req, res) => {
         res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
     }
 };
-
 
 export const getUsersByDepartmentId = async (req, res) => {
     const { departmentId } = req.params;

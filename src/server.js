@@ -11,9 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 //authentication
-import mockAuthenticate from './middleware/mockAuth.js';
-import { authenticate } from './middleware/authenticate.js';
-const authMiddleware = process.env.USE_MOCK_AUTH === 'true' ? mockAuthenticate : authenticate;
+import authenticate from './middleware/authenticate.js';
 
 //importing routes
 import companyRoutes from './routes/company.js';
@@ -23,7 +21,7 @@ import authRoutes from './routes/auth.js';
 import assessmentRoutes from './routes/assessment.js';
 import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
-import masterRoutes from './routes/master.js'
+import masterRoutes from './routes/master.js';
 import commentRoutes from './routes/comment.js';
 
 app.use(cors({
@@ -36,7 +34,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/', authRoutes);
 
-app.use(authMiddleware);
+app.use(authenticate);
 
 app.use('/companies', companyRoutes);
 app.use('/departments', departmentRoutes);

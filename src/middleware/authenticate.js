@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { User, Department } from '../models/index.js';
 
-export const authenticate = async (req, res, next) => {
+const authenticate = async (req, res, next) => {
 
   try {
     // Verify the token using the JWT secret
@@ -18,7 +18,7 @@ export const authenticate = async (req, res, next) => {
     if (decoded.type !== 'session') {
       return res.status(400).json({ success: false, messages: ['Invalid token type'] });
     }
-    
+
     const user = await User.findOne({
       where: {
         id: decoded.userId,
@@ -53,3 +53,4 @@ export const authenticate = async (req, res, next) => {
     }
   }
 };
+export default authenticate;

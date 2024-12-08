@@ -29,6 +29,6 @@ export const uploadFiles = (req, res, next) => {
       }
       return res.status(500).json({ success: false, messages: ['File upload error.'] });
     }
-    next();
+    return next();
   });
 };
