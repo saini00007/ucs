@@ -3,8 +3,9 @@ import sequelize from '../config/db.js';
 
 // generating user id for users
 const generateUserId = async (username) => {
-  const prefix = username.slice(0, 4).toLowerCase();
-  let uniqueId = prefix + Math.floor(Math.random() * 9000 + 1000).toString();
+
+  const prefix = username.slice(0, 4).toLowerCase().padEnd(4, 'x');;
+  let uniqueId = prefix + Math.floor(Math.random() * 90000000 + 10000000).toString();
 
   const existingUser = await User.findOne({ where: { id: uniqueId } });
   if (existingUser) {
