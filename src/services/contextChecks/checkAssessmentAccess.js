@@ -13,8 +13,8 @@ const checkAssessmentAccess = async (user, resourceId) => {
         if (!assessment) {
             return false;
         }
-
         const { companyId, id: departmentId } = assessment.department;
+
 
         return checkAccessScope(user, companyId, departmentId);
 
