@@ -766,7 +766,7 @@ export const getReportByCompanyId = async (req, res) => {
                   exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore',
                     'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating',
                     'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating',
-                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department']
+                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department','id']
                 }
               },
               {
