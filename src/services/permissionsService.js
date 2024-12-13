@@ -9,7 +9,6 @@ import {
   checkCommentAccess,
   checkUserAccess
 } from "./contextChecks/index.js";
-import createResponse from '../utils/contextCheckResponse.js';  // Importing createResponse function
 
 // Mapping of resource types to their corresponding access check functions.
 const resourceAccessCheckMap = {
@@ -56,8 +55,7 @@ const permissionsService = {
     }
     try {
       // Call the access check function and return its result.
-      const accessResult = await contentAccessCheckFn(user, resourceId, actionId);
-      return { success: accessResult.success, message: accessResult.message, status: accessResult.status };
+      return await contentAccessCheckFn(user, resourceId, actionId);
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
       return createResponse(false, `Error checking content access for user ${user.id}`, 500);

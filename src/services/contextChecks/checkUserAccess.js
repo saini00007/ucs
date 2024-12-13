@@ -1,51 +1,44 @@
 import { User, Department } from "../../models/index.js";
-import createResponse from '../../utils/contextCheckResponse.js';
 
 const checkUserAccess = async (user, resourceId) => {
-    try {
-        const userDb = await User.findByPk(resourceId, {
-            include: [{
-                model: Department,
-                as: 'departments',
-                attributes: ['id'],
-                through: { attributes: [] }
-            }]
-        });
+   try {
+       const userDb = await User.findByPk(resourceId, {
+           include: [{
+               model: Department,
+               as: 'departments',
+               attributes: ['id'],
+               through: { attributes: [] },
+           }],
+       });
 
-        if (!userDb) {
-            return createResponse(false, "Access denied: User not found.", 404);
-        }
+       if (!userDb) {
+           return false;
+       }
 
-        if (user.roleId === 'superadmin') {
-            return createResponse(true, "Access granted", 200);
-        }
+       // Superadmin has universal access
+       if (user.roleId === 'superadmin') {
+           return true;
+       }
 
-        if (user.roleId === 'admin' && user.companyId === userDb.companyId) {
-            return createResponse(true, "Access granted - Company admin", 200);
-        }
+       // Admin - check company access
+       if (user.roleId === 'admin') {
+           return user.companyId === userDb.companyId;
+       }
 
-        if (user.roleId === 'departmentmanager') {
-            const hasAccess = user.departments.some(department =>
-                userDb.departments.some(dbDept => dbDept.id === department.id)
-            );
+       // Department manager 
+       if (user.roleId === 'departmentmanager') {
+           return user.departments.some(department =>
+               userDb.departments.some(dbDept => dbDept.id === department.id)
+           );
+       }
 
-            if (!hasAccess) {
-                return createResponse(false, "Access denied: Department manager does not belong to the same department.", 403);
-            }
+       // Regular user - can only access own data
+       return user.id === userDb.id;
 
-            return createResponse(true, "Access granted - Department manager", 200);
-        }
-
-        const hasAccess = user.id === userDb.id;
-        if (!hasAccess) {
-            return createResponse(false, "Access denied: User is not the same as the resource user.", 403);
-        }
-
-        return createResponse(true, "Access granted - Self access", 200);
-
-    } catch (error) {
-        return createResponse(false, "Internal server error while checking access.", 500);
-    }
+   } catch (error) {
+       console.error("Error checking user access:", error);
+       return false;
+   }
 };
 
 export default checkUserAccess;

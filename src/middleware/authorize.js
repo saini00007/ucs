@@ -40,10 +40,10 @@ const checkAccess = async (req, res, next) => {
       actionId
     });
 
-    if (!hasContentAccess.success) {
-      return res.status(hasContentAccess.status).json({
+    if (!hasContentAccess) {
+      return res.status(403).json({
         success: false,
-        messages: [hasContentAccess.message || 'Access denied: insufficient content access.']
+        messages: ['Access denied: Insufficient content permissions.']
       });
     }
 

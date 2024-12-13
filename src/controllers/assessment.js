@@ -1,4 +1,5 @@
 import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment } from '../models/index.js';
+import { checkAssessmentState } from '../utils/accessValidators.js';
 
 export const startAssessment = async (req, res) => {
   const { assessmentId } = req.params;
@@ -208,12 +209,13 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
       });
     }
 
+
     const { assessmentStarted, submitted } = assessment;
     // If the assessment has not started or has already been submitted, deny access
     if (!assessmentStarted || submitted) {
-      return res.status(422).json({
+      return res.status(403).json({
         success: false,
-        messages: ['Access denied: Insufficient content access.'],
+        messages: ['Access denied: Insufficient content permissions.'],
       });
     }
 

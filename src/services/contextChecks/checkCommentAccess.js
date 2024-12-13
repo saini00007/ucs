@@ -1,5 +1,5 @@
 import { Comment, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
-import createResponse from '../../utils/contextCheckResponse.js';
+import { checkAccessScope, checkAssessmentState } from "../../utils/accessValidators.js";
 
 const checkCommentAccess = async (user, resourceId, actionId) => {
     try {
@@ -21,45 +21,31 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
         });
 
         if (!comment) {
-            return createResponse(false, "Access denied: Comment not found.", 404);
+            return false;
         }
 
-        const { assessmentStarted, submitted, departmentId } = comment.assessmentQuestion.assessment;
+        const assessment = comment.assessmentQuestion.assessment;
+        const companyId = assessment.department.companyId;
+        const departmentId = assessment.departmentId;
 
-        if (!assessmentStarted) {
-            return createResponse(false, "Access denied: Assessment has not started.", 422);
+        // Check basic access first
+        if (!checkAccessScope(user, companyId, departmentId) ||
+            !checkAssessmentState(assessment)) {
+            return false;
         }
 
-        if (submitted) {
-            return createResponse(false, "Access denied: Assessment has already been submitted.", 422);
+        // Check owner permissions for update/delete
+        if ((actionId === 'remove' || actionId === 'update') &&
+            user.roleId !== 'superadmin' &&
+            comment.createdByUserId !== user.id) {
+            return false;
         }
 
-        if (user.roleId === 'superadmin') {
-            return createResponse(true, "Access granted", 200);
-        }
-
-        const companyId = comment.assessmentQuestion.assessment.department.companyId;
-
-        // Special handling for comment owner's update/delete permissions
-        if ((actionId === 'delete' || actionId === 'update') && comment.userId === user.id) {
-            return createResponse(true, "Access granted - Comment owner", 200);
-        }
-
-        if (user.roleId === 'admin' && user.companyId === companyId) {
-            return createResponse(true, "Access granted", 200);
-        }
-
-        const hasAccess = user.departments.some(department => department.id === departmentId);
-
-        if (!hasAccess) {
-            return createResponse(false, "Access denied: User does not belong to the department.", 403);
-        }
-
-        return createResponse(true, "Access granted", 200);
+        return true;
 
     } catch (error) {
         console.error("Error checking comment access:", error);
-        return createResponse(false, "Internal server error while checking access.", 500);
+        return false;
     }
 };
 

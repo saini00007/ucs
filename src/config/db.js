@@ -15,11 +15,11 @@ const sequelize = new Sequelize(databaseUrl, {
     dialect: 'postgres',
     logging: false,
     dialectOptions: {
-        ssl: {
-            require: true,
-            rejectUnauthorized: false
-        },
-        connectTimeout: 60000
+         ssl: {
+             require: true,
+             rejectUnauthorized: false
+         },
+         connectTimeout: 60000
     },
     pool: {
         max: 5,
