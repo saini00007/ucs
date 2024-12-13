@@ -27,11 +27,8 @@ const checkAccess = async (req, res, next) => {
       });
     }
 
-    // Skip further checks if the user is a superadmin
-    if (roleId == 'superadmin') return next();
-
-    //role based access check is enough for these resources
-    if (roleResourceType === 'Role' || roleResourceType === 'MasterDepartment') {
+    //role based access check is enough for these resources 
+    if (contentResourceType === null) {
       return next();
     }
 
@@ -42,11 +39,11 @@ const checkAccess = async (req, res, next) => {
       resourceId: contentResourceId,
       actionId
     });
-    if (!hasContentAccess) {
-      // If the user lacks content access, deny access
-      return res.status(403).json({
+
+    if (!hasContentAccess.success) {
+      return res.status(hasContentAccess.status).json({
         success: false,
-        messages: ['Access denied: insufficient content access.']
+        messages: [hasContentAccess.message || 'Access denied: insufficient content access.']
       });
     }
 

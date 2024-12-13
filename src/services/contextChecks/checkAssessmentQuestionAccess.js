@@ -1,4 +1,5 @@
 import { AssessmentQuestion, Department, Assessment } from "../../models/index.js";
+import createResponse from '../../utils/contextCheckResponse.js';
 
 const checkAssessmentQuestionAccess = async (user, resourceId) => {
     try {
@@ -16,36 +17,40 @@ const checkAssessmentQuestionAccess = async (user, resourceId) => {
         });
 
         if (!assessmentQuestion) {
-            console.log("Access denied: Assessment question not found.");
-            return false;
+            return createResponse(false, "Access denied: Assessment question not found.", 404);
         }
 
         const { assessmentStarted, submitted, departmentId } = assessmentQuestion.assessment;
+
         if (!assessmentStarted) {
-            console.log("Access denied: Assessment has not started.");
-            return false;
+            return createResponse(false, "Access denied: Assessment has not started.", 422);
         }
 
         if (submitted) {
-            console.log("Access denied: Assessment has already been submitted.");
-            return false;
+            return createResponse(false, "Access denied: Assessment has already been submitted.", 422);
+        }
+
+        if (user.roleId === 'superadmin') {
+            return createResponse(true, "Access granted", 200);
         }
 
         const companyId = assessmentQuestion.assessment.department.companyId;
 
         if (user.roleId === 'admin' && user.companyId === companyId) {
-            return true;
+            return createResponse(true, "Access granted", 200);
         }
 
         const hasAccess = user.departments.some(department => department.id === departmentId);
+
         if (!hasAccess) {
-            console.log("Access denied: User does not belong to the department.");
+            return createResponse(false, "Access denied: User does not belong to the department.", 403);
         }
 
-        return hasAccess;
+        return createResponse(true, "Access granted", 200);
+
     } catch (error) {
         console.error("Error checking assessment question access:", error);
-        return false;
+        return createResponse(false, "Internal server error while checking access.", 500);
     }
 };
 

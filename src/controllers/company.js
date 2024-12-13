@@ -715,76 +715,86 @@ export const getReportByCompanyId = async (req, res) => {
   const { companyId } = req.params;
 
   try {
-    // Find all departments
+
     const departments = await Department.findAll({
       where: { companyId },
       attributes: ['id'],
+      include: [{
+        model: Assessment,
+        as: 'assessments',
+        attributes: ['id', 'submitted']
+      }]
     });
 
     if (!departments.length) {
       return res.status(404).json({
         success: false,
-        message: `No departments found for company ID: ${companyId}`,
+        messages: [`No departments found for company ID: ${companyId}`]
       });
     }
 
-    // Get department IDs
-    const departmentIds = departments.map(dept => dept.id);
+    // Check assessment submissions before fetching question data
+    const hasUnsubmittedAssessment = departments.some(dept =>
+      dept.assessments.some(assessment => !assessment.submitted)
+    );
 
-    // Find all assessments for these departments
-    const assessments = await Assessment.findAll({
-      where: {
-        departmentId: { [Op.in]: departmentIds }
-      },
-      attributes: ['id', 'submitted']
-    });
-
-    // Check if all assessments are submitted
-    const unsubmittedAssessment = assessments.find(assessment => !assessment.submitted);
-    if (unsubmittedAssessment) {
+    if (hasUnsubmittedAssessment) {
       return res.status(400).json({
         success: false,
-        message: 'All assessments must be submitted before generating report'
+        messages: ['All assessments must be submitted before generating report']
       });
     }
 
-    // Get assessment IDs
-    const assessmentIds = assessments.map(assessment => assessment.id);
-
-    // Fetch questions answered as "No" with related data
-    const questionsAnsweredAsNo = await AssessmentQuestion.findAll({
-      where: {
-        assessmentId: { [Op.in]: assessmentIds },
-      },
-      include: [{
-        model: MasterQuestion,
-        required: true,
-        as: 'masterQuestion',
-        attributes: {
-          exclude: ['id', 'srNo', 'sp80053ControlNumber', 'department']
+    // Only if all assessments are submitted, fetch the full data
+    const fullReport = await Department.findAll({
+      where: { companyId },
+      attributes: ['id', 'departmentName'],
+      include: [
+        {
+          model: Assessment,
+          as: 'assessments',
+          attributes: ['id', 'assessmentName'],
+          include: [{
+            model: AssessmentQuestion,
+            as: 'questions',
+            attributes: ['id'],
+            include: [
+              {
+                model: MasterQuestion,
+                as: 'masterQuestion',
+                attributes: {
+                  exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore',
+                    'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating',
+                    'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating',
+                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department']
+                }
+              },
+              {
+                model: Answer,
+                required: true,
+                as: 'answer',
+                where: {
+                  answerText: 'no'
+                },
+                attributes: []
+              }
+            ]
+          }]
         }
-      }, {
-        model: Answer,
-        required: true,
-        as: 'answer',
-        where: {
-          answerText: 'no'
-        },
-        attributes: []
-      }],
+      ]
     });
 
     return res.status(200).json({
       success: true,
-      message: 'Report data successfully fetched',
-      data: questionsAnsweredAsNo
+      messages: ['Report data successfully fetched'],
+      reportData: fullReport
     });
 
   } catch (error) {
     console.error('Error fetching report data:', error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error while fetching report data'
+      messages: ['Internal server error while fetching report data']
     });
   }
 };

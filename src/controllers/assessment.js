@@ -210,8 +210,8 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
 
     const { assessmentStarted, submitted } = assessment;
     // If the assessment has not started or has already been submitted, deny access
-    if ((!assessmentStarted || submitted) && req.user.roleId !== 'superadmin') {
-      return res.status(403).json({
+    if (!assessmentStarted || submitted) {
+      return res.status(422).json({
         success: false,
         messages: ['Access denied: Insufficient content access.'],
       });

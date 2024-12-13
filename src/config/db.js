@@ -1,22 +1,35 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
 
-const isProduction = process.env.NODE_ENV === 'Production';
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-// Sequelize instance to manage the database connection.
-const sequelize = new Sequelize(
-    isProduction ? process.env.RENDER_DB_URL : process.env.LOCAL_DB_URL, {
+const isDevelopment = process.env.NODE_ENV === 'development';
+const databaseUrl = isDevelopment ? process.env.LOCAL_DB_URL : process.env.RENDER_DB_URL;
+
+if (!databaseUrl) {
+    throw new Error(`Database URL not found for ${process.env.NODE_ENV} environment`);
+}
+
+const sequelize = new Sequelize(databaseUrl, {
     dialect: 'postgres',
-    protocol: 'postgres',
-    dialectOptions: isProduction ? {
+    logging: false,
+    dialectOptions: {
         ssl: {
             require: true,
             rejectUnauthorized: false
-        }
-    } : {}, // No special options for non-production environments.
-    logging: false, // Disable logging of SQL queries for cleaner console output.
-}
-);
+        },
+        connectTimeout: 60000
+    },
+    pool: {
+        max: 5,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+    },
+    retry: {
+        max: 3
+    }
+});
 
 export default sequelize;

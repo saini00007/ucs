@@ -1,4 +1,5 @@
 import { Answer, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
+import createResponse from '../../utils/contextCheckResponse.js';
 
 const checkAnswerAccess = async (user, resourceId) => {
     try {
@@ -26,43 +27,43 @@ const checkAnswerAccess = async (user, resourceId) => {
         });
 
         if (!answer) {
-            console.log("Access denied: Answer not found.");
-            return false;
+            return createResponse(false, "Access denied: Answer not found.", 404);
         }
 
         const assessment = answer.assessmentQuestion?.assessment;
         if (!assessment) {
-            console.log("Access denied: Assessment not found.");
-            return false;
+            return createResponse(false, "Access denied: Assessment not found.", 404);
         }
 
         if (!assessment.assessmentStarted) {
-            console.log("Access denied: Assessment has not started.");
-            return false;
+            return createResponse(false, "Access denied: Assessment has not started.", 422);
         }
 
         if (assessment.submitted) {
-            console.log("Access denied: Assessment has already been submitted.");
-            return false;
+            return createResponse(false, "Access denied: Assessment has already been submitted.", 422);
+        }
+
+        if (user.roleId === 'superadmin') {
+            return createResponse(true, "Access granted", 200);
         }
 
         const departmentId = assessment.departmentId;
         const companyId = assessment.department?.companyId;
 
         if (user.roleId === 'admin' && user.companyId === companyId) {
-            return true;
+            return createResponse(true, "Access granted", 200);
         }
 
         const userDepartments = user.departments.map(department => department.id);
         if (!userDepartments.includes(departmentId)) {
-            console.log("Access denied: User does not belong to the department.");
-            return false;
+            return createResponse(false, "Access denied: User does not belong to the department.", 403);
         }
 
-        return true;
+        return createResponse(true, "Access granted", 200);
+
     } catch (error) {
-        console.error("Error checking access to the answer:", error);
-        return false;
+        console.error("Error checking answer access:", error);
+        return createResponse(false, "Internal server error while checking access.", 500);
     }
 };
 

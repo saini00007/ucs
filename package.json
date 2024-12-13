@@ -1,6 +1,6 @@
 {
   "name": "ucs",
-  "module": "index.ts",
+  "module": "src/server.js",
   "type": "module",
   "scripts": {
     "start": "bun src/server.js",

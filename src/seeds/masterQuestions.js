@@ -15,8 +15,15 @@ const seedMasterQuestions = async () => {
 
     for (let i = 0; i < 1000; i++) {
       const questionData = {
-        srNo: faker.number.int({ min: 1, max: 1000 }),
+        srno: i,
         sp80053ControlNumber: `AC-${faker.number.int({ min: 1, max: 53 })}`,
+        controlName: faker.lorem.words(3),
+        iso270012022ControlIdNumber: `ISO-${faker.number.int({ min: 1, max: 100 })}`,
+        nistCsfControlId: `NIST-CSF-${faker.number.int({ min: 1, max: 100 })}`,
+        mitreDefendControlId: `MITRE-DEFEND-${faker.number.int({ min: 1, max: 100 })}`,
+        nist80082ControlId: `NIST-800-82-${faker.number.int({ min: 1, max: 100 })}`,
+        iec62443ControlId: `IEC-62443-${faker.number.int({ min: 1, max: 100 })}`,
+        pcidss: `PCI-DSS-${faker.number.int({ min: 1, max: 100 })}`,
         questionText: faker.lorem.sentence(),
         vulnerabilityDescription: faker.lorem.sentences(2),
         vulnerabilityRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
@@ -27,8 +34,6 @@ const seedMasterQuestions = async () => {
         ermLikelihoodRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
         operationalImpactDescription: faker.lorem.sentences(2),
         businessImpactDescription: faker.lorem.sentences(2),
-        healthSafetyRating: faker.number.int({ min: 1, max: 10 }),
-        environmentImpactRating: faker.number.int({ min: 1, max: 10 }),
         financialImpactRating: faker.number.int({ min: 1, max: 10 }),
         reputationalImpactRating: faker.number.int({ min: 1, max: 10 }),
         legalImpactRating: faker.number.int({ min: 1, max: 10 }),
@@ -40,14 +45,14 @@ const seedMasterQuestions = async () => {
         currentRiskValue: faker.number.int({ min: 1, max: 10 }),
         currentRiskRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
         ermRiskRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
-        riskOwner: faker.person.fullName(), // Updated
+        riskOwner: faker.person.fullName(),
         riskTreatmentPlan1: faker.lorem.sentences(2),
         riskTreatmentPlan2: faker.lorem.sentences(2),
         riskTreatmentPlan3: faker.lorem.sentences(2),
         riskTreatmentPlan4: faker.lorem.sentences(2),
         riskTreatmentPlan5: faker.lorem.sentences(2),
-        revisedRiskLikelihoodRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
-        revisedRiskImpactRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
+        revisedRiskLikelihoodRating: faker.number.int({ min: 1, max: 10 }),
+        revisedRiskImpactRating: faker.number.int({ min: 1, max: 10 }),
         targetRiskRating: faker.helpers.arrayElement(['Low', 'Medium', 'High', 'Critical']),
         department: faker.helpers.arrayElement(departments),
       };

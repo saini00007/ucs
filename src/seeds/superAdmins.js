@@ -8,22 +8,10 @@ const seedSuperAdmins = async () => {
     const superAdminsData = [
       {
         id: 'abcd12345678',
-        username: 'root',
+        username: 'superadmin',
         email: 'testingbygeek@gmail.com',
-        password: 'root',
-      },
-      {
-        id: 'efgh23456789',
-        username: 'admin1',
-        email: 'admin1@example.com',
-        password: 'admin1Pass456',
-      },
-      {
-        id: 'ijkl34567890',
-        username: 'admin2',
-        email: 'admin2@example.com',
-        password: 'admin2Pass789',
-      },
+        password: 'root@7ji',
+      }
     ];
 
     for (const superAdminData of superAdminsData) {

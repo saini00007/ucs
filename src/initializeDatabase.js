@@ -1,31 +1,33 @@
 import fs from 'fs';
 import path from 'path';
 import url from 'url';
-import sequelize from './config/db.js'; // Configured Sequelize instance.
+import sequelize from './config/db.js';
 
 const initializeDatabase = async () => {
   try {
-    // Authenticate the connection to ensure it's working.
+    // Authenticate the connection first
     await sequelize.authenticate();
-    console.log('Connection has been established successfully.');
+    console.log('✅ Database connection established successfully.');
 
-    // Directory containing the model files.
+    // Directory containing the model files
     const modelsDir = path.join(process.cwd(), 'src/models');
-    // Read the directory and filter for JavaScript files only.
+
+    // Read the directory and filter for JavaScript files only
     const modelFiles = fs.readdirSync(modelsDir).filter(file => file.endsWith('.js'));
 
-    // Loop through each model file and import them dynamically.
+    // Loop through each model file and import them dynamically
     for (const file of modelFiles) {
-      const filePath = path.join(modelsDir, file); // Full path to the file.
-      const fileUrl = url.pathToFileURL(filePath).href; // Convert the path to a URL for import.
-      await import(fileUrl); // Dynamically import the model file.
+      const filePath = path.join(modelsDir, file);
+      const fileUrl = url.pathToFileURL(filePath).href;
+      await import(fileUrl);
     }
 
-    // Sync all models with the database, creating tables if they don't exist.
+    // Sync all models with the database
     await sequelize.sync();
-    console.log('All models were synchronized successfully.');
+    console.log('✅ All models were synchronized successfully.');
   } catch (error) {
-    console.error('Unable to connect to the database:', error);
+    console.error('❌ Database initialization error:', error);
+    throw error; // Re-throw the error to be handled by the caller
   }
 };
 

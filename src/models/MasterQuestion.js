@@ -8,7 +8,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     defaultValue: DataTypes.UUIDV4,
     field: 'id',
   },
-  srNo: {
+  srno: {
     type: DataTypes.INTEGER,
     field: 'srno',
   },
@@ -16,9 +16,36 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
     field: 'sp_800_53_control_number',
   },
+  controlName: {
+    type: DataTypes.TEXT,
+    field: 'control_name',
+  },
+  iso270012022ControlIdNumber: {
+    type: DataTypes.TEXT,
+    field: 'iso_27001_2022_control_id_number',
+  },
+  nistCsfControlId: {
+    type: DataTypes.TEXT,
+    field: 'nist_csf_control_id',
+  },
+  mitreDefendControlId: {
+    type: DataTypes.TEXT,
+    field: 'mitre_defend_control_id',
+  },
+  nist80082ControlId: {
+    type: DataTypes.TEXT,
+    field: 'nist_800_82_control_id',
+  },
+  iec62443ControlId: {
+    type: DataTypes.TEXT,
+    field: 'iec_62443_control_id',
+  },
+  pcidss: {
+    type: DataTypes.TEXT,
+    field: 'pcidss',
+  },
   questionText: {
     type: DataTypes.TEXT,
-    allowNull: false,
     field: 'question_text',
   },
   vulnerabilityDescription: {
@@ -27,7 +54,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
   vulnerabilityRating: {
     type: DataTypes.TEXT,
-    field: 'vulnerability_rating', 
+    field: 'vulnerability_rating',
   },
   vulnerabilityValue: {
     type: DataTypes.INTEGER,
@@ -43,11 +70,11 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
   riskLikelihoodRating: {
     type: DataTypes.TEXT,
-    field: 'risk_likelihood_rating', 
+    field: 'risk_likelihood_rating',
   },
   ermLikelihoodRating: {
     type: DataTypes.TEXT,
-    field: 'erm_likelihood_rating', 
+    field: 'erm_likelihood_rating',
   },
   operationalImpactDescription: {
     type: DataTypes.TEXT,
@@ -56,14 +83,6 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   businessImpactDescription: {
     type: DataTypes.TEXT,
     field: 'business_impact_description',
-  },
-  healthSafetyRating: {
-    type: DataTypes.INTEGER,
-    field: 'health_safety_rating',
-  },
-  environmentImpactRating: {
-    type: DataTypes.INTEGER,
-    field: 'environment_impact_rating',
   },
   financialImpactRating: {
     type: DataTypes.INTEGER,
@@ -91,11 +110,11 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
   riskImpactRating: {
     type: DataTypes.TEXT,
-    field: 'risk_impact_rating', 
+    field: 'risk_impact_rating',
   },
   inherentRisk: {
     type: DataTypes.TEXT,
-    field: 'inherent_risk', 
+    field: 'inherent_risk',
   },
   currentRiskValue: {
     type: DataTypes.INTEGER,
@@ -103,11 +122,11 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
   currentRiskRating: {
     type: DataTypes.TEXT,
-    field: 'current_risk_rating', 
+    field: 'current_risk_rating',
   },
   ermRiskRating: {
     type: DataTypes.TEXT,
-    field: 'erm_risk_rating', 
+    field: 'erm_risk_rating',
   },
   riskOwner: {
     type: DataTypes.TEXT,
@@ -134,21 +153,21 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     field: 'risk_treatment_plan_5',
   },
   revisedRiskLikelihoodRating: {
-    type: DataTypes.TEXT,
-    field: 'revised_risk_likelihood_rating', 
+    type: DataTypes.INTEGER,
+    field: 'revised_risk_likelihood_rating',
   },
   revisedRiskImpactRating: {
-    type: DataTypes.TEXT,
-    field: 'revised_risk_impact_rating', 
+    type: DataTypes.INTEGER,
+    field: 'revised_risk_impact_rating',
   },
   targetRiskRating: {
     type: DataTypes.TEXT,
-    field: 'target_risk_rating', 
+    field: 'target_risk_rating',
   },
   department: {
     type: DataTypes.TEXT,
     field: 'department',
-  },
+  }
 }, {
   tableName: 'master_questions',
   timestamps: true,

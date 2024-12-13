@@ -5,7 +5,7 @@ import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 
-export const validateEmailForUser = async (email, userId = null, roleId = null, companyId = null) => {
+const validateEmailForUser = async (email, userId = null, roleId = null, companyId = null) => {
     try {
         // Check existing user
         const existingUser = await User.findOne({
@@ -53,7 +53,7 @@ export const validateEmailForUser = async (email, userId = null, roleId = null, 
     }
 };
 
-export const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
+const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
     try {
         // Superadmin validation
         if (targetRoleId === 'superadmin') {
@@ -96,7 +96,7 @@ export const validateRoleAssignment = async (currentUser, targetRoleId, existing
     }
 };
 
-export const validateAdminAssignment = async (companyId) => {
+ const validateAdminAssignment = async (companyId) => {
     try {
         const company = await Company.findByPk(companyId);
         if (!company) {
@@ -179,7 +179,7 @@ const createUser = async (userData, res) => {
 export const addUser = async (req, res) => {
     const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
     const currentUser = req.user;
-    const password = "root";
+    const password = "root@7ji";
 
     try {
         // Email validation
