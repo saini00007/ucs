@@ -47,18 +47,14 @@ const permissionsService = {
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
     if (!contentAccessCheckFn) {
       console.log('Content access check function not found for resource type:', resourceType);
-      return {
-        success: false,
-        message: `Content access check function not found for resource type: ${resourceType}`,
-        status: 400
-      }
+      return false;
     }
     try {
       // Call the access check function and return its result.
       return await contentAccessCheckFn(user, resourceId, actionId);
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
-      return createResponse(false, `Error checking content access for user ${user.id}`, 500);
+      return false;
     }
   },
 };
