@@ -1,6 +1,6 @@
 export const checkAccessScope = (user, companyId, departmentId) => {
     if (user.roleId === 'superadmin') return { success: true };
-    if (user.roleId === 'admin' && user.companyId === companyId) return { success: true };
+    if (user.roleId === 'admin') return { success: user.companyId === companyId };
     return { success: user.departments.some(department => department.id === departmentId) };
 };
 
