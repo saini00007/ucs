@@ -21,31 +21,43 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
         });
 
         if (!comment) {
-            return false;
+            return {
+                success: false,
+                message: 'Comment not found',
+                status: 404
+            };
         }
 
         const assessment = comment.assessmentQuestion.assessment;
         const companyId = assessment.department.companyId;
         const departmentId = assessment.departmentId;
 
-        // Check basic access first
-        if (!checkAccessScope(user, companyId, departmentId) ||
-            !checkAssessmentState(assessment)) {
-            return false;
+        // Check access scope
+        const accessScope = checkAccessScope(user, companyId, departmentId);
+        if (!accessScope.success) {
+            return { success: false };
+        }
+
+        // Check assessment state
+        const assessmentState = checkAssessmentState(assessment);
+        if (!assessmentState.success) {
+            return { success: false, message: assessmentState.message, status: assessmentState.status };
         }
 
         // Check owner permissions for update/delete
         if ((actionId === 'remove' || actionId === 'update') &&
             user.roleId !== 'superadmin' &&
             comment.createdByUserId !== user.id) {
-            return false;
+            return {
+                success: false
+            };
         }
 
-        return true;
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking comment access:", error);
-        return false;
+        return { success: false, message: 'Internal server error', status: 500 };
     }
 };
 

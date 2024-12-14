@@ -209,14 +209,13 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
       });
     }
 
+    const assessmentState = checkAssessmentState(assessment);
 
-    const { assessmentStarted, submitted } = assessment;
-    // If the assessment has not started or has already been submitted, deny access
-    if (!assessmentStarted || submitted) {
-      return res.status(403).json({
+    if (!assessmentState.success) {
+      return res.status(assessmentState.status || 403).json({
         success: false,
-        messages: ['Access denied: Insufficient content permissions.'],
-      });
+        messages: [req.user.roleId === 'superadmin' ? assessmentState.message || 'Access denied: Insufficient content permissions.' : 'Access denied: Insufficient content permissions.']
+      })
     }
 
     // Fetch the questions for the assessment with pagination

@@ -19,7 +19,8 @@ const checkAccess = async (req, res, next) => {
       resourceId: roleResourceId,
       actionId,
     });
-    if (!hasRolePermission) {
+
+    if (!hasRolePermission.success) {
       // If the user lacks the required role permission, deny access
       return res.status(403).json({
         success: false,
@@ -27,7 +28,7 @@ const checkAccess = async (req, res, next) => {
       });
     }
 
-    //role based access check is enough for these resources 
+    // role-based access check is enough for these resources 
     if (contentResourceType === null) {
       return next();
     }
@@ -40,13 +41,25 @@ const checkAccess = async (req, res, next) => {
       actionId
     });
 
-    if (!hasContentAccess) {
-      return res.status(403).json({
+    if (!hasContentAccess.success) {
+      // For superadmins, return the received message and status
+      if (req.user.roleId === 'superadmin') {
+        return res.status(hasContentAccess.status || 403).json({
+          success: false,
+          messages: [hasContentAccess.message || 'Access denied: insufficient content permissions.']
+        });
+      }
+
+      // For non-superadmins, show a generic message for status 500 or a default 403 message
+      return res.status(hasContentAccess.status === 500 ? 500 : 403).json({
         success: false,
-        messages: ['Access denied: Insufficient content permissions.']
+        messages: [
+          hasContentAccess.status === 500
+            ? (hasContentAccess.message || 'Internal Server Error')
+            : 'Access denied: insufficient content permissions.'
+        ],
       });
     }
-
     return next();
   } catch (error) {
     // Handle any errors that occur during the access check process

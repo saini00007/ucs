@@ -17,19 +17,34 @@ const checkAssessmentQuestionAccess = async (user, resourceId) => {
         });
 
         if (!assessmentQuestion) {
-            return false;
+            return {
+                success: false,
+                message: 'Assessment question not found',
+                status: 404
+            };
         }
 
         const assessment = assessmentQuestion.assessment;
         const companyId = assessment.department.companyId;
         const departmentId = assessment.departmentId;
 
-        return checkAccessScope(user, companyId, departmentId) &&
-            checkAssessmentState(assessment);
+        // Check access scope
+        const accessScope = checkAccessScope(user, companyId, departmentId);
+        if (!accessScope.success) {
+            return { success: false };
+        }
+
+        // Check assessment state
+        const assessmentState = checkAssessmentState(assessment);
+        if (!assessmentState.success) {
+            return { success: false, message: assessmentState.message, status: assessmentState.status };
+        }
+
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking assessment question access:", error);
-        return false;
+        return { success: false, message: 'Internal server error', status: 500 };
     }
 };
 

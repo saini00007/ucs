@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { User, Otp, Department, Company } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
-import  generateToken  from '../utils/token.js';
+import generateToken from '../utils/token.js';
 
 export const requestPasswordReset = async (req, res) => {
   const { identifier } = req.body;
@@ -196,7 +196,6 @@ export const verifyOtp = async (req, res) => {
 
     // Destroy the OTP record to prevent reuse
     await Otp.destroy({ where: { userId } });
-
 
     // Respond with success and user data
     res.status(200).json({

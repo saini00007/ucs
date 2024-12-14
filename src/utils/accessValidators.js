@@ -1,9 +1,15 @@
 export const checkAccessScope = (user, companyId, departmentId) => {
-    if (user.roleId === 'superadmin') return true;
-    if (user.roleId === 'admin' && user.companyId === companyId) return true;
-    return user.departments.some(department => department.id === departmentId);
+    if (user.roleId === 'superadmin') return { success: true };
+    if (user.roleId === 'admin' && user.companyId === companyId) return { success: true };
+    return { success: user.departments.some(department => department.id === departmentId) };
 };
 
 export const checkAssessmentState = (assessment) => {
-    return assessment.assessmentStarted && !assessment.submitted;
+    if (!assessment.assessmentStarted) {
+        return { success: false, message: 'Assessment has not started yet', status: 403 };
+    }
+    if (assessment.submitted) {
+        return { success: false, message: 'Assessment has already been submitted', status: 403 };
+    }
+    return { success: true };
 };

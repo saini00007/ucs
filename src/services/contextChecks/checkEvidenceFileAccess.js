@@ -16,10 +16,12 @@ const checkEvidenceFileAccess = async (user, resourceId) => {
                                 {
                                     model: Assessment,
                                     as: 'assessment',
+                                    attributes: ['assessmentStarted', 'submitted', 'departmentId'],
                                     include: [
                                         {
                                             model: Department,
                                             as: 'department',
+                                            attributes: ['id', 'companyId'],
                                         },
                                     ],
                                 },
@@ -31,19 +33,42 @@ const checkEvidenceFileAccess = async (user, resourceId) => {
         });
 
         if (!evidenceFile) {
-            return false;
+            return {
+                success: false,
+                message: 'EvidenceFile not found',
+                status: 404,
+            };
         }
 
         const assessment = evidenceFile.answer.assessmentQuestion.assessment;
         const departmentId = assessment.departmentId;
         const companyId = assessment.department.companyId;
 
-        return checkAccessScope(user, companyId, departmentId) &&
-            checkAssessmentState(assessment);
+        // Check access scope
+        const accessScope = checkAccessScope(user, companyId, departmentId);
+        if (!accessScope.success) {
+            return { success: false };
+        }
+
+        // Check assessment state
+        const assessmentState = checkAssessmentState(assessment);
+        if (!assessmentState.success) {
+            return {
+                success: false,
+                message: assessmentState.message,
+                status: assessmentState.status,
+            };
+        }
+
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking evidence file access:", error);
-        return false;
+        return {
+            success: false,
+            message: 'Internal server error',
+            status: 500,
+        };
     }
 };
 

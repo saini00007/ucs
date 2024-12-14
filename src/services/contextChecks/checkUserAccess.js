@@ -12,31 +12,43 @@ const checkUserAccess = async (user, resourceId) => {
         });
 
         if (!userDb) {
-            return false;
+            return {
+                success: false,
+                message: 'User not found',
+                status: 404,
+            };
         }
 
         // Superadmin has universal access
         if (user.roleId === 'superadmin') {
-            return true;
+            return { success: true };
         }
 
-        // Admin - check company access
         if (user.roleId === 'admin') {
-            return user.companyId === userDb.companyId;
+            return { success: user.companyId === userDb.companyId };
         }
-        // Department manager 
+
         if (user.roleId === 'departmentmanager') {
-            return user.departments.some(department =>
+            const hasDepartmentAccess = user.departments.some(department =>
                 userDb.departments.some(dbDept => dbDept.id === department.id)
             );
+            return { success: hasDepartmentAccess };
         }
 
-        // Regular user - can only access own data
-        return user.id === userDb.id;
+        // Regular user - can only access their own data
+        if (user.id === userDb.id) {
+            return { success: true };
+        }
+
+        return { success: false };
 
     } catch (error) {
         console.error("Error checking user access:", error);
-        return false;
+        return {
+            success: false,
+            message: 'Internal server error',
+            status: 500,
+        };
     }
 };
 

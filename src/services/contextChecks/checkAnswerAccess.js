@@ -27,19 +27,30 @@ const checkAnswerAccess = async (user, resourceId) => {
         });
 
         if (!answer) {
-            return false;
+            return { success: false, message: 'Answer not Found', status: 404 };
         }
 
         const assessment = answer.assessmentQuestion.assessment;
         const departmentId = assessment.departmentId;
         const companyId = assessment.department.companyId;
 
-        return checkAccessScope(user, companyId, departmentId) &&
-            checkAssessmentState(assessment);
+        // Check access scope
+        const accessScope = checkAccessScope(user, companyId, departmentId);
+        if (!accessScope.success) {
+            return { success: false };
+        }
+
+        // Check assessment state
+        const assessmentState = checkAssessmentState(assessment);
+        if (!assessmentState.success) {
+            return { success: false, message: assessmentState.message, status: assessmentState.status };
+        }
+
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking answer access:", error);
-        return false;
+        return { success: false, message: 'Internal server error', status: 500 };
     }
 };
 

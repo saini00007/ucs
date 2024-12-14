@@ -11,16 +11,25 @@ const checkAssessmentAccess = async (user, resourceId) => {
         });
 
         if (!assessment) {
-            return false;
+            return {
+                success: false,
+                message: 'Assessment not found',
+                status: 404
+            };
         }
         const { companyId, id: departmentId } = assessment.department;
 
+        // Check access scope
+        const accessScope = checkAccessScope(user, companyId, departmentId);
+        if (!accessScope.success) {
+            return { success: false };
+        }
 
-        return checkAccessScope(user, companyId, departmentId);
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking assessment access:", error);
-        return false;
+        return { success: false, message: 'Internal server error', status: 500 };
     }
 };
 

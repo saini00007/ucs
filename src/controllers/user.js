@@ -96,7 +96,7 @@ const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId 
     }
 };
 
- const validateAdminAssignment = async (companyId) => {
+const validateAdminAssignment = async (companyId) => {
     try {
         const company = await Company.findByPk(companyId);
         if (!company) {
@@ -322,7 +322,7 @@ export const updateUser = async (req, res) => {
         });
 
     } catch (error) {
-        await transaction.rollback(); 
+        await transaction.rollback();
         console.error('Error updating user:', error);
         res.status(500).json({
             success: false,
@@ -417,9 +417,15 @@ export const addUserToDepartment = async (req, res) => {
     const { userId, departmentId } = req.params;
 
     try {
-        // Fetch the user and department by their IDs
-        const user = await User.findByPk(userId);
+
         const department = await Department.findByPk(departmentId);
+
+        const user = await User.findOne({
+            where: {
+                id: userId,
+                companyId: department.companyId
+            }
+        });
 
         // If either the user or department is not found, return 404
         if (!user || !department) {
@@ -433,14 +439,6 @@ export const addUserToDepartment = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 messages: ['User must have a role of assessor or reviewer']
-            });
-        }
-
-        // Check if the user belongs to the same company as the department
-        if (user.companyId !== department.companyId) {
-            return res.status(400).json({
-                success: false,
-                messages: ['User does not belong to the same company as the department']
             });
         }
 

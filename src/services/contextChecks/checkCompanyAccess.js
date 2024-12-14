@@ -2,18 +2,29 @@ import { Company } from "../../models/index.js";
 
 const checkCompanyAccess = async (user, resourceId) => {
     try {
-
         const company = await Company.findByPk(resourceId);
 
         if (!company) {
-            return false;
+            return {
+                success: false,
+                message: 'Company not found',
+                status: 404
+            };
         }
 
-        return user.roleId === 'superadmin' || user.companyId === resourceId;
+        if (user.roleId === 'superadmin' || user.companyId === resourceId) {
+            return { success: true };
+        } else {
+            return { success: false };
+        }
 
     } catch (error) {
         console.error("Error checking company access:", error);
-        return false;
+        return {
+            success: false,
+            message: 'Internal server error',
+            status: 500
+        };
     }
 };
 

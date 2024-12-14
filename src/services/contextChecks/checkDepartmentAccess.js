@@ -6,13 +6,27 @@ const checkDepartmentAccess = async (user, resourceId) => {
         const department = await Department.findByPk(resourceId);
 
         if (!department) {
-            return false;
+            return {
+                success: false,
+                message: 'Department not found',
+                status: 404
+            };
         }
-        return checkAccessScope(user, department.companyId, department.id);
+
+        const accessScope = checkAccessScope(user, department.companyId, department.id);
+        if (!accessScope.success) {
+            return { success: false };
+        }
+
+        return { success: true };
 
     } catch (error) {
         console.error("Error checking department access:", error);
-        return false;
+        return {
+            success: false,
+            message: 'Internal server error',
+            status: 500
+        };
     }
 };
 

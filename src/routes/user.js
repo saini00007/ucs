@@ -59,7 +59,7 @@ router.get('/:userId/departments',
 
 // Route to remove a user from a department
 router.delete('/:userId/departments/:departmentId',
-  attachResourceInfo('UserDepartmentLink', 'User', 'userId', 'remove'),
+  attachResourceInfo('UserDepartmentLink', 'Department', 'departmentId', 'remove'),
   checkAccess,
   removeUserFromDepartment
 );
