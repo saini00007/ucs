@@ -6,7 +6,6 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
     allowNull: false,
   },
   assessmentId: {
@@ -16,7 +15,6 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'assessment_id',
     allowNull: false,
   },
   masterQuestionId: {
@@ -25,7 +23,6 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
       model: 'master_questions',
       key: 'id',
     },
-    field: 'master_question_id',
     allowNull: false,
   }
 }, {

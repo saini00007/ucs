@@ -4,7 +4,8 @@ import { User, Department } from '../models/index.js';
 const authenticate = async (req, res, next) => {
 
   try {
-
+    // Verify the token using the JWT secret
+    // Retrieve token from the cookies
     const token = req.header("Authorization")?.replace("Bearer ", "");
 
     //if no token provided

@@ -19,6 +19,6 @@ const createAnswerSchema = Joi.object({
     }),
 
 });
-const updateAnswerSchema=createAnswerSchema;
+const updateAnswerSchema = createAnswerSchema;
 
-export { createAnswerSchema ,updateAnswerSchema};
+export { createAnswerSchema, updateAnswerSchema };

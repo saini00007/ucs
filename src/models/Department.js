@@ -6,12 +6,10 @@ const Department = sequelize.define('Department', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   departmentName: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'department_name',
   },
   companyId: {
     type: DataTypes.UUID,
@@ -20,7 +18,6 @@ const Department = sequelize.define('Department', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'company_id',
     allowNull: false,
   },
   masterDepartmentId: {
@@ -30,7 +27,6 @@ const Department = sequelize.define('Department', {
       key: 'id',
     },
     allowNull: false,
-    field: 'master_department_id',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -39,7 +35,6 @@ const Department = sequelize.define('Department', {
       key: 'id',
     },
     allowNull: false,
-    field: 'created_by_user_id',
   },
 }, {
   tableName: 'departments',

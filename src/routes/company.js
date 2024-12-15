@@ -8,6 +8,7 @@ import {
     getDepartmentsByCompanyId,
     getUsersByCompanyId,
     getReportByCompanyId,
+    getCompanyLogo
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -15,12 +16,16 @@ import checkAccess from '../middleware/authorize.js';
 import validate from '../middleware/validate.js';
 import { createCompanySchema, updateCompanySchema } from '../joi/company.js';
 
+import uploadMiddleware from '../middleware/fileUpload.js';
+const uploadCompanyLogo = uploadMiddleware.companyLogo(5, 1)
+
 const router = express.Router();
 
 // Route to create a new company
 router.post('/',
     attachResourceInfo('Company', null, null, 'create'),
     checkAccess,
+    uploadCompanyLogo,
     validate(createCompanySchema),
     createCompany
 );
@@ -29,6 +34,7 @@ router.post('/',
 router.put('/:companyId',
     attachResourceInfo('Company', 'Company', 'companyId', 'update'),
     checkAccess,
+    uploadCompanyLogo,
     validate(updateCompanySchema),
     updateCompany
 );
@@ -73,6 +79,12 @@ router.get('/:companyId/report',
     attachResourceInfo('Report', 'Company', 'companyId', 'read'),
     checkAccess,
     getReportByCompanyId
+)
+
+router.get('/:companyId/logo',
+    attachResourceInfo('Company', 'Company', 'companyId', 'read'),
+    checkAccess,
+    getCompanyLogo
 )
 
 export default router;

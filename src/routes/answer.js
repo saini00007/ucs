@@ -1,5 +1,5 @@
 import express from 'express';
-import { uploadFiles } from '../middleware/fileUpload.js';
+
 import {
   createAnswer,
   updateAnswer,
@@ -9,6 +9,9 @@ import validate from '../middleware/validate.js';
 import { createAnswerSchema, updateAnswerSchema } from '../joi/answer.js';
 import checkAccess from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
+
+import uploadMiddleware from '../middleware/fileUpload.js';
+const uploadFiles = uploadMiddleware.evidenceFiles(100, 10);
 
 const router = express.Router();
 

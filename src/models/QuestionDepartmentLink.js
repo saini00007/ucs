@@ -10,7 +10,6 @@ const QuestionDepartmentLink = sequelize.define('QuestionDepartmentLink', {
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'master_question_id',
   },
   masterDepartmentId: {
     type: DataTypes.UUID,
@@ -20,7 +19,6 @@ const QuestionDepartmentLink = sequelize.define('QuestionDepartmentLink', {
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'master_department_id',
   },
 }, {
   tableName: 'question_department_links',

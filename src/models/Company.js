@@ -6,57 +6,50 @@ const Company = sequelize.define('Company', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   companyName: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'company_name',
+  },
+  companyLogo: {
+    type: DataTypes.BLOB,
+    allowNull: true,   
   },
   postalAddress: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'postal_address',
   },
   gstNumber: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'gst_number',
   },
   panNumber: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'pan_number',
   },
   primaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'primary_email',
   },
   secondaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'secondary_email',
   },
   primaryPhone: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'primary_phone',
   },
   secondaryPhone: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'secondary_phone',
   },
   primaryCountryCode: {
     type: DataTypes.STRING(5),
     allowNull: false,
-    field: 'primary_country_code',
   },
   secondaryCountryCode: {
     type: DataTypes.STRING(5),
     allowNull: false,
-    field: 'secondary_country_code',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -65,7 +58,14 @@ const Company = sequelize.define('Company', {
       key: 'id',
     },
     allowNull: false,
-    field: 'created_by_user_id',
+  },
+  industrySectorId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'industry_sectors',
+      key: 'id',
+    },
+    allowNull: true,
   },
 }, {
   tableName: 'companies',

@@ -11,7 +11,6 @@ const Resource = sequelize.define('Resource', {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
-    field: 'resource_name',
   },
 }, {
   tableName: 'resources',

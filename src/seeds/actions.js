@@ -1,4 +1,4 @@
-import { Action} from "../models/index.js";
+import { Action } from "../models/index.js";
 import sequelize from "../config/db.js";
 
 const actions = [
@@ -9,7 +9,7 @@ const actions = [
     { id: 'list', actionName: 'list' },
     { id: 'start', actionName: 'start' },
     { id: 'submit', actionName: 'submit' },
-    { id: 'reopen', actionName: 'reopen' }
+    { id: 'reopen', actionName: 'reopen' },
 ];
 
 const seedActions = async () => {

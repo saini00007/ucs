@@ -6,7 +6,6 @@ const Otp = sequelize.define('Otp', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   userId: {
     type: DataTypes.STRING(12),
@@ -15,16 +14,13 @@ const Otp = sequelize.define('Otp', {
       key: 'id',
     },
     allowNull: false,
-    field: 'user_id',
   },
   otpCode: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'otp_code',
   },
   expiresAt: {
     type: DataTypes.DATE,
-    field: 'expires_at',
   },
 }, {
   tableName: 'otps',

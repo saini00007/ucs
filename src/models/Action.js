@@ -11,7 +11,6 @@ const Action = sequelize.define('Action', {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true,
-    field: 'action_name',
   },
 }, {
   tableName: 'actions',

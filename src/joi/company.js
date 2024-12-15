@@ -34,10 +34,17 @@ const baseCompanySchema = Joi.object({
     panNumber: Joi.string()
         .length(10)
         .required()
-        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/) // Assuming PAN number pattern: 5 letters, 4 digits, 1 letter
+        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
         .messages({
             'string.length': 'PAN number must be exactly 10 characters',
             'string.pattern.base': 'PAN number must match the pattern XXXXX1234X',
+        }),
+
+    industrySectorId: Joi.string()
+        .uuid()
+        .required()
+        .messages({
+            'string.uuid': 'Industry sector ID must be a valid UUID',
         }),
 
     primaryEmail: Joi.string()
@@ -145,6 +152,14 @@ const updateCompanySchema = Joi.object({
         .messages({
             'string.length': 'PAN number must be exactly 10 characters',
             'string.pattern.base': 'PAN number must match the pattern XXXXX1234X',
+        }),
+
+    industrySectorId: Joi.string()
+        .uuid()
+        .allow('')
+        .optional()
+        .messages({
+            'string.uuid': 'Industry sector ID must be a valid UUID',
         }),
 
     primaryEmail: Joi.string()

@@ -15,6 +15,7 @@ import RoleResourceActionLink from './RoleResourceActionLink.js';
 import Action from './Action.js';
 import Resource from './Resource.js';
 import UserDepartmentLink from './UserDepartmentLink.js';
+import IndustrySector from './IndustrySector.js';
 
 // 1. User and Company
 User.belongsTo(Company, { foreignKey: 'companyId', targetKey: 'id', as: 'company' });
@@ -80,6 +81,10 @@ MasterDepartment.belongsToMany(MasterQuestion, { through: QuestionDepartmentLink
 Department.belongsTo(MasterDepartment, { foreignKey: 'masterDepartmentId', targetKey: 'id', as: 'masterDepartment' });
 MasterDepartment.hasMany(Department, { foreignKey: 'masterDepartmentId', as: 'departments' });
 
+// 17. Company and IndustrySector
+Company.belongsTo(IndustrySector, { foreignKey: 'industrySectorId', targetKey: 'id', as: 'industrySector' });
+IndustrySector.hasOne(Company, { foreignKey: 'industrySectorId', as: 'company' });
+
 export {
   User,
   Company,
@@ -97,5 +102,6 @@ export {
   RoleResourceActionLink,
   Action,
   Resource,
-  UserDepartmentLink
+  UserDepartmentLink,
+  IndustrySector
 };

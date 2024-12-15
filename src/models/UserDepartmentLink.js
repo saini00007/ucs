@@ -6,7 +6,6 @@ const UserDepartmentLink = sequelize.define('UserDepartmentLink', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   userId: {
     type: DataTypes.STRING(12),
@@ -16,7 +15,6 @@ const UserDepartmentLink = sequelize.define('UserDepartmentLink', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'user_id',
   },
   departmentId: {
     type: DataTypes.UUID,
@@ -26,7 +24,6 @@ const UserDepartmentLink = sequelize.define('UserDepartmentLink', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'department_id',
   },
 }, {
   tableName: 'user_departments',

@@ -1,4 +1,4 @@
-import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion } from '../models/index.js';
+import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 
@@ -177,12 +177,17 @@ export const createCompany = async (req, res) => {
     secondaryPhone,
     primaryCountryCode,
     secondaryCountryCode,
-    panNumber
+    panNumber,
+    industrySectorId,
   } = req.body;
+  console.log(req.body);
+  const transaction = await sequelize.transaction();
   try {
+
     // Validate primary email
     const primaryEmailValidation = await validateEmailForCompany(primaryEmail);
     if (!primaryEmailValidation.isValid) {
+      await transaction.rollback();
       return res.status(409).json({
         success: false,
         messages: ["Primary " + primaryEmailValidation.message],
@@ -192,33 +197,79 @@ export const createCompany = async (req, res) => {
     // Validate secondary email
     const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail);
     if (!secondaryEmailValidation.isValid) {
+      await transaction.rollback();
       return res.status(409).json({
         success: false,
         messages: ["Secondary " + secondaryEmailValidation.message],
       });
     }
 
+    //check for company logo
+    const companyLogo = req.files?.['companyLogo'];
+    if (!companyLogo || companyLogo.length === 0) {
+      await transaction.rollback();
+      return res.status(409).json({
+        success: false,
+        messages: ['Company Logo is Required'],
+      });
+    }
+
+
     // Create the company
-    const newCompany = await Company.create({
-      companyName,
-      postalAddress,
-      gstNumber,
-      primaryEmail,
-      secondaryEmail,
-      primaryPhone,
-      secondaryPhone,
-      primaryCountryCode,
-      secondaryCountryCode,
-      panNumber,
-      createdByUserId: req.user.id,
+    const newCompany = await Company.create(
+      {
+        companyName,
+        postalAddress,
+        gstNumber,
+        primaryEmail,
+        secondaryEmail,
+        primaryPhone,
+        secondaryPhone,
+        primaryCountryCode,
+        secondaryCountryCode,
+        panNumber,
+        companyLogo: companyLogo[0]?.buffer,
+        createdByUserId: req.user.id,
+      },
+      { transaction }
+    );
+
+    // If an industry sector ID is provided, associate the company with the industry sector
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          messages: ["Industry sector not found."],
+        });
+      }
+
+      // Associate the company with the industry sector
+      await newCompany.setIndustrySector(industrySector, { transaction });
+    }
+
+    // Commit the transaction
+    await transaction.commit();
+
+    // Refetch the company and include only desired attributes
+    const refetchedCompany = await Company.findByPk(newCompany.id, {
+      attributes: { exclude: ['companyLogo'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType'],
+      }],
     });
 
     res.status(201).json({
       success: true,
       messages: ['Company created successfully!'],
-      company: newCompany,
+      company: refetchedCompany,
     });
   } catch (error) {
+    // Rollback transaction in case of error
+    await transaction.rollback();
     console.error(error);
     res.status(500).json({
       success: false,
@@ -227,12 +278,14 @@ export const createCompany = async (req, res) => {
   }
 };
 
+
 export const getAllCompanies = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
     // Fetch companies with pagination and count the total number of companies
     const { count, rows: companies } = await Company.findAndCountAll({
+      attributes: { exclude: ['companyLogo'] },
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -327,6 +380,7 @@ export const updateCompany = async (req, res) => {
     primaryCountryCode,
     secondaryCountryCode,
     panNumber,
+    industrySectorId,
   } = req.body;
 
   const transaction = await sequelize.transaction();
@@ -376,9 +430,35 @@ export const updateCompany = async (req, res) => {
     if (primaryCountryCode) company.primaryCountryCode = primaryCountryCode;
     if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
     if (panNumber) company.panNumber = panNumber;
+    if (req.files?.['companyLogo']) company.companyLogo = req.files['companyLogo'][0].buffer;
+
+    // If industry sector ID is provided, update the company's industry sector
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          messages: ['Industry sector not found.'],
+        });
+      }
+
+      // Set the new industry sector
+      await company.setIndustrySector(industrySector, { transaction });
+    }
 
     await company.save({ transaction });
     await transaction.commit();
+
+    // Fetch updated company without logo
+    const updatedCompany = await Company.findByPk(companyId, {
+      attributes: { exclude: ['companyLogo'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType'],
+      }],
+    });
 
     res.status(200).json({
       success: true,
@@ -386,7 +466,7 @@ export const updateCompany = async (req, res) => {
         'Company updated successfully',
         ...emailUpdates
       ],
-      company,
+      company: updatedCompany,
     });
 
   } catch (error) {
@@ -395,7 +475,6 @@ export const updateCompany = async (req, res) => {
     res.status(500).json({
       success: false,
       messages: ['Error updating company'],
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -766,7 +845,7 @@ export const getReportByCompanyId = async (req, res) => {
                   exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore',
                     'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating',
                     'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating',
-                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department','id']
+                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department', 'id']
                 }
               },
               {
@@ -795,6 +874,34 @@ export const getReportByCompanyId = async (req, res) => {
     return res.status(500).json({
       success: false,
       messages: ['Internal server error while fetching report data']
+    });
+  }
+};
+
+export const getCompanyLogo = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    // Fetch the company record with the logo
+    const company = await Company.findByPk(companyId, {
+      attributes: ['companyLogo'],
+    });
+
+    // Check if the company exists and has a logo
+    if (!company || !company.companyLogo) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Logo not found for the company'],
+      });
+    }
+
+    res.set('Content-Type', 'image/png');
+    return res.status(200).send(company.companyLogo);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      messages: ['Error retrieving company logo'],
     });
   }
 };

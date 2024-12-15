@@ -6,17 +6,17 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
+  },
+  fileName: {
+    type: DataTypes.TEXT,
   },
   filePath: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'file_path',
   },
   pdfData: {
     type: DataTypes.BLOB,
     allowNull: false,
-    field: 'pdf_data',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -25,7 +25,6 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
       model: 'users',
       key: 'id',
     },
-    field: 'created_by_user_id',
   },
   answerId: {
     type: DataTypes.UUID,
@@ -35,7 +34,6 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'answer_id',
   },
 }, {
   tableName: 'evidence_files',

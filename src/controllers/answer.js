@@ -38,14 +38,20 @@ export const createAnswer = async (req, res) => {
       await transaction.rollback(); // Rollback if no answer text
       return res.status(400).json({ success: false, messages: ['Answer text is required.'] });
     }
-
     // Validate that evidence files are uploaded if the answer is "yes"
     const isAnswerYes = answerText.toLowerCase() === "yes";
-    if (isAnswerYes && (!req.files || req.files.length === 0)) {
+    if (isAnswerYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
       await transaction.rollback(); // Rollback if no evidence files
       return res.status(400).json({
         success: false,
         messages: ['Evidence files are required when the answer is "yes".'],
+      });
+    }
+    if (!isAnswerYes && req.files['files'] && req.files?.['files'].length > 0) {
+      await transaction.rollback(); // Rollback if files uploaded when answer is "no" or "not applicable"
+      return res.status(400).json({
+        success: false,
+        messages: ['No evidence files should be uploaded when the answer is "no" or "not applicable".'],
       });
     }
 
@@ -58,9 +64,10 @@ export const createAnswer = async (req, res) => {
 
     if (isAnswerYes) {
       // Save evidence files if the answer is "yes"
-      await Promise.all(req.files.map(async (file) => {
+      await Promise.all(req.files['files'].map(async (file) => {
         await EvidenceFile.create({
-          filePath: file.originalname,
+          fileName: file.originalname,
+          filePath: file.originalname,//have to change it to the path of external cloud storage
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
@@ -74,7 +81,7 @@ export const createAnswer = async (req, res) => {
       include: [{
         model: EvidenceFile,
         as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'filePath', 'fileName', 'createdAt', 'updatedAt'],
         order: [['createdAt', 'ASC']],
         include: [{
           model: User,
@@ -136,7 +143,7 @@ export const updateAnswer = async (req, res) => {
     const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
     // Validation: No evidence files should be uploaded when updating to "no" or "not applicable"
-    if (isUpdatingToNo && req.files && req.files.length > 0) {
+    if (isUpdatingToNo && req.files?.['files'] && req.files['files'].length > 0) {
       await transaction.rollback(); // Rollback if files uploaded when answer is "no" or "not applicable"
       return res.status(400).json({
         success: false,
@@ -152,7 +159,7 @@ export const updateAnswer = async (req, res) => {
     }
 
     // Validation: Ensure evidence files are uploaded when updating to "yes"
-    if (isUpdatingToYes && (!req.files || req.files.length === 0)) {
+    if (isUpdatingToYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
       await transaction.rollback(); // Rollback if no files uploaded when the answer is "yes"
       return res.status(400).json({
         success: false,
@@ -175,8 +182,9 @@ export const updateAnswer = async (req, res) => {
 
     // Create new evidence files if the answer is "yes" and files are uploaded
     if (isUpdatingToYes) {
-      await Promise.all(req.files.map(async (file) => {
+      await Promise.all(req.files['files'].map(async (file) => {
         await EvidenceFile.create({
+          fileName: file.originalname,
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
@@ -191,7 +199,7 @@ export const updateAnswer = async (req, res) => {
       include: [{
         model: EvidenceFile,
         as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        attributes: ['id', 'filePath', 'fileName', 'createdAt', 'updatedAt'],
         order: [['createdAt', 'ASC']],
         include: [{
           model: User,

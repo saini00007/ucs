@@ -1,5 +1,5 @@
 import express from 'express';
-import { getRoles, getMasterDepartments } from '../controllers/master.js';
+import { getRoles, getMasterDepartments, getIndustrySectors } from '../controllers/master.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
 
@@ -18,5 +18,11 @@ router.get('/master-departments',
   checkAccess,
   getMasterDepartments
 );
+
+router.get('/industry-sectors',
+  attachResourceInfo('IndustrySector', null, null, 'list'),
+  checkAccess,
+  getIndustrySectors
+)
 
 export default router;

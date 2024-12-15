@@ -14,7 +14,8 @@ const resources = [
     { id: 'masterdepartment', resourceName: 'MasterDepartment' },
     { id: 'role', resourceName: 'Role' },
     { id: 'userdepartmentlink', resourceName: 'UserDepartmentLink' },
-    { id: 'report' , resourceName : 'Report'}
+    { id: 'report', resourceName: 'Report' },
+    { id: 'industrysector', resourceName: 'IndustrySector' }
 ];
 
 const seedResources = async () => {

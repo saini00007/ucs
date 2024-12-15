@@ -1,4 +1,4 @@
-import { Role, MasterDepartment } from '../models/index.js';
+import { Role, MasterDepartment, IndustrySector } from '../models/index.js';
 
 export const getRoles = async (req, res) => {
   try {
@@ -62,4 +62,25 @@ export const getMasterDepartments = async (req, res) => {
     res.status(500).json({ success: false, messages: ['Error fetching master departments'] });
   }
 };
+
+export const getIndustrySectors = async (req, res) => {
+  try {
+    const industrySectors = await IndustrySector.findAll();
+
+    if (industrySectors.length === 0) {
+      return res.status(404).json({ success: false, messages: ['No industry sectors found'] });
+    }
+    // Return the list of industry sectors in the response
+    res.status(200).json({
+      success: true,
+      messages: ['Industry Sectors retrieved successfully'],
+      industrySectors,
+    });
+  } catch (error) {
+    console.error('Error fetching industry sectors:', error); // Log the error for debugging purposes
+    // Return a 500 response if there was an issue fetching the master departments
+    res.status(500).json({ success: false, messages: ['Error fetching industry sectors'] });
+
+  }
+}
 

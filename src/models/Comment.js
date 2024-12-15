@@ -6,7 +6,6 @@ const Comment = sequelize.define('Comment', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   assessmentQuestionId: {
     type: DataTypes.UUID,
@@ -16,7 +15,6 @@ const Comment = sequelize.define('Comment', {
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'assessment_question_id',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -25,12 +23,10 @@ const Comment = sequelize.define('Comment', {
       key: 'id',
     },
     allowNull: false,
-    field: 'created_by_user_id',
   },
   commentText: {
     type: DataTypes.TEXT,
     allowNull: false,
-    field: 'comment_text',
     get() {
       const deletedAt = this.getDataValue('deletedAt');
       if (deletedAt) {

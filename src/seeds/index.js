@@ -9,6 +9,7 @@ import seedMasterDepartments from './masterDepartments.js';
 import seedMasterQuestions from './masterQuestions.js';
 import seedRoleResourceActionLinks from './roleResourceActionLinks.js';
 import initializeDatabase from '../initializeDatabase.js';
+import seedIndustrySectors from './industrySectors.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ const runSeeds = async () => {
         await seedRoleResourceActionLinks({ transaction });
         await seedSuperAdmins({ transaction });
         await seedMasterDepartments({ transaction });
+        await seedIndustrySectors({ transaction });
         await seedMasterQuestions();
         await transaction.commit();
         console.log('Seeding completed successfully!');

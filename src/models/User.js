@@ -18,7 +18,6 @@ const User = sequelize.define('User', {
   id: {
     type: DataTypes.STRING(12),
     primaryKey: true,
-    field: 'id',
   },
   username: {
     type: DataTypes.TEXT,
@@ -31,7 +30,7 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.TEXT,
     allowNull: false,
-    unique: true,  // Ensure email is unique
+    unique: true, 
   },
   roleId: {
     type: DataTypes.STRING,
@@ -40,12 +39,10 @@ const User = sequelize.define('User', {
       key: 'id',
     },
     allowNull: false,
-    field: 'role_id',
   },
   countryCode: {
     type: DataTypes.STRING(5),
     allowNull: true,
-    field: 'country_code',
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
@@ -63,7 +60,6 @@ const User = sequelize.define('User', {
       key: 'id',
     },
     onDelete: 'CASCADE',
-    field: 'company_id',
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
@@ -76,7 +72,6 @@ const User = sequelize.define('User', {
   phoneNumber: {
     type: DataTypes.STRING(10),
     allowNull: true,
-    field: 'phone_number',
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {

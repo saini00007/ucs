@@ -15,7 +15,6 @@ const RoleResourceActionLink = sequelize.define('RoleResourceActionLink', {
       model: 'roles', 
       key: 'id',
     },
-    field: 'role_id',
   },
   resourceId: {
     type: DataTypes.STRING,
@@ -24,7 +23,6 @@ const RoleResourceActionLink = sequelize.define('RoleResourceActionLink', {
       model: 'resources', 
       key: 'id',
     },
-    field: 'resource_id',
   },
   actionId: {
     type: DataTypes.STRING,
@@ -33,7 +31,6 @@ const RoleResourceActionLink = sequelize.define('RoleResourceActionLink', {
       model: 'actions',
       key: 'id',
     },
-    field: 'action_id',
   },
 }, {
   tableName: 'role_resource_actions',

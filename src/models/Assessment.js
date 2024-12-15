@@ -6,7 +6,6 @@ const Assessment = sequelize.define('Assessment', {
     type: DataTypes.UUID,
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
-    field: 'id',
   },
   departmentId: {
     type: DataTypes.UUID,
@@ -16,32 +15,26 @@ const Assessment = sequelize.define('Assessment', {
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'department_id',
   },
   assessmentName: {
     type: DataTypes.STRING,
     defaultValue: 'default',
-    field: 'assessment_name',
   },
   assessmentStarted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'assessment_started',
   },
   submitted: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    field: 'submitted',
   },
   startedAt: {
     type: DataTypes.DATE,
-    field: 'started_at',
     allowNull: true,
   },
   submittedAt: {
     type: DataTypes.DATE,
-    field: 'submitted_at',
-    allowNull: true, 
+    allowNull: true,
   }
 }, {
   tableName: 'assessments',

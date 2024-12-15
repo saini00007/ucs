@@ -16,7 +16,6 @@ const Answer = sequelize.define('Answer', {
     },
     allowNull: false,
     onDelete: 'CASCADE',
-    field: 'assessment_question_id',
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -25,11 +24,9 @@ const Answer = sequelize.define('Answer', {
       key: 'id',
     },
     allowNull: false,
-    field: 'created_by_user_id',
   },
   answerText: {
     type: DataTypes.TEXT,
-    field: 'answer_text',
   }
 }, {
   tableName: 'answers',
