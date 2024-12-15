@@ -43,7 +43,7 @@ const validateEmailForUser = async (email, userId = null, roleId = null, company
             });
 
             if (existingCompanyEmail) {
-                return { isValid: false, message: 'Email is already in use by a company' };
+                return { isValid: false, message: 'Email already in use' };
             }
         }
 
