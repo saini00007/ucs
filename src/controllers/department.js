@@ -14,9 +14,11 @@ import {
 } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
+import AppError from '../utils/AppError.js';
 
-export const getDepartmentById = async (req, res) => {
+export const getDepartmentById = async (req, res, next) => {
     const { departmentId } = req.params;
+
     try {
         // Fetch the department by its ID, including associated Company and MasterDepartment details
         const department = await Department.findByPk(departmentId, {
@@ -34,20 +36,21 @@ export const getDepartmentById = async (req, res) => {
             ],
         });
 
-        // If the department is not found, return a 404 response
+        // If the department is not found, throw an error
         if (!department) {
-            return res.status(404).json({ success: false, messages: ['Department not found'] });
+            throw new AppError('Department not found', 404);
         }
 
         // Return the department details in the response
         res.status(200).json({ success: true, department: department });
     } catch (error) {
         console.error('Error fetching department:', error);
-        res.status(500).json({ success: false, messages: ['Failed to fetch department'] });
+        next(error);
     }
 };
 
-export const createDepartment = async (req, res) => {
+
+export const createDepartment = async (req, res, next) => {
     const { departmentName, masterDepartmentId, companyId } = req.body;
 
     // Start a new transaction
@@ -57,15 +60,13 @@ export const createDepartment = async (req, res) => {
         // Check if the company exists
         const company = await Company.findByPk(companyId, { transaction });
         if (!company) {
-            await transaction.rollback();
-            return res.status(400).json({ success: false, messages: ['Invalid company ID'] });
+            throw new AppError('Invalid company ID', 400);
         }
 
         // Check if the master department exists
         const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
         if (!masterDepartment) {
-            await transaction.rollback();
-            return res.status(400).json({ success: false, messages: ['Invalid master department ID'] });
+            throw new AppError('Invalid master department ID', 400);
         }
 
         // Create the new department
@@ -93,12 +94,10 @@ export const createDepartment = async (req, res) => {
 
         // Create assessment questions for each linked question
         await Promise.all(questions.map(async (qdl) => {
-
             await AssessmentQuestion.create({
                 assessmentId: newAssessment.id,
                 masterQuestionId: qdl.masterQuestionId,
             }, { transaction });
-
         }));
 
         // Commit the transaction
@@ -121,255 +120,233 @@ export const createDepartment = async (req, res) => {
     } catch (error) {
         console.error('Error creating department:', error);
         await transaction.rollback();
-        res.status(500).json({ success: false, messages: ['Failed to create department'] });
+        next(error);
     }
 };
 
-export const updateDepartment = async (req, res) => {
+export const updateDepartment = async (req, res, next) => {
     const { departmentId } = req.params;
     const { departmentName, masterDepartmentId } = req.body;
-
+  
     const transaction = await sequelize.transaction();
-
+  
     try {
-        const department = await Department.findByPk(departmentId, { transaction });
-        if (!department) {
-            await transaction.rollback();
-            return res.status(404).json({
-                success: false,
-                messages: ['Department not found']
-            });
+      const department = await Department.findByPk(departmentId, { transaction });
+      if (!department) {
+        throw new AppError('Department not found', 404);
+      }
+  
+      if (departmentName) {
+        department.departmentName = departmentName;
+      }
+  
+      if (masterDepartmentId) {
+        const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
+        if (!masterDepartment) {
+          throw new AppError('Invalid master department ID', 400);
         }
-
-        if (departmentName) {
-            department.departmentName = departmentName;
-        }
-
-        if (masterDepartmentId) {
-            const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
-            if (!masterDepartment) {
-                await transaction.rollback();
-                return res.status(400).json({
-                    success: false,
-                    messages: ['Invalid master department ID']
-                });
-            }
-
-            // Check if master department is changing
-            if (department.masterDepartmentId !== masterDepartmentId) {
-                // Check for started assessments
-                const startedAssessments = await Assessment.findAll({
-                    where: {
-                        departmentId,
-                        assessmentStarted: true
-                    },
-                    transaction
-                });
-
-                if (startedAssessments.length > 0) {
-                    await transaction.rollback();
-                    return res.status(400).json({
-                        success: false,
-                        messages: ['Could not update department because some assessments are in progress']
-                    });
-                }
-
-                const assessments = await Assessment.findAll({
-                    where: { departmentId },
-                    attributes: ['id'],
-                    transaction
-                });
-
-                const assessmentIds = assessments.map(assessment => assessment.id);
-
-                //  Delete associated assessment questions
-                await AssessmentQuestion.destroy({
-                    where: {
-                        assessmentId: {
-                            [Op.in]: assessmentIds
-                        }
-                    },
-                    transaction
-                });
-
-
-                // Delete old assessment
-                await Assessment.destroy({
-                    where: { departmentId },
-                    transaction
-                });
-
-                // Create new assessment
-                const newAssessment = await Assessment.create({
-                    departmentId
-                }, { transaction });
-
-                // Get questions for new master department
-                const questions = await QuestionDepartmentLink.findAll({
-                    where: { masterDepartmentId },
-                    transaction
-                });
-
-                // Create new assessment questions
-                await Promise.all(questions.map(async (qdl) => {
-                    await AssessmentQuestion.create({
-                        assessmentId: newAssessment.id,
-                        masterQuestionId: qdl.masterQuestionId
-                    }, { transaction });
-                }));
-
-                department.masterDepartmentId = masterDepartmentId;
-            }
-        }
-
-        await department.save({ transaction });
-
-        const updatedDepartment = await Department.findByPk(department.id, {
-            include: [
-                { model: Company, as: 'company', attributes: ['companyName'] },
-                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
-            ],
+  
+        // Check if master department is changing
+        if (department.masterDepartmentId !== masterDepartmentId) {
+          // Check for started assessments
+          const startedAssessments = await Assessment.findAll({
+            where: {
+              departmentId,
+              assessmentStarted: true
+            },
             transaction
-        });
-
-        await transaction.commit();
-
-        res.status(200).json({
-            success: true,
-            messages: ['Department updated successfully'],
-            department: updatedDepartment
-        });
-
+          });
+  
+          if (startedAssessments.length > 0) {
+            throw new AppError('Could not update department because some assessments are in progress', 400);
+          }
+  
+          const assessments = await Assessment.findAll({
+            where: { departmentId },
+            attributes: ['id'],
+            transaction
+          });
+  
+          const assessmentIds = assessments.map(assessment => assessment.id);
+  
+          // Delete associated assessment questions
+          await AssessmentQuestion.destroy({
+            where: {
+              assessmentId: {
+                [Op.in]: assessmentIds
+              }
+            },
+            transaction
+          });
+  
+          // Delete old assessment
+          await Assessment.destroy({
+            where: { departmentId },
+            transaction
+          });
+  
+          // Create new assessment
+          const newAssessment = await Assessment.create({
+            departmentId
+          }, { transaction });
+  
+          // Get questions for new master department
+          const questions = await QuestionDepartmentLink.findAll({
+            where: { masterDepartmentId },
+            transaction
+          });
+  
+          // Create new assessment questions
+          await Promise.all(questions.map(async (qdl) => {
+            await AssessmentQuestion.create({
+              assessmentId: newAssessment.id,
+              masterQuestionId: qdl.masterQuestionId
+            }, { transaction });
+          }));
+  
+          department.masterDepartmentId = masterDepartmentId;
+        }
+      }
+  
+      await department.save({ transaction });
+  
+      const updatedDepartment = await Department.findByPk(department.id, {
+        include: [
+          { model: Company, as: 'company', attributes: ['companyName'] },
+          { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
+        ],
+        transaction
+      });
+  
+      await transaction.commit();
+  
+      res.status(200).json({
+        success: true,
+        messages: ['Department updated successfully'],
+        department: updatedDepartment
+      });
+  
     } catch (error) {
-        await transaction.rollback();
-        console.error('Error updating department:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Failed to update department']
-        });
+      await transaction.rollback();
+      console.error('Error updating department:', error);
+      next(error);
     }
-};
-
-export const deleteDepartment = async (req, res) => {
+  };
+  
+  export const deleteDepartment = async (req, res, next) => {
     const { departmentId } = req.params;
-
     const transaction = await sequelize.transaction();
-
+ 
     try {
+        // Check if department exists first
+        const department = await Department.findByPk(departmentId);
+        if (!department) {
+            throw new AppError('Department not found', 404);
+        }
+ 
         // Find all assessments associated with the department
         const assessments = await Assessment.findAll({
             where: { departmentId },
             attributes: ['id'],
             transaction,
         });
-
+ 
         const assessmentIds = assessments.map(assessment => assessment.id);
-
+ 
         // Find all assessment questions related to the assessments
         const assessmentQuestions = await AssessmentQuestion.findAll({
             where: { assessmentId: { [Op.in]: assessmentIds } },
             attributes: ['id'],
             transaction,
         });
-
+ 
         const assessmentQuestionIds = assessmentQuestions.map(q => q.id);
-
+ 
         // Find all answers related to the assessment questions
         const answers = await Answer.findAll({
             where: { assessmentQuestionId: { [Op.in]: assessmentQuestionIds } },
             attributes: ['id'],
             transaction,
         });
-
+ 
         const answerIds = answers.map(a => a.id);
-
+ 
         // Find all evidence files related to the answers
         const evidenceFiles = await EvidenceFile.findAll({
             where: { answerId: { [Op.in]: answerIds } },
             attributes: ['id'],
             transaction,
         });
-
+ 
         const evidenceFileIds = evidenceFiles.map(e => e.id);
-
+ 
         // Find all comments related to the assessment questions
         const comments = await Comment.findAll({
             where: { assessmentQuestionId: { [Op.in]: assessmentQuestionIds } },
             attributes: ['id'],
             transaction,
         });
-
-        // Delete comments
+ 
+        // Delete all related records
         await Comment.destroy({
             where: { id: { [Op.in]: comments.map(c => c.id) } },
             transaction,
         });
-
-        // Delete evidence files
+ 
         await EvidenceFile.destroy({
             where: { id: { [Op.in]: evidenceFileIds } },
             transaction,
         });
-
-        // Delete answers
+ 
         await Answer.destroy({
             where: { id: { [Op.in]: answerIds } },
             transaction,
         });
-
-        // Delete assessment questions
+ 
         await AssessmentQuestion.destroy({
             where: { id: { [Op.in]: assessmentQuestionIds } },
             transaction,
         });
-
-        // Delete assessments
+ 
         await Assessment.destroy({
             where: { id: { [Op.in]: assessmentIds } },
             transaction,
         });
-
-        // Delete user-department links
+ 
         await UserDepartmentLink.destroy({
             where: { departmentId },
             transaction,
         });
-
-        // Delete the department
-        const deleted = await Department.destroy({
+ 
+        await Department.destroy({
             where: { id: departmentId },
             transaction,
         });
-
-        if (deleted === 0) {
-            await transaction.rollback();
-            return res.status(404).json({
-                success: false,
-                messages: ['Department not found or already deleted'],
-            });
-        }
-
+ 
         await transaction.commit();
-
-        return res.status(200).json({
+ 
+        res.status(200).json({
             success: true,
             messages: ['Department and related records deleted successfully'],
         });
+ 
     } catch (error) {
         await transaction.rollback();
-
-        console.error('Error deleting department and related records:', error);
-        return res.status(500).json({
-            success: false,
-            messages: ['Error deleting department and related records'],
-        });
+        next(error);
     }
-};
+ };
 
-export const getAssessmentByDepartmentId = async (req, res) => {
+export const getAssessmentByDepartmentId = async (req, res, next) => {
     const { departmentId } = req.params;
 
     try {
+        // First check if department exists
+        const department = await Department.findByPk(departmentId);
+        
+        if (!department) {
+            throw new AppError('Department not found', 404);
+        }
+
         // Find all assessments associated with the given department ID
         const assessments = await Assessment.findAll({
             where: { departmentId },
@@ -378,33 +355,43 @@ export const getAssessmentByDepartmentId = async (req, res) => {
             ],
         });
 
-        // If no assessments are found, return a 404 error response
+        // If no assessments are found
         if (!assessments || assessments.length === 0) {
-            return res.status(404).json({
-                success: false,
-                messages: ['No assessments found for the given department'],
-            });
+            throw new AppError('No assessments found for the given department', 404);
         }
 
-        // Return the assessments with a success message
+        // Return the assessments
         res.status(200).json({
             success: true,
             messages: ['Assessments retrieved successfully'],
             assessments,
         });
+
     } catch (error) {
-        // Log and return an error response in case of any issues
-        console.error('Error fetching assessments:', error);
-        res.status(500).json({ success: false, messages: ['Error fetching assessments'] });
+        next(error);
     }
 };
 
-export const getUsersByDepartmentId = async (req, res) => {
+export const getUsersByDepartmentId = async (req, res, next) => {
     const { departmentId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
     try {
-        // Fetch users associated with the given department ID, including pagination
+        // Validate department exists first
+        const department = await Department.findByPk(departmentId);
+        if (!department) {
+            throw new AppError('Department not found', 404);
+        }
+
+        // Validate pagination params
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+
+        if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+            throw new AppError('Invalid pagination parameters', 400);
+        }
+
+        // Fetch users associated with the given department ID
         const { count, rows: users } = await User.findAndCountAll({
             include: [
                 {
@@ -414,62 +401,36 @@ export const getUsersByDepartmentId = async (req, res) => {
                     through: {
                         attributes: []
                     },
-                    // Filter by departmentId if provided
                     where: departmentId ? { id: departmentId } : {},
                 },
             ],
-            // Exclude sensitive information from the user attributes
             attributes: { exclude: ['password', 'deletedAt'] },
-            // Apply pagination
-            limit: parseInt(limit, 10),
-            offset: (page - 1) * limit,
+            limit: limitNum,
+            offset: (pageNum - 1) * limitNum,
         });
 
-        // If no users are found, return an empty response with pagination info
-        if (count === 0) {
-            return res.status(200).json({
-                success: true,
-                messages: ['No users found'],
-                users: [],
-                pagination: {
-                    totalItems: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    itemsPerPage: limit
-                },
-            });
+        // Calculate pagination info
+        const totalPages = Math.ceil(count / limitNum);
+
+        // Check if page exists
+        if (pageNum > totalPages && count > 0) {
+            throw new AppError('Page not found', 404);
         }
 
-        // Calculate total number of pages based on the limit
-        const totalPages = Math.ceil(count / limit);
-
-        // If the requested page exceeds total pages, return a 404 error
-        if (page > totalPages) {
-            return res.status(404).json({
-                success: false,
-                messages: ['Page not found'],
-            });
-        }
-
-        // Return the users with success message and pagination info
+        // Return response with pagination
         res.status(200).json({
             success: true,
-            messages: ['Users retrieved successfully'],
-            users: users,
+            messages: count === 0 ? ['No users found'] : ['Users retrieved successfully'],
+            users,
             pagination: {
                 totalItems: count,
                 totalPages,
-                currentPage: page,
-                itemsPerPage: limit
+                currentPage: pageNum,
+                itemsPerPage: limitNum
             },
         });
+
     } catch (error) {
-        // Log and return an error response in case of any issues
-        console.error('Error fetching users by department:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Error fetching users'],
-            error: error.message,
-        });
+        next(error);
     }
 };

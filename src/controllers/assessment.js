@@ -1,7 +1,8 @@
 import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment } from '../models/index.js';
 import { checkAssessmentState } from '../utils/accessValidators.js';
+import AppError from '../utils/AppError.js';
 
-export const startAssessment = async (req, res) => {
+export const startAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
 
   try {
@@ -10,15 +11,12 @@ export const startAssessment = async (req, res) => {
 
     // If the assessment is not found, return a 404 error
     if (!assessment) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // If the assessment has already been started, return a 400 error
     if (assessment.assessmentStarted) {
-      return res.status(400).json({
-        success: false,
-        messages: ['Assessment has already been started'],
-      });
+      throw new AppError('Assessment has already been started', 400);
     }
 
     // Update the assessment to mark it as started and set the start time
@@ -35,7 +33,7 @@ export const startAssessment = async (req, res) => {
 
     // If no rows were updated, return a 404 error
     if (updatedCount === 0) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // Return a success response with the updated assessment
@@ -47,12 +45,11 @@ export const startAssessment = async (req, res) => {
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
     console.error('Error marking assessment as started:', error);
-    res.status(500).json({ success: false, messages: ['Error marking assessment as started'] });
+    next(error);
   }
 };
 
-
-export const submitAssessment = async (req, res) => {
+export const submitAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
 
   try {
@@ -63,23 +60,17 @@ export const submitAssessment = async (req, res) => {
 
     // If the assessment is not found, return a 404 error
     if (!assessment) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // If the assessment has not been started, return a 400 error
     if (!assessment.assessmentStarted) {
-      return res.status(400).json({
-        success: false,
-        messages: ['Assessment must be started before submission'],
-      });
+      throw new AppError('Assessment must be started before submission', 400);
     }
 
     // If the assessment has already been submitted, return a 400 error
     if (assessment.submitted) {
-      return res.status(400).json({
-        success: false,
-        messages: ['Assessment has already been submitted'],
-      });
+      throw new AppError('Assessment has already been submitted', 400);
     }
 
     // Update the assessment to mark it as submitted and set the submission time
@@ -103,12 +94,11 @@ export const submitAssessment = async (req, res) => {
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
     console.error('Error submitting assessment:', error);
-    res.status(500).json({ success: false, messages: ['Error submitting assessment'] });
+    next(error);
   }
 };
 
-
-export const getAssessmentById = async (req, res) => {
+export const getAssessmentById = async (req, res, next) => {
   const { assessmentId } = req.params;
 
   try {
@@ -122,7 +112,7 @@ export const getAssessmentById = async (req, res) => {
 
     // If the assessment is not found, return a 404 error
     if (!assessment) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // Return a success response with the found assessment
@@ -134,12 +124,11 @@ export const getAssessmentById = async (req, res) => {
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
     console.error('Error fetching assessment:', error);
-    res.status(500).json({ success: false, messages: ['Error fetching assessment'] });
+    next(error);
   }
 };
 
-
-export const reopenAssessment = async (req, res) => {
+export const reopenAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
 
   try {
@@ -148,15 +137,12 @@ export const reopenAssessment = async (req, res) => {
 
     // If the assessment is not found, return a 404 error
     if (!assessment) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // If the assessment has not been submitted, it cannot be reopened
     if (!assessment.submitted) {
-      return res.status(400).json({
-        success: false,
-        messages: ['Assessment is not submitted, cannot reopen'],
-      });
+      throw new AppError('Assessment is not submitted, cannot reopen', 400);
     }
 
     // Update the assessment to mark it as not submitted and clear the submittedAt date
@@ -173,7 +159,7 @@ export const reopenAssessment = async (req, res) => {
 
     // If no assessments were updated, return a 404 error
     if (updatedCount === 0) {
-      return res.status(404).json({ success: false, messages: ['Assessment not found'] });
+      throw new AppError('Assessment not found', 404);
     }
 
     // Return a success response with the updated assessment
@@ -185,12 +171,11 @@ export const reopenAssessment = async (req, res) => {
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
     console.error('Error reopening assessment:', error);
-    res.status(500).json({ success: false, messages: ['Error reopening assessment'] });
+    next(error);
   }
 };
 
-
-export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
+export const getAssessmentQuestionsByAssessmentId = async (req, res, next) => {
   const { assessmentId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
@@ -201,21 +186,18 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
       attributes: ['assessmentStarted', 'submitted'],
     });
 
-    // If assessment is not found deny access
+    // If assessment is not found, deny access
     if (!assessment) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Assessment not found'],
-      });
+      throw new AppError('Assessment not found', 404);
     }
 
     const assessmentState = checkAssessmentState(assessment);
 
     if (!assessmentState.success) {
-      return res.status(assessmentState.status || 403).json({
-        success: false,
-        messages: [req.user.roleId === 'superadmin' ? assessmentState.message || 'Access denied: Insufficient content permissions.' : 'Access denied: Insufficient content permissions.']
-      })
+      throw new AppError(
+        req.user.roleId === 'superadmin' ? assessmentState.message || 'Access denied: Insufficient content permissions.' : 'Access denied: Insufficient content permissions.',
+        assessmentState.status || 403
+      );
     }
 
     // Fetch the questions for the assessment with pagination
@@ -289,10 +271,7 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
 
     // If the requested page is out of range, return a 404 error
     if (page > totalPages) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Page not found'],
-      });
+      throw new AppError('Page not found', 404);
     }
 
     // Return the questions with pagination details
@@ -310,10 +289,8 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res) => {
   } catch (error) {
     // Log the error and return a 500 server error if anything goes wrong
     console.error('Error fetching assessment questions:', error);
-    res.status(500).json({
-      success: false,
-      messages: ['Internal server error'],
-    });
+    next(error);
   }
 };
+
 

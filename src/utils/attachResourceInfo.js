@@ -1,9 +1,9 @@
+import AppError from '../utils/AppError.js';
+
 const attachResourceInfo = (roleResourceType, contentResourceType, contentResourceId, actionId) => {
     return (req, res, next) => {
         try {
-            if (
-                !contentResourceId
-            ) {
+            if (!contentResourceId) {
                 req.contentResourceId = null;
             } else {
                 // Otherwise, attempt to get the contentResourceId from request parameters.
@@ -22,12 +22,10 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
             return next();
 
         } catch (error) {
-            // Catch and log any errors
+            // Using AppError for structured error handling
             console.error('Error in attachResourceInfo middleware:', error);
-            return res.status(500).json({
-                success: false,
-                messages: ['Internal Server Error: An unexpected error occurred.'],
-            });
+
+            return next(error);
         }
     };
 };

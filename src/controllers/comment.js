@@ -1,6 +1,7 @@
-import {User,Comment,AssessmentQuestion} from '../models/index.js';
+import { User, Comment, AssessmentQuestion } from '../models/index.js';
+import AppError from '../utils/AppError.js';
 
-export const createComment = async (req, res) => {
+export const createComment = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
   const { commentText } = req.body;
 
@@ -10,7 +11,7 @@ export const createComment = async (req, res) => {
 
     // If no assessment question is found, return a 404 error
     if (!assessmentQuestion) {
-      return res.status(404).json({ success: false, messages: ['No associated assessmentQuestion found'] });
+      throw new AppError('No associated assessmentQuestion found', 404);
     }
 
     // Create a new comment associated with the assessment question and user
@@ -35,12 +36,11 @@ export const createComment = async (req, res) => {
   } catch (error) {
     console.error(error);
     // Return error response in case of failure
-    return res.status(500).json({ success: false, messages: ['Error creating comment'], error: error.message });
+    next(error);
   }
 };
 
-
-export const getCommentById = async (req, res) => {
+export const getCommentById = async (req, res, next) => {
   const { commentId } = req.params;
 
   try {
@@ -59,16 +59,15 @@ export const getCommentById = async (req, res) => {
     }
 
     // If no comment is found, return a 404 error
-    return res.status(404).json({ success: false, messages: ['Comment not found'] });
+    throw new AppError('Comment not found', 404);
   } catch (error) {
     console.error(error);
     // Return an error response if something goes wrong
-    return res.status(500).json({ success: false, messages: ['Error retrieving comment'], error: error.message });
+    next(error);
   }
 };
 
-
-export const updateComment = async (req, res) => {
+export const updateComment = async (req, res, next) => {
   const { commentId } = req.params;
   const { commentText } = req.body;
 
@@ -83,7 +82,7 @@ export const updateComment = async (req, res) => {
 
     // If the comment is not found, return a 404 error
     if (!comment) {
-      return res.status(404).json({ success: false, messages: ['Comment not found'] });
+      throw new AppError('Comment not found', 404);
     }
 
     // Calculate the time difference between the current time and the comment's creation time
@@ -92,10 +91,7 @@ export const updateComment = async (req, res) => {
 
     // If the time limit for updating the comment has passed, return a 403 error
     if (currentTime - commentCreationTime > UPDATE_TIME_LIMIT) {
-      return res.status(403).json({
-        success: false,
-        messages: ['Time limit exceeded. You can no longer update this comment.']
-      });
+      throw new AppError('Time limit exceeded. You can no longer update this comment.', 403);
     }
 
     // Update the comment text with the new value
@@ -112,18 +108,14 @@ export const updateComment = async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error('Error updating comment:', error);
     // Return a 500 error response if something goes wrong during the update
-    return res.status(500).json({
-      success: false,
-      messages: ['Error updating comment'],
-      error: error.message,
-    });
+    next(error);
   }
 };
 
 
-export const deleteComment = async (req, res) => {
+export const deleteComment = async (req, res, next) => {
   const { commentId } = req.params;  // Extract the comment ID from the URL parameters
 
   try {
@@ -134,10 +126,7 @@ export const deleteComment = async (req, res) => {
 
     // If no rows were deleted, the comment was not found or it has already been deleted
     if (rowsDeleted === 0) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Comment not found or already deleted'],
-      });
+      throw new AppError('Comment not found or already deleted', 404);
     }
 
     // Return success response if the comment was deleted successfully
@@ -146,15 +135,12 @@ export const deleteComment = async (req, res) => {
       messages: ['Comment deleted successfully'],
     });
   } catch (error) {
-    console.error(error);  // Log the error for debugging purposes
+    console.error('Error deleting comment:', error);  // Log the error for debugging purposes
     // Return an error response if the deletion process fails
-    return res.status(500).json({
-      success: false,
-      messages: ['Error deleting comment'],
-      error: error.message,
-    });
+    next(error);
   }
 };
+
 
 
 

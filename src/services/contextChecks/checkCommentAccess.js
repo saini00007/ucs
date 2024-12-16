@@ -1,5 +1,6 @@
 import { Comment, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 import { checkAccessScope, checkAssessmentState } from "../../utils/accessValidators.js";
+import AppError from "../../utils/AppError.js";
 
 const checkCommentAccess = async (user, resourceId, actionId) => {
     try {
@@ -21,11 +22,8 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
         });
 
         if (!comment) {
-            return {
-                success: false,
-                message: 'Comment not found',
-                status: 404
-            };
+            // If the comment is not found, return an error
+            throw new AppError('Comment not found', 404);
         }
 
         const assessment = comment.assessmentQuestion.assessment;
@@ -35,29 +33,30 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
         // Check access scope
         const accessScope = checkAccessScope(user, companyId, departmentId);
         if (!accessScope.success) {
-            return { success: false };
+            // If the user does not have access to the department or company, return an error
+            throw new AppError('Access denied: insufficient permissions', 403);
         }
 
         // Check assessment state
         const assessmentState = checkAssessmentState(assessment);
         if (!assessmentState.success) {
-            return { success: false, message: assessmentState.message, status: assessmentState.status };
+            // If the assessment state is not valid, return an error
+            throw new AppError(assessmentState.message || 'Assessment state is not valid', assessmentState.status || 400);
         }
 
         // Check owner permissions for update/delete
         if ((actionId === 'remove' || actionId === 'update') &&
             user.roleId !== 'superadmin' &&
             comment.createdByUserId !== user.id) {
-            return {
-                success: false
-            };
+            // If the user is not a superadmin and does not own the comment, deny access
+            throw new AppError('You do not have permission to modify this comment', 403);
         }
 
         return { success: true };
 
     } catch (error) {
         console.error("Error checking comment access:", error);
-        return { success: false, message: 'Internal server error', status: 500 };
+        throw error;
     }
 };
 

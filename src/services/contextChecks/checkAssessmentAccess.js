@@ -1,5 +1,6 @@
 import { Assessment, Department } from "../../models/index.js";
 import { checkAccessScope } from "../../utils/accessValidators.js";
+import AppError from "../../utils/AppError.js";
 
 const checkAssessmentAccess = async (user, resourceId) => {
     try {
@@ -11,25 +12,22 @@ const checkAssessmentAccess = async (user, resourceId) => {
         });
 
         if (!assessment) {
-            return {
-                success: false,
-                message: 'Assessment not found',
-                status: 404
-            };
+            throw new AppError('Assessment not found', 404);
         }
+
         const { companyId, id: departmentId } = assessment.department;
 
         // Check access scope
         const accessScope = checkAccessScope(user, companyId, departmentId);
         if (!accessScope.success) {
-            return { success: false };
+            throw new AppError('Access denied: insufficient permissions', 403);
         }
 
         return { success: true };
 
     } catch (error) {
         console.error("Error checking assessment access:", error);
-        return { success: false, message: 'Internal server error', status: 500 };
+        throw error;
     }
 };
 

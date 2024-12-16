@@ -1,7 +1,8 @@
 import { AssessmentQuestion, EvidenceFile, Answer, User } from '../models/index.js';
 import sequelize from '../config/db.js';
+import AppError from '../utils/AppError.js';
 
-export const createAnswer = async (req, res) => {
+export const createAnswer = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
   const { answerText } = req.body;
   const userId = req.user.id;
@@ -18,8 +19,7 @@ export const createAnswer = async (req, res) => {
     });
 
     if (!question) {
-      await transaction.rollback(); // Rollback if question not found
-      return res.status(404).json({ success: false, messages: ['Assessment question not found.'] });
+      throw new AppError('Assessment question not found.', 404);
     }
 
     // Check if an answer already exists for the question
@@ -29,30 +29,21 @@ export const createAnswer = async (req, res) => {
     });
 
     if (existingAnswer) {
-      await transaction.rollback(); // Rollback if answer exists
-      return res.status(400).json({ success: false, messages: ['Answer already exists for this question.'] });
+      throw new AppError('Answer already exists for this question.', 400);
     }
 
     // Validate that answerText is provided
     if (!answerText) {
-      await transaction.rollback(); // Rollback if no answer text
-      return res.status(400).json({ success: false, messages: ['Answer text is required.'] });
+      throw new AppError('Answer text is required.', 400);
     }
+
     // Validate that evidence files are uploaded if the answer is "yes"
     const isAnswerYes = answerText.toLowerCase() === "yes";
     if (isAnswerYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
-      await transaction.rollback(); // Rollback if no evidence files
-      return res.status(400).json({
-        success: false,
-        messages: ['Evidence files are required when the answer is "yes".'],
-      });
+      throw new AppError('Evidence files are required when the answer is "yes".', 400);
     }
     if (!isAnswerYes && req.files['files'] && req.files?.['files'].length > 0) {
-      await transaction.rollback(); // Rollback if files uploaded when answer is "no" or "not applicable"
-      return res.status(400).json({
-        success: false,
-        messages: ['No evidence files should be uploaded when the answer is "no" or "not applicable".'],
-      });
+      throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
     }
 
     // Create the answer
@@ -67,7 +58,7 @@ export const createAnswer = async (req, res) => {
       await Promise.all(req.files['files'].map(async (file) => {
         await EvidenceFile.create({
           fileName: file.originalname,
-          filePath: file.originalname,//have to change it to the path of external cloud storage
+          filePath: file.originalname, // have to change it to the path of external cloud storage
           pdfData: file.buffer,
           createdByUserId: userId,
           answerId: answer.id,
@@ -106,13 +97,13 @@ export const createAnswer = async (req, res) => {
       answer: refetchedAnswer,
     });
   } catch (error) {
+    transaction.rollback();
     console.error('Error creating answer:', error);
-    await transaction.rollback(); // Rollback transaction on error
-    res.status(500).json({ success: false, messages: ['Internal server error while creating answer.'] });
+    next(error);
   }
 };
 
-export const updateAnswer = async (req, res) => {
+export const updateAnswer = async (req, res, next) => {
   const { answerId } = req.params;
   const { answerText } = req.body;
   const userId = req.user.id;
@@ -133,8 +124,7 @@ export const updateAnswer = async (req, res) => {
     });
 
     if (!answer) {
-      await transaction.rollback(); // Rollback if answer not found
-      return res.status(404).json({ success: false, messages: ['Answer not found.'] });
+      throw new AppError('Answer not found.', 404);
     }
 
     // Check if the answer is being updated to "yes" or "no"
@@ -144,11 +134,7 @@ export const updateAnswer = async (req, res) => {
 
     // Validation: No evidence files should be uploaded when updating to "no" or "not applicable"
     if (isUpdatingToNo && req.files?.['files'] && req.files['files'].length > 0) {
-      await transaction.rollback(); // Rollback if files uploaded when answer is "no" or "not applicable"
-      return res.status(400).json({
-        success: false,
-        messages: ['No evidence files should be uploaded when the answer is "no" or "not applicable".'],
-      });
+      throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
     }
 
     // Remove existing evidence files if updating to "no"
@@ -160,11 +146,7 @@ export const updateAnswer = async (req, res) => {
 
     // Validation: Ensure evidence files are uploaded when updating to "yes"
     if (isUpdatingToYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
-      await transaction.rollback(); // Rollback if no files uploaded when the answer is "yes"
-      return res.status(400).json({
-        success: false,
-        messages: ['No files uploaded'],
-      });
+      throw new AppError('Evidence files are required when the answer is "yes".', 400);
     }
 
     // Update the answer text if it's different from the existing text
@@ -226,12 +208,12 @@ export const updateAnswer = async (req, res) => {
   } catch (error) {
     console.error('Error updating answer:', error);
     await transaction.rollback(); // Rollback transaction on error
-    res.status(500).json({ success: false, messages: ['Internal server error while updating answer.'] });
+    next(error);
   }
 };
 
-export const serveFile = async (req, res) => {
-  const { fileId } = req.params; // Extract file ID from the request parameters
+export const serveFile = async (req, res, next) => {
+  const { fileId } = req.params;
 
   try {
     // Find the evidence file by primary key (fileId)
@@ -239,7 +221,7 @@ export const serveFile = async (req, res) => {
 
     // If the file is not found, return a 404 response
     if (!evidenceFile) {
-      return res.status(404).json({ success: false, messages: ['File not found.'] });
+      throw new AppError('File not found.', 404);
     }
 
     // Destructure the filePath and pdfData from the found evidence file
@@ -256,7 +238,7 @@ export const serveFile = async (req, res) => {
     console.error('Error retrieving file data:', error);
 
     // Return a 500 error if something goes wrong while retrieving the file
-    res.status(500).json({ success: false, messages: ['Error retrieving file.'] });
+    next(error);
   }
 };
 

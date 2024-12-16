@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import AppError from '../utils/AppError.js'; // Assuming AppError is in the utils folder
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ const sendEmail = async (to, subject, text) => {
         console.log('Email sent successfully:', info.response);
     } catch (error) {
         console.error('Error sending email:', error);
-        throw new Error('Failed to send email');
+        throw new AppError('Failed to send email', 500);
     }
 };
 

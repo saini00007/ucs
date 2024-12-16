@@ -9,6 +9,7 @@ import {
   checkCommentAccess,
   checkUserAccess
 } from "./contextChecks/index.js";
+import AppError from "../utils/AppError.js";
 
 // Mapping of resource types to their corresponding access check functions.
 const resourceAccessCheckMap = {
@@ -34,10 +35,16 @@ const permissionsService = {
           actionId: actionId,
         },
       });
-      return { success: !!permission };
+
+      if (!permission) {
+        // If no permission is found, throw an error
+        throw new AppError('Permission not found for the user on the specified resource', 404);
+      }
+
+      return { success: true };
     } catch (error) {
       console.error(`Error checking role permission for user ${user.id} on resource ${resourceId}:`, error);
-      return { success: false };
+      throw error;
     }
   },
 
@@ -47,20 +54,24 @@ const permissionsService = {
     const contentAccessCheckFn = resourceAccessCheckMap[resourceType];
 
     if (!contentAccessCheckFn) {
-      console.log('Content access check function not found for resource type:', resourceType);
-      return { success: false, message: 'Resource type access check function not found', status: 400 };
+      // If no matching check function exists for the resource type, throw an error
+      throw new AppError('Resource type access check function not found', 400);
     }
 
     try {
-      // Call the access check function and return its result.
+      // Call the access check function and return its result
       const result = await contentAccessCheckFn(user, resourceId, actionId);
+
+      if (!result.success) {
+        // If the result indicates no access, throw an error
+        throw new AppError('Access denied', 403);
+      }
       return result;
     } catch (error) {
       console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
-      return { success: false, message: 'Internal server error', status: 500 };
+      throw error;
     }
   }
-
 };
 
 export default permissionsService;

@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 //authentication
 import authenticate from './middleware/authenticate.js';
+import errorHandler from './utils/errorHandler.js';
 
 //importing routes
 import companyRoutes from './routes/company.js';
@@ -45,6 +46,7 @@ app.use('/', answerRoutes);
 app.use('/', commentRoutes);
 app.use('/', masterRoutes);
 
+app.use(errorHandler);
 
 const startServer = async () => {
   try {

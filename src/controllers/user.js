@@ -4,122 +4,113 @@ import sequelize from '../config/db.js';
 import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
+import AppError from '../utils/AppError.js';
 
 const validateEmailForUser = async (email, userId = null, roleId = null, companyId = null) => {
-    try {
-        // Check existing user
-        const existingUser = await User.findOne({
+    // Check existing user
+    const existingUser = await User.findOne({
+        where: {
+            email,
+            ...(userId && { id: { [Op.ne]: userId } })
+        },
+        paranoid: false
+    });
+ 
+    if (existingUser) {
+        throw new AppError('Email already in use', 400);
+    }
+ 
+    // Admin email validation
+    if (roleId === 'admin' && companyId) {
+        const company = await Company.findByPk(companyId);
+        if (!company) {
+            throw new AppError('Company not found', 404);
+        }
+ 
+        if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
+            throw new AppError('Invalid email for admin role', 400);
+        }
+    } else {
+        // Non-admin email validations
+        const existingCompanyEmail = await Company.findOne({
             where: {
-                email,
-                ...(userId && { id: { [Op.ne]: userId } })
+                [Op.or]: [
+                    { primaryEmail: email },
+                    { secondaryEmail: email }
+                ]
             },
             paranoid: false
         });
-
-        if (existingUser) {
-            return { isValid: false, message: 'Email already in use' };
+ 
+        if (existingCompanyEmail) {
+            throw new AppError('Email already in use', 400);
         }
-
-        // Admin email validation
-        if (roleId === 'admin' && companyId) {
-            const company = await Company.findByPk(companyId);
-            if (!company) {
-                return { isValid: false, message: 'Company not found' };
-            }
-
-            if (![company.primaryEmail, company.secondaryEmail].includes(email)) {
-                return { isValid: false, message: 'Invalid email for admin role' };
-            }
-        } else {
-            // Non-admin email validations
-            const existingCompanyEmail = await Company.findOne({
-                where: {
-                    [Op.or]: [
-                        { primaryEmail: email },
-                        { secondaryEmail: email }
-                    ]
-                },
-                paranoid: false
-            });
-
-            if (existingCompanyEmail) {
-                return { isValid: false, message: 'Email already in use' };
-            }
-        }
-
-        return { isValid: true };
-    } catch (error) {
-        throw new Error('Error validating email: ' + error.message);
     }
-};
+ 
+    return { isValid: true };
+ };
 
-const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
-    try {
-        // Superadmin validation
-        if (targetRoleId === 'superadmin') {
-            return { isValid: false, message: 'Cannot assign superadmin role' };
-        }
-
-        // Admin role validations
-        if (currentUser.roleId === 'admin' && targetRoleId === 'admin') {
-            return { isValid: false, message: 'Admin cannot add admin' };
-        }
-
-        // Department manager validations
-        if (currentUser.roleId === 'departmentmanager' &&
-            ['admin', 'departmentmanager'].includes(targetRoleId)) {
-            return { isValid: false, message: 'Department Manager cannot add admin or department manager' };
-        }
-
-        // Role change validations
-        if (existingRoleId) {
-            if (existingRoleId === 'admin' && targetRoleId !== 'admin') {
-                return { isValid: false, message: 'Cannot change admin role' };
-            }
-
-            if (targetRoleId === 'admin' && existingRoleId !== 'admin') {
-                return { isValid: false, message: 'Cannot assign admin role' };
-            }
-
-            if (existingRoleId === 'departmentmanager' && targetRoleId !== 'departmentmanager') {
-                return { isValid: false, message: 'Cannot change departmentmanager role' };
-            }
-
-            if (targetRoleId === 'departmentmanager' && existingRoleId !== 'departmentmanager') {
-                return { isValid: false, message: 'Cannot assign departmentmanager role' };
-            }
-        }
-
-        return { isValid: true };
-    } catch (error) {
-        throw new Error('Error validating role assignment: ' + error.message);
+ const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
+    // Superadmin validation
+    if (targetRoleId === 'superadmin') {
+        throw new AppError('Cannot assign superadmin role', 403);
     }
-};
+ 
+    // Admin role validations
+    if (currentUser.roleId === 'admin' && targetRoleId === 'admin') {
+        throw new AppError('Admin cannot add admin', 403);
+    }
+ 
+    // Department manager validations
+    if (currentUser.roleId === 'departmentmanager' &&
+        ['admin', 'departmentmanager'].includes(targetRoleId)) {
+        throw new AppError('Department Manager cannot add admin or department manager', 403);
+    }
+ 
+    // Role change validations
+    if (existingRoleId) {
+        if (existingRoleId === 'admin' && targetRoleId !== 'admin') {
+            throw new AppError('Cannot change admin role', 403);
+        }
+ 
+        if (targetRoleId === 'admin' && existingRoleId !== 'admin') {
+            throw new AppError('Cannot assign admin role', 403);
+        }
+ 
+        if (existingRoleId === 'departmentmanager' && targetRoleId !== 'departmentmanager') {
+            throw new AppError('Cannot change departmentmanager role', 403);
+        }
+ 
+        if (targetRoleId === 'departmentmanager' && existingRoleId !== 'departmentmanager') {
+            throw new AppError('Cannot assign departmentmanager role', 403);
+        }
+    }
+ 
+    return { isValid: true };
+ };
 
 const validateAdminAssignment = async (companyId) => {
-    try {
-        const company = await Company.findByPk(companyId);
-        if (!company) {
-            return { isValid: false, message: 'Company not found' };
-        }
+   // Check if company exists
+   const company = await Company.findByPk(companyId);
+   if (!company) {
+       throw new AppError('Company not found', 404);
+   }
 
-        const existingAdmins = await User.findAll({
-            where: { companyId, roleId: 'admin' }
-        });
+   // Check existing admins count
+   const existingAdmins = await User.findAll({
+       where: { companyId, roleId: 'admin' }
+   });
 
-        if (existingAdmins.length >= 2) {
-            return { isValid: false, message: 'Only two admins are allowed for this company' };
-        }
+   if (existingAdmins.length >= 2) {
+       throw new AppError('Only two admins are allowed for this company', 400);
+   }
 
-        return { isValid: true };
-    } catch (error) {
-        throw new Error('Error validating admin assignment: ' + error.message);
-    }
+   return { isValid: true };
 };
 
-// Helper function to create user and send password reset email
-const createUser = async (userData, res) => {
+const createUser = async (userData, res, next) => {
     const transaction = await sequelize.transaction();
+    
     try {
         const hashedPassword = await bcrypt.hash(userData.password, 10);
         const { departmentId, ...trimmedUserData } = userData;
@@ -130,6 +121,11 @@ const createUser = async (userData, res) => {
         }, { transaction });
 
         if (departmentId) {
+            const department = await Department.findByPk(departmentId);
+            if (!department) {
+                throw new AppError('Department not found', 404);
+            }
+
             await UserDepartmentLink.create({
                 userId: user.id,
                 departmentId
@@ -148,7 +144,6 @@ const createUser = async (userData, res) => {
             transaction
         });
 
-        // Send password setup email
         const token = generateToken(user.id, 'reset-password');
         const resetLink = `http://localhost:3000/set-password?token=${token}`;
         await sendEmail(
@@ -157,70 +152,51 @@ const createUser = async (userData, res) => {
             `Hi ${userData.username},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`
         );
 
-        // Commit the transaction
         await transaction.commit();
 
-        return res.status(201).json({
+        res.status(201).json({
             success: true,
             messages: ['User added successfully, password setup email sent'],
             user: userWithDepartments
         });
+
     } catch (error) {
         await transaction.rollback();
-        console.error('Error creating user:', error);
-        return res.status(500).json({
-            success: false,
-            messages: ['Error adding user'],
-            error: error.message
-        });
+        next(error);
     }
 };
 
-export const addUser = async (req, res) => {
+export const addUser = async (req, res, next) => {
     const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
     const currentUser = req.user;
     const password = "root@7ji";
 
     try {
-        // Email validation
-        const emailValidation = await validateEmailForUser(email, null, roleId, companyId);
-        if (!emailValidation.isValid) {
-            return res.status(409).json({
-                success: false,
-                messages: [emailValidation.message]
-            });
-        }
+        // Since validation functions now throw AppError, we don't need to check isValid
+        await validateEmailForUser(email, null, roleId, companyId);
+        await validateRoleAssignment(currentUser, roleId);
 
-        // Role validation
-        const roleValidation = await validateRoleAssignment(currentUser, roleId);
-        if (!roleValidation.isValid) {
-            return res.status(403).json({
-                success: false,
-                messages: [roleValidation.message]
-            });
-        }
-
-        // Admin validation 
         if (roleId === 'admin') {
-            const adminValidation = await validateAdminAssignment(companyId);
-            if (!adminValidation.isValid) {
-                return res.status(422).json({
-                    success: false,
-                    messages: [adminValidation.message]
-                });
-            }
+            await validateAdminAssignment(companyId);
+            // For admin role, create user with provided company
+            await createUser({
+                username,
+                password,
+                email,
+                roleId,
+                companyId,
+                phoneNumber,
+                countryCode
+            }, res, next);
         } else {
             // For non-admin roles, check department exists
             const department = await Department.findOne({ where: { id: departmentId } });
             if (!department) {
-                return res.status(404).json({
-                    success: false,
-                    messages: ['Department not found']
-                });
+                throw new AppError('Department not found', 404);
             }
 
             // For non-admin roles, create user with department's company
-            return await createUser({
+            await createUser({
                 username,
                 password,
                 email,
@@ -229,30 +205,15 @@ export const addUser = async (req, res) => {
                 companyId: department.companyId,
                 phoneNumber,
                 countryCode
-            }, res);
+            }, res, next);
         }
 
-        // For admin role, create user with provided company
-        return await createUser({
-            username,
-            password,
-            email,
-            roleId,
-            companyId,
-            phoneNumber,
-            countryCode
-        }, res);
-
     } catch (error) {
-        console.error('Error adding user:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Server error']
-        });
+        next(error);
     }
 };
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (req, res, next) => {
     const { userId } = req.params;
     const { username, email, roleId, phoneNumber } = req.body;
 
@@ -260,35 +221,17 @@ export const updateUser = async (req, res) => {
     try {
         const user = await User.findOne({ where: { id: userId }, transaction });
         if (!user) {
-            await transaction.rollback();
-            return res.status(404).json({
-                success: false,
-                messages: ['User not found']
-            });
+            throw new AppError('User not found', 404);
         }
 
         // Email validation if email is being updated
         if (email && email !== user.email) {
-            const emailValidation = await validateEmailForUser(email, userId, roleId || user.roleId, user.companyId);
-            if (!emailValidation.isValid) {
-                await transaction.rollback();
-                return res.status(409).json({
-                    success: false,
-                    messages: [emailValidation.message]
-                });
-            }
+            await validateEmailForUser(email, userId, roleId || user.roleId, user.companyId);
         }
 
         // Role validation if role is being updated
         if (roleId && roleId !== user.roleId) {
-            const roleValidation = await validateRoleAssignment(req.user, roleId, user.roleId);
-            if (!roleValidation.isValid) {
-                await transaction.rollback();
-                return res.status(403).json({
-                    success: false,
-                    messages: [roleValidation.message]
-                });
-            }
+            await validateRoleAssignment(req.user, roleId, user.roleId);
         }
 
         // Update user fields
@@ -312,7 +255,6 @@ export const updateUser = async (req, res) => {
             transaction
         });
 
-        // Commit the transaction
         await transaction.commit();
 
         res.status(200).json({
@@ -323,19 +265,13 @@ export const updateUser = async (req, res) => {
 
     } catch (error) {
         await transaction.rollback();
-        console.error('Error updating user:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Error updating user'],
-            error: error.message
-        });
+        next(error);
     }
 };
 
-export const deleteUser = async (req, res) => {
+export const deleteUser = async (req, res, next) => {
     const { userId } = req.params;
     const requestingUserRoleId = req.user.roleId;
-
     const transaction = await sequelize.transaction();
 
     try {
@@ -343,8 +279,7 @@ export const deleteUser = async (req, res) => {
         const userToDelete = await User.findByPk(userId);
 
         if (!userToDelete) {
-            await transaction.rollback();
-            return res.status(404).json({ success: false, messages: ['User not found'] });
+            throw new AppError('User not found', 404);
         }
 
         const userToDeleteRoleId = userToDelete.roleId;
@@ -356,8 +291,7 @@ export const deleteUser = async (req, res) => {
             (requestingUserRoleId === 'departmentmanager' && ['assessor', 'reviewer'].includes(userToDeleteRoleId));
 
         if (!canDelete) {
-            await transaction.rollback();
-            return res.status(403).json({ success: false, messages: ['Unauthorized to delete this user'] });
+            throw new AppError('Unauthorized to delete this user', 403);
         }
 
         // Delete UserDepartmentLink records associated with the user
@@ -367,58 +301,61 @@ export const deleteUser = async (req, res) => {
         });
 
         // Delete the user record
-        const deleted = await User.destroy({ where: { id: userId }, transaction });
+        await User.destroy({ 
+            where: { id: userId }, 
+            transaction 
+        });
 
-        if (!deleted) {
-            await transaction.rollback();
-            return res.status(404).json({ success: false, messages: ['User not found'] });
-        }
-
-        // Commit the transaction if all deletions succeeded
         await transaction.commit();
-        res.status(200).json({ success: true, messages: ['User deleted successfully'] });
+
+        res.status(200).json({ 
+            success: true, 
+            messages: ['User deleted successfully'] 
+        });
+
     } catch (error) {
-        // Rollback the transaction in case of any error
         await transaction.rollback();
-        console.error('Error deleting user:', error);
-        res.status(500).json({ success: false, messages: ['Error deleting user'] });
+        next(error);
     }
 };
 
-export const getUserById = async (req, res) => {
-    const { userId } = req.params;
-
+export const getUserById = async (req, res, next) => {
     try {
+        const { userId } = req.params;
+
         // Fetch user by primary key and include related departments
         const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password', 'deletedAt'] }, // Exclude sensitive data
+            attributes: { exclude: ['password', 'deletedAt'] },
             include: [{
-                model: Department, // Include the associated departments
+                model: Department,
                 as: 'departments',
-                attributes: ['id'], // Only return department IDs
-                through: { attributes: [] }, // Exclude join table attributes
+                attributes: ['id'],
+                through: { attributes: [] },
             }]
         });
 
         if (!user) {
-            return res.status(404).json({ success: false, messages: ['User not found'] });
+            throw new AppError('User not found', 404);
         }
 
-        // Return user data
-        res.status(200).json({ success: true, user });
+        res.status(200).json({ 
+            success: true, 
+            user 
+        });
 
     } catch (error) {
-        console.error('Error fetching user:', error);
-        res.status(500).json({ success: false, messages: ['Server error'] });
+        next(error);
     }
 };
 
-export const addUserToDepartment = async (req, res) => {
-    const { userId, departmentId } = req.params;
-
+export const addUserToDepartment = async (req, res, next) => {
     try {
+        const { userId, departmentId } = req.params;
 
         const department = await Department.findByPk(departmentId);
+        if (!department) {
+            throw new AppError('Department not found', 404);
+        }
 
         const user = await User.findOne({
             where: {
@@ -427,73 +364,58 @@ export const addUserToDepartment = async (req, res) => {
             }
         });
 
-        // If either the user or department is not found, return 404
-        if (!user || !department) {
-            return res.status(404).json({
-                success: false,
-                messages: ['User or department not found']
-            });
+        if (!user) {
+            throw new AppError('User not found', 404);
         }
 
         if (!['assessor', 'reviewer'].includes(user.roleId)) {
-            return res.status(400).json({
-                success: false,
-                messages: ['User must have a role of assessor or reviewer']
-            });
+            throw new AppError('User must have a role of assessor or reviewer', 400);
         }
 
-        // Check if the user is already linked to the department (even soft-deleted links)
+        // Check for existing link (including soft-deleted)
         const existingLink = await UserDepartmentLink.findOne({
             where: { userId, departmentId },
-            paranoid: false // Include soft-deleted records
+            paranoid: false
         });
 
         if (existingLink) {
-            // If the link exists and is not soft-deleted, return a conflict response
+            // If link exists and not soft-deleted
             if (existingLink.deletedAt === null) {
-                return res.status(409).json({
-                    success: false,
-                    messages: ['User is already associated with this department']
-                });
-            } else {
-                // Restore the soft-deleted link if it exists
-                await existingLink.restore();
-
-                // Fetch the updated user with department association
-                const updatedUser = await User.findByPk(userId, {
-                    attributes: { exclude: ['password', 'deletedAt'] },
-                    include: [
-                        {
-                            model: Department,
-                            as: 'departments',
-                            through: { attributes: [] },
-                            attributes: ['id'],
-                        }
-                    ]
-                });
-
-                return res.status(200).json({
-                    success: true,
-                    messages: ['User re-associated with department successfully'],
-                    user: updatedUser
-                });
+                throw new AppError('User is already associated with this department', 409);
             }
-        }
 
-        // If no existing link, create a new user-department association
-        await UserDepartmentLink.create({ userId, departmentId });
+            // Restore soft-deleted link
+            await existingLink.restore();
 
-        // Fetch the updated user data after association
-        const updatedUser = await User.findByPk(userId, {
-            attributes: { exclude: ['password', 'deletedAt'] },
-            include: [
-                {
+            const updatedUser = await User.findByPk(userId, {
+                attributes: { exclude: ['password', 'deletedAt'] },
+                include: [{
                     model: Department,
                     as: 'departments',
                     through: { attributes: [] },
                     attributes: ['id'],
-                }
-            ]
+                }]
+            });
+
+            return res.status(200).json({
+                success: true,
+                messages: ['User re-associated with department successfully'],
+                user: updatedUser
+            });
+        }
+
+        // Create new association
+        await UserDepartmentLink.create({ userId, departmentId });
+
+        // Fetch updated user data
+        const updatedUser = await User.findByPk(userId, {
+            attributes: { exclude: ['password', 'deletedAt'] },
+            include: [{
+                model: Department,
+                as: 'departments',
+                through: { attributes: [] },
+                attributes: ['id'],
+            }]
         });
 
         res.status(200).json({
@@ -501,94 +423,70 @@ export const addUserToDepartment = async (req, res) => {
             messages: ['User added to department successfully'],
             user: updatedUser
         });
+
     } catch (error) {
-        // Handle unexpected errors and log them
-        console.error('Error adding user to department:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Server error'],
-            error: error.message
-        });
+        next(error);
     }
 };
 
-export const removeUserFromDepartment = async (req, res) => {
-    const { userId, departmentId } = req.params;
-
+export const removeUserFromDepartment = async (req, res, next) => {
     try {
+        const { userId, departmentId } = req.params;
+
         // Check if there is an existing link between the user and department
         const userDepartmentLink = await UserDepartmentLink.findOne({
             where: { userId, departmentId }
         });
 
-        // If no such link exists, return a 404 response
         if (!userDepartmentLink) {
-            return res.status(404).json({
-                success: false,
-                messages: ['User is not associated with this department']
-            });
+            throw new AppError('User is not associated with this department', 404);
         }
 
         // Fetch the user to check their role
         const user = await User.findByPk(userId);
 
-        // If user not found, return a 404 response
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                messages: ['User not found']
-            });
+            throw new AppError('User not found', 404);
         }
 
-        // Check if the user has a valid role (either assessor or reviewer)
+        // Check if the user has a valid role
         if (!['assessor', 'reviewer'].includes(user.roleId)) {
-            return res.status(400).json({
-                success: false,
-                messages: ['User must have a role of assessor or reviewer']
-            });
+            throw new AppError('User must have a role of assessor or reviewer', 400);
         }
 
-        // If everything is valid, remove the user from the department by destroying the link
+        // Remove the user from the department
         await userDepartmentLink.destroy();
 
-        // Return a success response
         res.status(200).json({
             success: true,
             messages: ['User removed from department successfully']
         });
+
     } catch (error) {
-        // Handle any errors that occur during the process
-        console.error('Error removing user from department:', error);
-        res.status(500).json({
-            success: false,
-            messages: ['Server error'],
-            error: error.message
-        });
+        next(error);
     }
 };
 
-export const getDepartmentsByUserId = async (req, res) => {
-    const { userId } = req.params;
-
+export const getDepartmentsByUserId = async (req, res, next) => {
     try {
-        // Fetch the user along with their associated departments
+        const { userId } = req.params;
+
+        // Fetch the user with associated departments
         const user = await User.findByPk(userId, {
             include: [{
-                model: Department, // Include the departments associated with the user
+                model: Department,
                 as: 'departments',
                 attributes: ['id', 'departmentName'],
                 through: {
-                    attributes: [] // Exclude the join table attributes (no need to include them)
+                    attributes: []
                 }
             }]
         });
 
-        // If no user is found, return a 404 response
         if (!user) {
-            return res.status(404).json({ success: false, messages: ['User not found'] });
+            throw new AppError('User not found', 404);
         }
 
-        // Return the user and their associated departments
         res.status(200).json({
             success: true,
             userId: user.id,
@@ -596,8 +494,6 @@ export const getDepartmentsByUserId = async (req, res) => {
         });
 
     } catch (error) {
-        // Catch any errors that occur during the process
-        console.error('Error fetching user departments:', error);
-        res.status(500).json({ success: false, messages: ['Server error'] });
+        next(error);
     }
 };

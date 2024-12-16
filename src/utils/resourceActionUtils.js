@@ -1,4 +1,5 @@
 import { RoleResourceActionLink, Resource, Action } from '../models/index.js';
+import AppError from '../utils/AppError.js';
 
 // Function to retrieve the ID of a resource by its name.
 export const getResourceId = async (resourceName) => {
@@ -7,7 +8,7 @@ export const getResourceId = async (resourceName) => {
     return resource ? resource.id : null;
   } catch (error) {
     console.error(`Error retrieving resource ID for ${resourceName}:`, error);
-    throw new Error('Error retrieving resource ID');
+    throw new AppError('Error retrieving resource ID', 500);
   }
 };
 
@@ -18,6 +19,6 @@ export const getActionId = async (actionName) => {
     return action ? action.id : null;
   } catch (error) {
     console.error(`Error retrieving action ID for ${actionName}:`, error);
-    throw new Error('Error retrieving action ID');
+    throw new AppError('Error retrieving action ID', 500);
   }
 };

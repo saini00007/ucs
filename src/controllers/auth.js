@@ -3,13 +3,14 @@ import bcrypt from 'bcrypt';
 import { User, Otp, Department, Company } from '../models/index.js';
 import sendEmail from '../utils/mailer.js';
 import generateToken from '../utils/token.js';
+import AppError from '../utils/AppError.js';
 
-export const requestPasswordReset = async (req, res) => {
+export const requestPasswordReset = async (req, res, next) => {
   const { identifier } = req.body;
 
   // Validate if the identifier is provided
   if (!identifier) {
-    return res.status(400).json({ success: false, messages: ['Email or user ID is required.'] });
+    throw new AppError('Email or user ID is required.', 400);
   }
 
   try {
@@ -23,7 +24,7 @@ export const requestPasswordReset = async (req, res) => {
 
     // If no user is found with the provided identifier, return a 404 error
     if (!user) {
-      return res.status(404).json({ success: false, messages: ['No user found with this identifier.'] });
+      throw new AppError('No user found with this identifier.', 404);
     }
 
     // Generate a reset token for the user
@@ -46,16 +47,16 @@ export const requestPasswordReset = async (req, res) => {
     console.error('Error requesting password reset:', error);
 
     // Return a 500 error if something goes wrong
-    res.status(500).json({ success: false, messages: ['Failed to request password reset'] });
+    next(error);
   }
 };
 
-export const resetPassword = async (req, res) => {
+export const resetPassword = async (req, res, next) => {
   const { token, newPassword } = req.body;
 
   // Validate if token and new password are provided
   if (!token || !newPassword) {
-    return res.status(400).json({ success: false, messages: ['Token and new password are required.'] });
+    throw new AppError('Token and new password are required.', 400);
   }
 
   try {
@@ -64,7 +65,7 @@ export const resetPassword = async (req, res) => {
 
     // Check if the token is of type 'reset-password'
     if (decoded.type !== 'reset-password') {
-      return res.status(400).json({ success: false, messages: ['Invalid token type'] });
+      throw new AppError('Invalid token type', 400);
     }
 
     const userId = decoded.userId;
@@ -79,17 +80,17 @@ export const resetPassword = async (req, res) => {
     res.status(200).json({ success: true, messages: ['Password reset successfully'] });
   } catch (error) {
     console.error('Error resetting password:', error);
-    res.status(500).json({ success: false, messages: ['Failed to reset password'] });
+    next(error);
   }
 };
 
-export const login = async (req, res) => {
+export const login = async (req, res, next) => {
   const { identifier, password } = req.body;
   console.log(req.body);
 
   // Validate if identifier and password are provided
   if (!identifier || !password) {
-    return res.status(400).json({ success: false, messages: ['Identifier and password are required.'] });
+    throw new AppError('Identifier and password are required.', 400);
   }
 
   try {
@@ -103,13 +104,13 @@ export const login = async (req, res) => {
 
     // If user not found, return an error
     if (!user) {
-      return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
+      throw new AppError('Invalid user ID/email or password', 400);
     }
 
     // Compare the provided password with the stored hashed password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, messages: ['Invalid user ID/email or password'] });
+      throw new AppError('Invalid user ID/email or password', 400);
     }
 
     // Generate a login token
@@ -131,26 +132,25 @@ export const login = async (req, res) => {
     res.status(200).json({ success: true, messages: ['OTP sent to email'], token, otp: `${otp} ----for development purpose only` });
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(500).json({ success: false, messages: ['Login failed'] });
+    next(error);
   }
 };
 
-export const verifyOtp = async (req, res) => {
+export const verifyOtp = async (req, res, next) => {
   const { token, otp } = req.body;
 
-  // Validate if both token and OTP are provided
-  if (!token || !otp) {
-    return res.status(400).json({ success: false, messages: ['Token and OTP are required.'] });
-  }
-
   try {
+    // Validate if both token and OTP are provided
+    if (!token || !otp) {
+      throw new AppError('Token and OTP are required.', 400);
+    }
     // Verify the provided token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.userId;
 
     // Ensure the token is for 'login' type
     if (decoded.type !== 'login') {
-      return res.status(400).json({ success: false, messages: ['Invalid token type'] });
+      throw new AppError('Invalid token type', 400);
     }
 
     // Find OTP record for the user
@@ -158,12 +158,12 @@ export const verifyOtp = async (req, res) => {
 
     // If OTP is not found, return an error
     if (!otpRecord) {
-      return res.status(400).json({ success: false, messages: ['Invalid OTP'] });
+      throw new AppError('Invalid OTP', 400);
     }
 
     // Check if the OTP has expired
     if (new Date(otpRecord.expiresAt) < new Date()) {
-      return res.status(400).json({ success: false, messages: ['OTP expired'] });
+      throw new AppError('OTP expired', 400);
     }
 
     // Fetch user details, including associated departments and company
@@ -188,7 +188,7 @@ export const verifyOtp = async (req, res) => {
 
     // If user is not found, return an error
     if (!user) {
-      return res.status(400).json({ success: false, messages: ['Invalid user ID'] });
+      throw new AppError('Invalid user ID', 400);
     }
 
     // Generate a session token for the user
@@ -196,6 +196,7 @@ export const verifyOtp = async (req, res) => {
 
     // Destroy the OTP record to prevent reuse
     await Otp.destroy({ where: { userId } });
+
 
     // Respond with success and user data
     res.status(200).json({
@@ -206,9 +207,10 @@ export const verifyOtp = async (req, res) => {
     });
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    res.status(500).json({ success: false, messages: ['Failed to verify OTP'] });
+    next(error);
   }
 };
+
 
 
 

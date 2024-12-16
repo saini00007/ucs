@@ -13,7 +13,7 @@ const Company = sequelize.define('Company', {
   },
   companyLogo: {
     type: DataTypes.BLOB,
-    allowNull: true,   
+    allowNull: false,
   },
   postalAddress: {
     type: DataTypes.TEXT,
@@ -65,7 +65,7 @@ const Company = sequelize.define('Company', {
       model: 'industry_sectors',
       key: 'id',
     },
-    allowNull: true,
+    allowNull: false,
   },
 }, {
   tableName: 'companies',

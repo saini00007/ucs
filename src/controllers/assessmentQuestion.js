@@ -1,4 +1,5 @@
 import { AssessmentQuestion, MasterQuestion, Answer, EvidenceFile, Comment, User } from '../models/index.js';
+import AppError from '../utils/AppError.js';
 
 // export const addAssessmentQuestions = async (req, res) => {
 //   const { assessmentId } = req.params;
@@ -52,7 +53,7 @@ import { AssessmentQuestion, MasterQuestion, Answer, EvidenceFile, Comment, User
 //   }
 // };
 
-export const getAssessmentQuestionById = async (req, res) => {
+export const getAssessmentQuestionById = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
 
   try {
@@ -107,23 +108,23 @@ export const getAssessmentQuestionById = async (req, res) => {
 
     // Return 404 if the assessment question is not found
     if (!assessmentQuestion) {
-      return res.status(404).json({ success: false, messages: ['Assessment question not found'] });
+      throw new AppError('Assessment question not found', 404);
     }
 
     // Send back the assessment question data
     res.status(200).json({
       success: true,
+      messages: ['Assessment question fetched successfully'],
       assessmentQuestion,
     });
   } catch (error) {
-    // Handle errors and return a server error response
+    // Handle errors and pass them to the error handler middleware
     console.error('Error fetching assessment question:', error);
-    res.status(500).json({ success: false, messages: ['Server error'] });
+    next(error);
   }
 };
 
-
-export const getAnswerByAssessmentQuestionId = async (req, res) => {
+export const getAnswerByAssessmentQuestionId = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
 
   try {
@@ -154,10 +155,7 @@ export const getAnswerByAssessmentQuestionId = async (req, res) => {
 
     // If no answer is found for the given assessment question ID, return a 404 response
     if (!answer) {
-      return res.status(404).json({
-        success: false,
-        messages: ['No Answer found'],
-      });
+      throw new AppError('No Answer found', 404);
     }
 
     // Return the found answer along with creator and evidence file information
@@ -166,14 +164,13 @@ export const getAnswerByAssessmentQuestionId = async (req, res) => {
       answer: answer,
     });
   } catch (error) {
-    // Handle errors and return a 500 server error response with error details
+    // Handle errors and pass them to the error handler middleware
     console.error('Error retrieving answer:', error);
-    res.status(500).json({ success: false, messages: ['Error retrieving answer.'], error: error.message });
+    next(error);
   }
 };
 
-
-export const getCommentsByAssessmentQuestionId = async (req, res) => {
+export const getCommentsByAssessmentQuestionId = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
 
   try {
@@ -185,6 +182,15 @@ export const getCommentsByAssessmentQuestionId = async (req, res) => {
       order: [['createdAt', 'ASC']], // Order comments by creation date in ascending order
     });
 
+    // If no comments are found, return an empty array with a success message
+    if (comments.length === 0) {
+      return res.status(200).json({
+        success: true,
+        messages: ['No comments found for the given assessment question'],
+        comments: [],
+      });
+    }
+
     // Return success response with the list of comments
     return res.status(200).json({
       success: true,
@@ -192,9 +198,9 @@ export const getCommentsByAssessmentQuestionId = async (req, res) => {
       comments,
     });
   } catch (error) {
-    // Handle errors and return a 500 server error response with the error message
+    // Handle errors and pass them to the error handler middleware
     console.error(error);
-    return res.status(500).json({ success: false, messages: ['Error retrieving comments'], error: error.message });
+    next(error);
   }
 };
 

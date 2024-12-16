@@ -1,5 +1,6 @@
 import { Answer, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 import { checkAccessScope, checkAssessmentState } from "../../utils/accessValidators.js";
+import AppError from "../../utils/AppError.js";
 
 const checkAnswerAccess = async (user, resourceId) => {
     try {
@@ -27,7 +28,7 @@ const checkAnswerAccess = async (user, resourceId) => {
         });
 
         if (!answer) {
-            return { success: false, message: 'Answer not Found', status: 404 };
+            throw new AppError('Answer not Found', 404);
         }
 
         const assessment = answer.assessmentQuestion.assessment;
@@ -37,20 +38,20 @@ const checkAnswerAccess = async (user, resourceId) => {
         // Check access scope
         const accessScope = checkAccessScope(user, companyId, departmentId);
         if (!accessScope.success) {
-            return { success: false };
+            throw new AppError('Access denied: insufficient permissions', 403);
         }
 
         // Check assessment state
         const assessmentState = checkAssessmentState(assessment);
         if (!assessmentState.success) {
-            return { success: false, message: assessmentState.message, status: assessmentState.status };
+            throw new AppError(assessmentState.message || 'Assessment state is not valid', assessmentState.status || 400);
         }
 
         return { success: true };
 
     } catch (error) {
         console.error("Error checking answer access:", error);
-        return { success: false, message: 'Internal server error', status: 500 };
+        throw error;
     }
 };
 

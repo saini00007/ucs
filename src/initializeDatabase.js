@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import url from 'url';
 import sequelize from './config/db.js';
+import AppError from './utils/AppError.js';
 
 const initializeDatabase = async () => {
   try {
@@ -27,7 +28,7 @@ const initializeDatabase = async () => {
     console.log('✅ All models were synchronized successfully.');
   } catch (error) {
     console.error('❌ Database initialization error:', error);
-    throw error; // Re-throw the error to be handled by the caller
+    throw new AppError('Database initialization failed', 500);
   }
 };
 

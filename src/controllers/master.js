@@ -1,86 +1,96 @@
 import { Role, MasterDepartment, IndustrySector } from '../models/index.js';
+import AppError from '../utils/AppError.js';
 
-export const getRoles = async (req, res) => {
+export const getRoles = async (req, res, next) => {
+    try {
+        // Retrieve all roles from the database
+        const roles = await Role.findAll();
+
+        // If no roles found
+        if (roles.length === 0) {
+            throw new AppError('No roles found', 404);
+        }
+
+        let filteredRoles;
+        const userRole = req.user.roleId;
+
+        // Filter roles based on user's role
+        switch (userRole) {
+            case 'superadmin':
+                filteredRoles = roles;
+                break;
+
+            case 'admin':
+                filteredRoles = roles.filter(role => 
+                    !['superadmin', 'admin'].includes(role.id)
+                );
+                break;
+
+            case 'departmentmanager':
+                filteredRoles = roles.filter(role => 
+                    !['superadmin', 'admin', 'departmentmanager'].includes(role.id)
+                );
+                break;
+
+            default:
+                filteredRoles = [];
+        }
+
+        // Return the filtered roles
+        res.status(200).json({
+            success: true,
+            messages: filteredRoles.length ? 
+                ['Roles retrieved successfully'] : 
+                ['No roles available for your access level'],
+            roles: filteredRoles,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMasterDepartments = async (req, res, next) => {
   try {
-    // Retrieve all roles from the database
-    const roles = await Role.findAll();
+      // Fetch all master departments
+      const masterDepartments = await MasterDepartment.findAll();
 
-    // If no roles are found, return a 404 response
-    if (roles.length === 0) {
-      return res.status(404).json({ success: false, messages: ['No roles found'] });
-    }
+      // If no master departments found
+      if (masterDepartments.length === 0) {
+          throw new AppError('No master departments found', 404);
+      }
 
-    let filteredRoles;
+      // Return successful response
+      res.status(200).json({
+          success: true,
+          messages: ['Master departments retrieved successfully'],
+          masterDepartments,
+      });
 
-    // Check the user's role to determine which roles they are authorized to see
-    if (req.user.roleId === 'superadmin') {
-      // Superadmins can view all roles
-      filteredRoles = roles;
-    } else if (req.user.roleId === 'admin') {
-      // Admins can view all roles except 'superadmin' and 'admin'
-      filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin');
-    } else if (req.user.roleId === 'departmentmanager') {
-      // Department managers can view all roles except 'superadmin', 'admin', and 'departmentmanager'
-      filteredRoles = roles.filter(role => role.id !== 'superadmin' && role.id !== 'admin' && role.id !== 'departmentmanager');
-    } else {
-      // Users with other roles will see an empty list
-      filteredRoles = [];
-    }
-
-    // Return the filtered list of roles
-    res.status(200).json({
-      success: true,
-      messages: ['Roles retrieved successfully'],
-      roles: filteredRoles,
-    });
   } catch (error) {
-    console.error('Error fetching roles:', error); // Log the error for debugging purposes
-    // Return a 500 response in case of error while fetching roles
-    res.status(500).json({ success: false, messages: ['Error fetching roles'] });
+      next(error);
   }
 };
 
-export const getMasterDepartments = async (req, res) => {
+export const getIndustrySectors = async (req, res, next) => {
   try {
-    // Fetch all master departments from the database
-    const masterDepartments = await MasterDepartment.findAll();
+      // Fetch all industry sectors
+      const industrySectors = await IndustrySector.findAll();
 
-    // If no master departments are found, return a 404 response
-    if (masterDepartments.length === 0) {
-      return res.status(404).json({ success: false, messages: ['No master departments found'] });
-    }
+      // If no industry sectors found
+      if (industrySectors.length === 0) {
+          throw new AppError('No industry sectors found', 404);
+      }
 
-    // Return the list of master departments in the response
-    res.status(200).json({
-      success: true,
-      messages: ['Master departments retrieved successfully'],
-      masterDepartments,
-    });
+      // Return successful response
+      res.status(200).json({
+          success: true,
+          messages: ['Industry Sectors retrieved successfully'],
+          industrySectors,
+      });
+
   } catch (error) {
-    console.error('Error fetching master departments:', error); // Log the error for debugging purposes
-    // Return a 500 response if there was an issue fetching the master departments
-    res.status(500).json({ success: false, messages: ['Error fetching master departments'] });
+      next(error);
   }
 };
-
-export const getIndustrySectors = async (req, res) => {
-  try {
-    const industrySectors = await IndustrySector.findAll();
-
-    if (industrySectors.length === 0) {
-      return res.status(404).json({ success: false, messages: ['No industry sectors found'] });
-    }
-    // Return the list of industry sectors in the response
-    res.status(200).json({
-      success: true,
-      messages: ['Industry Sectors retrieved successfully'],
-      industrySectors,
-    });
-  } catch (error) {
-    console.error('Error fetching industry sectors:', error); // Log the error for debugging purposes
-    // Return a 500 response if there was an issue fetching the master departments
-    res.status(500).json({ success: false, messages: ['Error fetching industry sectors'] });
-
-  }
-}
 

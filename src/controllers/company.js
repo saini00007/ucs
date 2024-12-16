@@ -1,46 +1,42 @@
 import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
+import AppError from '../utils/AppError.js';
 
 const validateEmailForCompany = async (email, companyId = null) => {
-  try {
-    // Check the Company table for the email conflict
-    const existingCompany = await Company.findOne({
-      where: {
-        [Op.or]: [
-          { primaryEmail: email },
-          { secondaryEmail: email }
-        ],
-        ...(companyId && { id: { [Op.ne]: companyId } })
-      },
-      paranoid: false
-    });
+  // Check the Company table for the email conflict
+  const existingCompany = await Company.findOne({
+    where: {
+      [Op.or]: [
+        { primaryEmail: email },
+        { secondaryEmail: email }
+      ],
+      ...(companyId && { id: { [Op.ne]: companyId } })
+    },
+    paranoid: false
+  });
 
-    // Check the User table for the email conflict
-    const existingUserEmail = await User.findOne({
-      where: { email },
-      paranoid: false
-    });
+  // Check the User table for the email conflict
+  const existingUserEmail = await User.findOne({
+    where: { email },
+    paranoid: false
+  });
 
-    if (existingCompany) {
-      return {
-        isValid: false,
-        message: 'Email already exists in another company'
-      };
-    }
-
-    if (existingUserEmail) {
-      return {
-        isValid: false,
-        message: 'Email is already in use by a user'
-      };
-    }
-
-    return { isValid: true };
-
-  } catch (error) {
-    throw new Error('Error validating company email: ' + error.message);
+  if (existingCompany) {
+    return {
+      isValid: false,
+      message: 'Email already exists in another company'
+    };
   }
+
+  if (existingUserEmail) {
+    return {
+      isValid: false,
+      message: 'Email is already in use by a user'
+    };
+  }
+
+  return { isValid: true };
 };
 
 const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, transaction) => {
@@ -50,14 +46,13 @@ const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, 
 
   // If primary wants secondary's current email, update secondary first
   if (primaryEmail === originalSecondaryEmail) {
-    // Verify new secondary email is provided
     if (!secondaryEmail) {
-      throw new Error('New secondary email required when swapping with primary');
+      throw new AppError('New secondary email required when swapping with primary', 400);
     }
 
     const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
     if (!secondaryEmailValidation.isValid) {
-      throw new Error('Secondary email ' + secondaryEmailValidation.message);
+      throw new AppError(`Secondary email ${secondaryEmailValidation.message}`, 400);
     }
 
     // Update secondary first
@@ -89,14 +84,13 @@ const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, 
 
   // If secondary wants primary's current email, update primary first
   if (secondaryEmail === originalPrimaryEmail) {
-    // Verify new primary email is provided
     if (!primaryEmail) {
-      throw new Error('New primary email required when swapping with secondary');
+      throw new AppError('New primary email required when swapping with secondary', 400);
     }
 
     const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
     if (!primaryEmailValidation.isValid) {
-      throw new Error('Primary email ' + primaryEmailValidation.message);
+      throw new AppError(`Primary email ${primaryEmailValidation.message}`, 400);
     }
 
     // Update primary first
@@ -130,7 +124,7 @@ const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, 
   if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
     const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
     if (!primaryEmailValidation.isValid) {
-      throw new Error('Primary email ' + primaryEmailValidation.message);
+      throw new AppError(`Primary email ${primaryEmailValidation.message}`, 400);
     }
 
     const primaryAdmin = await User.findOne({
@@ -148,7 +142,7 @@ const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, 
   if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
     const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
     if (!secondaryEmailValidation.isValid) {
-      throw new Error('Secondary email ' + secondaryEmailValidation.message);
+      throw new AppError(`Secondary email ${secondaryEmailValidation.message}`, 400);
     }
 
     const secondaryAdmin = await User.findOne({
@@ -166,7 +160,7 @@ const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, 
   return emailUpdates;
 };
 
-export const createCompany = async (req, res) => {
+export const createCompany = async (req, res, next) => {
   const {
     companyName,
     postalAddress,
@@ -180,40 +174,26 @@ export const createCompany = async (req, res) => {
     panNumber,
     industrySectorId,
   } = req.body;
-  console.log(req.body);
+
   const transaction = await sequelize.transaction();
   try {
-
     // Validate primary email
     const primaryEmailValidation = await validateEmailForCompany(primaryEmail);
     if (!primaryEmailValidation.isValid) {
-      await transaction.rollback();
-      return res.status(409).json({
-        success: false,
-        messages: ["Primary " + primaryEmailValidation.message],
-      });
+      throw new AppError(`Primary ${primaryEmailValidation.message}`, 409);
     }
 
     // Validate secondary email
     const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail);
     if (!secondaryEmailValidation.isValid) {
-      await transaction.rollback();
-      return res.status(409).json({
-        success: false,
-        messages: ["Secondary " + secondaryEmailValidation.message],
-      });
+      throw new AppError(`Secondary ${secondaryEmailValidation.message}`, 409);
     }
 
-    //check for company logo
+    // Check for company logo
     const companyLogo = req.files?.['companyLogo'];
     if (!companyLogo || companyLogo.length === 0) {
-      await transaction.rollback();
-      return res.status(409).json({
-        success: false,
-        messages: ['Company Logo is Required'],
-      });
+      throw new AppError('Company Logo is required', 409);
     }
-
 
     // Create the company
     const newCompany = await Company.create(
@@ -238,11 +218,7 @@ export const createCompany = async (req, res) => {
     if (industrySectorId) {
       const industrySector = await IndustrySector.findByPk(industrySectorId);
       if (!industrySector) {
-        await transaction.rollback();
-        return res.status(404).json({
-          success: false,
-          messages: ["Industry sector not found."],
-        });
+        throw new AppError('Industry sector not found.', 404);
       }
 
       // Associate the company with the industry sector
@@ -268,18 +244,12 @@ export const createCompany = async (req, res) => {
       company: refetchedCompany,
     });
   } catch (error) {
-    // Rollback transaction in case of error
     await transaction.rollback();
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      messages: ['An error occurred while creating the company.'],
-    });
+    next(error)
   }
 };
 
-
-export const getAllCompanies = async (req, res) => {
+export const getAllCompanies = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
@@ -294,13 +264,13 @@ export const getAllCompanies = async (req, res) => {
     if (count === 0) {
       return res.status(200).json({
         success: true,
-        messages: ['No companies found'],
+        messages: 'No companies found',
         companies: [],
         pagination: {
           totalItems: 0,
           totalPages: 0,
           currentPage: page,
-          itemsPerPage: limit
+          itemsPerPage: limit,
         },
       });
     }
@@ -309,65 +279,52 @@ export const getAllCompanies = async (req, res) => {
 
     // Return 404 if requested page exceeds total pages
     if (page > totalPages) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Page not found'],
-      });
+      throw new AppError('Page not found', 404);
     }
 
     // Return companies with pagination data
     res.status(200).json({
       success: true,
-      messages: ['Companies retrieved successfully'],
+      messages: 'Companies retrieved successfully',
       companies,
       pagination: {
         totalItems: count,
         totalPages,
         currentPage: page,
-        itemsPerPage: limit
+        itemsPerPage: limit,
       },
     });
   } catch (error) {
-    // Handle error and send response
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      messages: ['An error occurred while fetching companies.'],
-    });
+    next(error)
   }
 };
 
-export const getCompanyById = async (req, res) => {
+export const getCompanyById = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
     // Fetch the company
-    const company = await Company.findByPk(companyId);
+    const company = await Company.findByPk(companyId, {
+      attributes: { exclude: ['companyLogo'] }
+    });
 
     // If the company is not found, return a 404 error with a message
     if (!company) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Company not found.'],
-      });
+      throw new AppError('Company not found.', 404);
     }
 
     // If the company is found, return it in the response with a success message
     res.status(200).json({
       success: true,
-      messages: ['Company retrieved successfully'],
+      messages: 'Company retrieved successfully',
       company,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      messages: ['An error occurred while fetching the company.'],
-    });
+    next(error);
   }
 };
 
-export const updateCompany = async (req, res) => {
+export const updateCompany = async (req, res, next) => {
   const { companyId } = req.params;
   const {
     companyName,
@@ -384,41 +341,24 @@ export const updateCompany = async (req, res) => {
   } = req.body;
 
   const transaction = await sequelize.transaction();
-
   try {
     const company = await Company.findByPk(companyId, { transaction });
 
     if (!company) {
-      await transaction.rollback();
-      return res.status(404).json({
-        success: false,
-        messages: ['Company not found.'],
-      });
+      throw new AppError('Company not found.', 404);
     }
 
     // Handle all email updates
     let emailUpdates = [];
     if (primaryEmail || secondaryEmail) {
-      try {
-        emailUpdates = await handleCompanyEmailUpdates(company, primaryEmail, secondaryEmail, transaction);
-      } catch (error) {
-        await transaction.rollback();
-        return res.status(400).json({
-          success: false,
-          messages: [error.message],
-        });
-      }
+      emailUpdates = await handleCompanyEmailUpdates(company, primaryEmail, secondaryEmail, transaction);
     }
 
     if (
       (primaryPhone && primaryPhone === company.secondaryPhone && !secondaryPhone) ||
       (secondaryPhone && secondaryPhone === company.primaryPhone && !primaryPhone)
     ) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        messages: ['Primary email is same as secondary email in database and vice versa.'],
-      });
+      throw new AppError('Primary phone is same as secondary phone in database and vice versa.', 400);
     }
 
     // Update other fields
@@ -436,14 +376,8 @@ export const updateCompany = async (req, res) => {
     if (industrySectorId) {
       const industrySector = await IndustrySector.findByPk(industrySectorId);
       if (!industrySector) {
-        await transaction.rollback();
-        return res.status(404).json({
-          success: false,
-          messages: ['Industry sector not found.'],
-        });
+        throw new AppError('Industry sector not found.', 404);
       }
-
-      // Set the new industry sector
       await company.setIndustrySector(industrySector, { transaction });
     }
 
@@ -471,15 +405,11 @@ export const updateCompany = async (req, res) => {
 
   } catch (error) {
     await transaction.rollback();
-    console.error('Error updating company:', error);
-    res.status(500).json({
-      success: false,
-      messages: ['Error updating company'],
-    });
+    next(error);
   }
 };
 
-export const deleteCompany = async (req, res) => {
+export const deleteCompany = async (req, res, next) => {
   const { companyId } = req.params;
 
   // Start a transaction
@@ -492,6 +422,10 @@ export const deleteCompany = async (req, res) => {
       attributes: ['id'],
       transaction,
     });
+
+    if (!departments.length) {
+      throw new AppError('No departments found for this company.', 404);
+    }
 
     const departmentIds = departments.map(department => department.id);
 
@@ -587,11 +521,7 @@ export const deleteCompany = async (req, res) => {
     });
 
     if (companyDeleted === 0) {
-      await transaction.rollback();  // Rollback if the company wasn't deleted
-      return res.status(404).json({
-        success: false,
-        messages: ['Company not found or already deleted'],
-      });
+      throw new AppError('Company not found or already deleted', 404);
     }
 
     // Delete all users associated with the company
@@ -612,15 +542,13 @@ export const deleteCompany = async (req, res) => {
     // Rollback the transaction in case of an error
     await transaction.rollback();
 
+    // Pass error to error handling middleware
     console.error('Error deleting company and related records:', error);
-    return res.status(500).json({
-      success: false,
-      messages: ['Error deleting company and related records'],
-    });
+    next(error); // Use next(error) as requested
   }
 };
 
-export const getDepartmentsByCompanyId = async (req, res) => {
+export const getDepartmentsByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
@@ -644,26 +572,16 @@ export const getDepartmentsByCompanyId = async (req, res) => {
       ],
     });
 
-    // If no departments are found, return an empty response with pagination
+    // If no departments are found, throw an error
     if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No departments found'],
-        departments: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
+      throw new AppError('No departments found', 404);
     }
 
     const totalPages = Math.ceil(count / limit);
 
-    // If the page exceeds total pages, return an error
+    // If the page exceeds total pages, throw an error
     if (page > totalPages) {
-      return res.status(404).json({ success: false, messages: ['Page not found'] });
+      throw new AppError('Page not found', 404);
     }
 
     // Return departments with pagination details
@@ -674,11 +592,11 @@ export const getDepartmentsByCompanyId = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching departments for company:', error);
-    res.status(500).json({ success: false, messages: ['Failed to fetch departments'] });
+    next(error);
   }
 };
 
-export const getUsersByCompanyId = async (req, res) => {
+export const getUsersByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
   const { roleId, departments } = req.user;
@@ -729,11 +647,8 @@ export const getUsersByCompanyId = async (req, res) => {
         }
       ];
     } else {
-      // Unknown role - return error
-      return res.status(403).json({
-        success: false,
-        messages: ['Unauthorized access'],
-      });
+      // Unknown role - throw an error
+      throw new AppError('Unauthorized access', 403);
     }
 
     // Fetch users based on the query options
@@ -761,10 +676,7 @@ export const getUsersByCompanyId = async (req, res) => {
 
     // Handle invalid page number
     if (currentPage > totalPages) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Page not found'],
-      });
+      throw new AppError('Page not found', 404);
     }
 
     // Return successful response
@@ -782,19 +694,15 @@ export const getUsersByCompanyId = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching users by company:', error);
-    return res.status(500).json({
-      success: false,
-      messages: ['Error fetching users'],
-      error: error.message,
-    });
+    next(error);
   }
 };
 
-export const getReportByCompanyId = async (req, res) => {
+
+export const getReportByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
-
     const departments = await Department.findAll({
       where: { companyId },
       attributes: ['id'],
@@ -806,10 +714,7 @@ export const getReportByCompanyId = async (req, res) => {
     });
 
     if (!departments.length) {
-      return res.status(404).json({
-        success: false,
-        messages: [`No departments found for company ID: ${companyId}`]
-      });
+      throw new AppError(`No departments found for company ID: ${companyId}`, 404);
     }
 
     // Check assessment submissions before fetching question data
@@ -818,10 +723,7 @@ export const getReportByCompanyId = async (req, res) => {
     );
 
     if (hasUnsubmittedAssessment) {
-      return res.status(400).json({
-        success: false,
-        messages: ['All assessments must be submitted before generating report']
-      });
+      throw new AppError('All assessments must be submitted before generating report', 400);
     }
 
     // Only if all assessments are submitted, fetch the full data
@@ -863,7 +765,7 @@ export const getReportByCompanyId = async (req, res) => {
       ]
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       messages: ['Report data successfully fetched'],
       reportData: fullReport
@@ -871,14 +773,12 @@ export const getReportByCompanyId = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching report data:', error);
-    return res.status(500).json({
-      success: false,
-      messages: ['Internal server error while fetching report data']
-    });
+    next(error);
   }
 };
 
-export const getCompanyLogo = async (req, res) => {
+
+export const getCompanyLogo = async (req, res, next) => {
   try {
     const { companyId } = req.params;
 
@@ -889,22 +789,18 @@ export const getCompanyLogo = async (req, res) => {
 
     // Check if the company exists and has a logo
     if (!company || !company.companyLogo) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Logo not found for the company'],
-      });
+      throw new AppError('Logo not found for the company', 404);
     }
 
     res.set('Content-Type', 'image/png');
     return res.status(200).send(company.companyLogo);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({
-      success: false,
-      messages: ['Error retrieving company logo'],
-    });
+    // Handle error and pass it to the next middleware
+    next(err); // Pass error to next middleware (error handler)
   }
 };
+
 
 
 

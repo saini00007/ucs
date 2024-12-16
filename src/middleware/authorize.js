@@ -1,5 +1,5 @@
 import permissionsService from '../services/permissionsService.js';
-import { getResourceId, getActionId } from '../utils/resourceActionUtils.js'
+import AppError from '../utils/AppError.js';
 
 const checkAccess = async (req, res, next) => {
   const { roleId } = req.user;
@@ -9,65 +9,55 @@ const checkAccess = async (req, res, next) => {
   const actionId = req.actionId;
 
   try {
-
     const roleResourceId = roleResourceType.toLowerCase();
     console.log(`User Id: ${req.user.id}, Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
 
     // Check if the user has the required role permission
-    const hasRolePermission = await permissionsService.hasRolePermission({
+    const rolePermission = await permissionsService.hasRolePermission({
       user: req.user,
       resourceId: roleResourceId,
       actionId,
     });
 
-    if (!hasRolePermission.success) {
-      // If the user lacks the required role permission, deny access
-      return res.status(403).json({
-        success: false,
-        messages: ['Access denied: insufficient role permissions.']
-      });
+    // Explicitly check if the role permission was successful
+    if (!rolePermission.success) {
+      throw new AppError('Access denied: insufficient permissions.', 403);
     }
 
-    // role-based access check is enough for these resources 
-    if (contentResourceType === null) {
+    // If content resource type is null, the role-based access check suffices
+    if (!contentResourceType) {
       return next();
     }
 
     // Check if the user has the necessary content access for the specific resource
-    const hasContentAccess = await permissionsService.hasContentAccess({
+    const contentAccess = await permissionsService.hasContentAccess({
       user: req.user,
       resourceType: contentResourceType,
       resourceId: contentResourceId,
       actionId
     });
 
-    if (!hasContentAccess.success) {
-      // For superadmins, return the received message and status
-      if (req.user.roleId === 'superadmin') {
-        return res.status(hasContentAccess.status || 403).json({
-          success: false,
-          messages: [hasContentAccess.message || 'Access denied: insufficient content permissions.']
-        });
-      }
-
-      // For non-superadmins, show a generic message for status 500 or a default 403 message
-      return res.status(hasContentAccess.status === 500 ? 500 : 403).json({
-        success: false,
-        messages: [
-          hasContentAccess.status === 500
-            ? (hasContentAccess.message || 'Internal Server Error')
-            : 'Access denied: insufficient content permissions.'
-        ],
-      });
+    // Explicitly check if the attribute based check was successful
+    if (!contentAccess.success) {
+      throw new AppError('Access denied: insufficient permissions.', 403);
     }
+
     return next();
   } catch (error) {
-    // Handle any errors that occur during the access check process
     console.error('Error checking access:', error);
-    return res.status(500).json({
-      success: false,
-      messages: ['Internal Server Error: An unexpected error occurred.'],
-    });
+
+    // For superadmins, propagate the error with its message and status
+    if (req.user.roleId === 'superadmin') {
+      return next(error);
+    }
+
+    // For non-superadmin users, provide a generic access denied message
+    // If it's a server error (500), we use 'Internal Server Error' for clarity
+    const errorMessage = error.status === 500
+      ? 'Internal Server Error'
+      : 'Access denied: insufficient permissions.';
+
+    return next(new AppError(errorMessage, error.status === 500 ? 500 : 403));
   }
 };
 
