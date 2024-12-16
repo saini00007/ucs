@@ -83,7 +83,8 @@ MasterDepartment.hasMany(Department, { foreignKey: 'masterDepartmentId', as: 'de
 
 // 17. Company and IndustrySector
 Company.belongsTo(IndustrySector, { foreignKey: 'industrySectorId', targetKey: 'id', as: 'industrySector' });
-IndustrySector.hasOne(Company, { foreignKey: 'industrySectorId', as: 'company' });
+IndustrySector.hasMany(Company, { foreignKey: 'industrySectorId', as: 'companies' });
+
 
 export {
   User,

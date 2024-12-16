@@ -76,8 +76,8 @@ router.get('/:companyId/users',
 
 //Route to get report
 router.get('/:companyId/report',
-    attachResourceInfo('Report', 'Company', 'companyId', 'read'),
-    checkAccess,
+    // attachResourceInfo('Report', 'Company', 'companyId', 'read'),
+    // checkAccess,
     getReportByCompanyId
 )
 

@@ -4,6 +4,7 @@ import AppError from '../utils/AppError.js';
 
 const authenticate = async (req, res, next) => {
     try {
+        // Retrieve token from the headers or cookies
         const token = req.header("Authorization")?.replace("Bearer ", "");
 
         // If no token is provided

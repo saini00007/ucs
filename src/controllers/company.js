@@ -174,7 +174,6 @@ export const createCompany = async (req, res, next) => {
     panNumber,
     industrySectorId,
   } = req.body;
-
   const transaction = await sequelize.transaction();
   try {
     // Validate primary email
@@ -195,6 +194,15 @@ export const createCompany = async (req, res, next) => {
       throw new AppError('Company Logo is required', 409);
     }
 
+    // Check if the industry sector ID is provided and valid
+    let industrySector = null;
+    if (industrySectorId) {
+      industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        throw new AppError('Industry sector not found.', 404);
+      }
+    }
+
     // Create the company
     const newCompany = await Company.create(
       {
@@ -210,27 +218,18 @@ export const createCompany = async (req, res, next) => {
         panNumber,
         companyLogo: companyLogo[0]?.buffer,
         createdByUserId: req.user.id,
+        industrySectorId
       },
       { transaction }
     );
 
-    // If an industry sector ID is provided, associate the company with the industry sector
-    if (industrySectorId) {
-      const industrySector = await IndustrySector.findByPk(industrySectorId);
-      if (!industrySector) {
-        throw new AppError('Industry sector not found.', 404);
-      }
-
-      // Associate the company with the industry sector
-      await newCompany.setIndustrySector(industrySector, { transaction });
-    }
 
     // Commit the transaction
     await transaction.commit();
 
     // Refetch the company and include only desired attributes
     const refetchedCompany = await Company.findByPk(newCompany.id, {
-      attributes: { exclude: ['companyLogo'] },
+      // attributes: { exclude: ['companyLogo'] },
       include: [{
         model: IndustrySector,
         as: 'industrySector',
@@ -361,6 +360,15 @@ export const updateCompany = async (req, res, next) => {
       throw new AppError('Primary phone is same as secondary phone in database and vice versa.', 400);
     }
 
+
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        throw new AppError('Industry sector not found.', 404);
+      }
+    }
+    company.industrySectorId = industrySectorId;
+
     // Update other fields
     if (companyName) company.companyName = companyName;
     if (postalAddress) company.postalAddress = postalAddress;
@@ -372,14 +380,6 @@ export const updateCompany = async (req, res, next) => {
     if (panNumber) company.panNumber = panNumber;
     if (req.files?.['companyLogo']) company.companyLogo = req.files['companyLogo'][0].buffer;
 
-    // If industry sector ID is provided, update the company's industry sector
-    if (industrySectorId) {
-      const industrySector = await IndustrySector.findByPk(industrySectorId);
-      if (!industrySector) {
-        throw new AppError('Industry sector not found.', 404);
-      }
-      await company.setIndustrySector(industrySector, { transaction });
-    }
 
     await company.save({ transaction });
     await transaction.commit();
@@ -743,12 +743,8 @@ export const getReportByCompanyId = async (req, res, next) => {
               {
                 model: MasterQuestion,
                 as: 'masterQuestion',
-                attributes: {
-                  exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore',
-                    'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating',
-                    'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating',
-                    'objectivesAndProductionOperationsImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revisedRiskLikelihoodRating', 'revisedRiskImpactRating', 'createdAt', 'updatedAt', 'department', 'id']
-                }
+                attributes: { exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore', 'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating', 'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating', 'objAndProdOperImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revRiskLikelihoodRating', 'revRiskImpactRating', 'targetRiskRating', 'department', 'id', 'createdAt', 'updatedAt'] }
+
               },
               {
                 model: Answer,

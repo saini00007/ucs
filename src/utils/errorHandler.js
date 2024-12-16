@@ -2,12 +2,13 @@
 import AppError from '../utils/AppError.js';
 
 const errorHandler = (err, req, res, next) => {
-    console.error({
-        error: err,
-        path: req.path,
-        method: req.method,
-        timestamp: new Date().toISOString()
-    });
+    // console.error({
+    //     error: err,
+    //     path: req.path,
+    //     method: req.method,
+    //     timestamp: new Date().toISOString()
+    // });
+    console.log(err);
 
     // Check if error is AppError instance
     if (err instanceof AppError) {

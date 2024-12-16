@@ -11,14 +11,14 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.INTEGER,
     field: 'srno',
   },
-  sp80053ControlNumber: {
+  sp80053ControlNum: {
     type: DataTypes.TEXT,
     field: 'sp_800_53_control_number',
   },
   controlName: {
     type: DataTypes.TEXT,
   },
-  iso270012022ControlIdNumber: {
+  iso270012022CIdNum: {
     type: DataTypes.TEXT,
     field: 'iso_27001_2022_control_id_number',
   },
@@ -42,7 +42,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   questionText: {
     type: DataTypes.TEXT,
   },
-  vulnerabilityDescription: {
+  vulnerabilityDesc: {
     type: DataTypes.TEXT,
   },
   vulnerabilityRating: {
@@ -63,10 +63,10 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   ermLikelihoodRating: {
     type: DataTypes.TEXT,
   },
-  operationalImpactDescription: {
+  operationalImpactDesc: {
     type: DataTypes.TEXT,
   },
-  businessImpactDescription: {
+  businessImpactDesc: {
     type: DataTypes.TEXT,
   },
   financialImpactRating: {
@@ -81,7 +81,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   complianceImpactRating: {
     type: DataTypes.INTEGER,
   },
-  objectivesAndProductionOperationsImpactRating: {
+  objAndProdOperImpactRating: {
     type: DataTypes.INTEGER,
   },
   riskImpactValue: {
@@ -120,10 +120,10 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   riskTreatmentPlan5: {
     type: DataTypes.TEXT,
   },
-  revisedRiskLikelihoodRating: {
+  revRiskLikelihoodRating: {
     type: DataTypes.INTEGER,
   },
-  revisedRiskImpactRating: {
+  revRiskImpactRating: {
     type: DataTypes.INTEGER,
   },
   targetRiskRating: {
