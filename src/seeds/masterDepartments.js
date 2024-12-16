@@ -1,15 +1,13 @@
-import { MasterDepartment} from '../models/index.js';
+import { MasterDepartment } from '../models/index.js';
 import sequelize from '../config/db.js';
 
 const seedMasterDepartments = async () => {
   const departments = [
-    'Network Security',
-    'Application Security',
-    'Compliance and Risk Management',
-    'Incident Response Team',
-    'Cybersecurity Training and Awareness',
-    'Security Operations Center (SOC)',
     'Human Resources',
+    'IT Operations',
+    'Information Security',
+    'Business Continuity',
+    'Physical Security',
   ];
 
   const transaction = await sequelize.transaction();

@@ -49,13 +49,13 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   vulnerabilityValue: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   riskLikelihoodScore: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   riskLikelihoodValue: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   riskLikelihoodRating: {
     type: DataTypes.TEXT,
@@ -70,22 +70,22 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   financialImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   reputationalImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   legalImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   complianceImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   objAndProdOperImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   riskImpactValue: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   riskImpactRating: {
     type: DataTypes.TEXT,
@@ -94,7 +94,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   currentRiskValue: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   currentRiskRating: {
     type: DataTypes.TEXT,
@@ -121,10 +121,10 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   revRiskLikelihoodRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   revRiskImpactRating: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.FLOAT, // Now accepts both integers and float values
   },
   targetRiskRating: {
     type: DataTypes.TEXT,
