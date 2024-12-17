@@ -229,7 +229,7 @@ export const createCompany = async (req, res, next) => {
 
     // Refetch the company and include only desired attributes
     const refetchedCompany = await Company.findByPk(newCompany.id, {
-      // attributes: { exclude: ['companyLogo'] },
+      attributes: { exclude: ['companyLogo'] },
       include: [{
         model: IndustrySector,
         as: 'industrySector',

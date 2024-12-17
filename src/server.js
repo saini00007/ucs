@@ -35,7 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/', authRoutes);
 
-// app.use(authenticate);
+app.use(authenticate);
 
 app.use('/companies', companyRoutes);
 app.use('/departments', departmentRoutes);
