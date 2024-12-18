@@ -468,10 +468,9 @@ export const removeUserFromDepartment = async (req, res, next) => {
 };
 
 export const getDepartmentsByUserId = async (req, res, next) => {
-    try {
-        const { userId } = req.params;
+    const { userId } = req.params;
 
-        // Fetch the user with associated departments
+    try {
         const user = await User.findByPk(userId, {
             include: [{
                 model: Department,
@@ -487,13 +486,17 @@ export const getDepartmentsByUserId = async (req, res, next) => {
             throw new AppError('User not found', 404);
         }
 
+        // Return response
         res.status(200).json({
             success: true,
-            userId: user.id,
+            messages: user.departments.length === 0 
+                ? ['No departments found for the user'] 
+                : ['Departments retrieved successfully'],
             departments: user.departments
         });
 
     } catch (error) {
+        console.error('Error fetching departments for user:', error);
         next(error);
     }
 };

@@ -6,11 +6,6 @@ export const getRoles = async (req, res, next) => {
         // Retrieve all roles from the database
         const roles = await Role.findAll();
 
-        // If no roles found
-        if (roles.length === 0) {
-            throw new AppError('No roles found', 404);
-        }
-
         let filteredRoles;
         const userRole = req.user.roleId;
 
@@ -21,13 +16,13 @@ export const getRoles = async (req, res, next) => {
                 break;
 
             case 'admin':
-                filteredRoles = roles.filter(role => 
+                filteredRoles = roles.filter(role =>
                     !['superadmin', 'admin'].includes(role.id)
                 );
                 break;
 
             case 'departmentmanager':
-                filteredRoles = roles.filter(role => 
+                filteredRoles = roles.filter(role =>
                     !['superadmin', 'admin', 'departmentmanager'].includes(role.id)
                 );
                 break;
@@ -39,9 +34,9 @@ export const getRoles = async (req, res, next) => {
         // Return the filtered roles
         res.status(200).json({
             success: true,
-            messages: filteredRoles.length ? 
-                ['Roles retrieved successfully'] : 
-                ['No roles available for your access level'],
+            messages: filteredRoles.length === 0 ?
+                ['No roles found'] :
+                ['Roles retrieved successfully'],
             roles: filteredRoles,
         });
 
@@ -51,46 +46,36 @@ export const getRoles = async (req, res, next) => {
 };
 
 export const getMasterDepartments = async (req, res, next) => {
-  try {
-      // Fetch all master departments
-      const masterDepartments = await MasterDepartment.findAll();
+    try {
+        // Fetch all master departments
+        const masterDepartments = await MasterDepartment.findAll();
 
-      // If no master departments found
-      if (masterDepartments.length === 0) {
-          throw new AppError('No master departments found', 404);
-      }
+        // Return successful response
+        res.status(200).json({
+            success: true,
+            messages: [masterDepartments.length === 0 ? 'No master departments found' : 'Master departments retrieved successfully'],
+            masterDepartments,
+        });
 
-      // Return successful response
-      res.status(200).json({
-          success: true,
-          messages: ['Master departments retrieved successfully'],
-          masterDepartments,
-      });
-
-  } catch (error) {
-      next(error);
-  }
+    } catch (error) {
+        next(error);
+    }
 };
 
 export const getIndustrySectors = async (req, res, next) => {
-  try {
-      // Fetch all industry sectors
-      const industrySectors = await IndustrySector.findAll();
+    try {
+        // Fetch all industry sectors
+        const industrySectors = await IndustrySector.findAll();
 
-      // If no industry sectors found
-      if (industrySectors.length === 0) {
-          throw new AppError('No industry sectors found', 404);
-      }
+        // Return successful response
+        res.status(200).json({
+            success: true,
+            messages: [industrySectors.length === 0 ? 'No industry sectors found' : 'Industry Sectors retrieved successfully'],
+            industrySectors,
+        });
 
-      // Return successful response
-      res.status(200).json({
-          success: true,
-          messages: ['Industry Sectors retrieved successfully'],
-          industrySectors,
-      });
-
-  } catch (error) {
-      next(error);
-  }
+    } catch (error) {
+        next(error);
+    }
 };
 

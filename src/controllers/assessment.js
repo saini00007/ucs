@@ -180,22 +180,29 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    // Fetch the assessment details to check if it has started or been submitted
     const assessment = await Assessment.findOne({
       where: { id: assessmentId },
       attributes: ['assessmentStarted', 'submitted'],
     });
 
-    // If assessment is not found, deny access
     if (!assessment) {
       throw new AppError('Assessment not found', 404);
     }
 
+    // Check assessment state
     const assessmentState = checkAssessmentState(assessment);
-
+    
+    // Parse and validate pagination params
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      throw new AppError('Invalid pagination parameters', 400);
+    }
     if (!assessmentState.success) {
       throw new AppError(
-        req.user.roleId === 'superadmin' ? assessmentState.message || 'Access denied: Insufficient content permissions.' : 'Access denied: Insufficient content permissions.',
+        req.user.roleId === 'superadmin'
+          ? assessmentState.message || 'Access denied: Insufficient content permissions.'
+          : 'Access denied: Insufficient content permissions.',
         assessmentState.status || 403
       );
     }
@@ -206,88 +213,71 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res, next) => {
       attributes: ['id', 'assessmentId'],
       include: [
         {
-          model: MasterQuestion, // Include the associated master question text
+          model: MasterQuestion,
           as: 'masterQuestion',
           attributes: ['questionText'],
         },
         {
-          model: Answer, // Include the answers related to the question
+          model: Answer,
           as: 'answer',
           attributes: ['id', 'answerText', 'createdAt', 'updatedAt'],
           include: [
             {
-              model: EvidenceFile, // Include evidence files associated with answers
+              model: EvidenceFile,
               as: 'evidenceFiles',
               attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
               order: [['createdAt', 'ASC']],
               include: [{
-                model: User, // Include the creator of the evidence file
+                model: User,
                 as: 'creator',
                 attributes: ['id', 'username'],
               }]
             },
             {
-              model: User, // Include the creator of the answer
+              model: User,
               as: 'creator',
               attributes: ['id', 'username'],
             }
           ],
         },
         {
-          model: Comment, // Include comments related to the question
+          model: Comment,
           as: 'comments',
           paranoid: false,
-          include: [
-            {
-              model: User, // Include the creator of the comment
-              as: 'creator',
-              attributes: ['id', 'username'],
-            },
-          ],
-          order: [['createdAt', 'ASC']], // Order comments by creation date
+          include: [{
+            model: User,
+            as: 'creator',
+            attributes: ['id', 'username'],
+          }],
+          order: [['createdAt', 'ASC']],
         },
       ],
-      limit, // Limit the number of questions fetched per page
-      offset: (page - 1) * limit, // Calculate offset for pagination
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
     });
 
-    // If no questions are found, return a success response with empty questions
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No questions found for the given assessment'],
-        questions: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
-    }
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / limitNum);
 
-    // Calculate the total number of pages for pagination
-    const totalPages = Math.ceil(count / limit);
-
-    // If the requested page is out of range, return a 404 error
-    if (page > totalPages) {
+    // Check if page exists
+    if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
-    // Return the questions with pagination details
+    // Return response with pagination
     res.status(200).json({
       success: true,
-      messages: ['Assessment questions retrieved successfully'],
+      messages: count === 0 ? ['No questions found for the given assessment'] : ['Assessment questions retrieved successfully'],
       questions,
       pagination: {
         totalItems: count,
         totalPages,
-        currentPage: page,
-        itemsPerPage: limit,
+        currentPage: pageNum,
+        itemsPerPage: limitNum
       },
     });
+
   } catch (error) {
-    // Log the error and return a 500 server error if anything goes wrong
     console.error('Error fetching assessment questions:', error);
     next(error);
   }

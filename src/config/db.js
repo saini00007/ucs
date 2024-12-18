@@ -17,19 +17,19 @@ const sequelize = new Sequelize(databaseUrl, {
     dialectOptions: {
         ssl: {
             require: true,
-            rejectUnauthorized: false
-        },
-        connectTimeout: 60000
+        rejectUnauthorized: false
     },
+    connectTimeout: 60000
+},
     pool: {
-        max: 5,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-    },
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
+},
     retry: {
-        max: 3
-    }
+    max: 3
+}
 });
 
 export default sequelize;

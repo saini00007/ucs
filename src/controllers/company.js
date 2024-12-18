@@ -250,51 +250,50 @@ export const createCompany = async (req, res, next) => {
 
 export const getAllCompanies = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
-
   try {
-    // Fetch companies with pagination and count the total number of companies
-    const { count, rows: companies } = await Company.findAndCountAll({
-      attributes: { exclude: ['companyLogo'] },
-      limit: limit,
-      offset: (page - 1) * limit,
-    });
-
-    // Return empty list if no companies are found
-    if (count === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: 'No companies found',
-        companies: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage: page,
-          itemsPerPage: limit,
-        },
-      });
+    // Validate pagination params
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      throw new AppError('Invalid pagination parameters', 400);
     }
 
-    const totalPages = Math.ceil(count / limit);
+    // Fetch companies with pagination and count
+    const { count, rows: companies } = await Company.findAndCountAll({
+      attributes: { exclude: ['companyLogo'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType'],
+      }],
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+    });
 
-    // Return 404 if requested page exceeds total pages
-    if (page > totalPages) {
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / limitNum);
+
+    // Check if page exists
+    if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
-    // Return companies with pagination data
+    // Return response with pagination
     res.status(200).json({
       success: true,
-      messages: 'Companies retrieved successfully',
+      messages: count === 0 ? ['No companies found'] : ['Companies retrieved successfully'],
       companies,
       pagination: {
         totalItems: count,
         totalPages,
-        currentPage: page,
-        itemsPerPage: limit,
+        currentPage: pageNum,
+        itemsPerPage: limitNum
       },
     });
+
   } catch (error) {
-    next(error)
+    console.error('Error fetching companies:', error);
+    next(error);
   }
 };
 
@@ -304,7 +303,12 @@ export const getCompanyById = async (req, res, next) => {
   try {
     // Fetch the company
     const company = await Company.findByPk(companyId, {
-      attributes: { exclude: ['companyLogo'] }
+      attributes: { exclude: ['companyLogo'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType'],
+      }],
     });
 
     // If the company is not found, return a 404 error with a message
@@ -553,11 +557,23 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      throw new AppError('Company not found', 404);
+    }
+
+    // Validate pagination params
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      throw new AppError('Invalid pagination parameters', 400);
+    }
+
     // Fetch departments for the given companyId with pagination
     const { count, rows: departments } = await Department.findAndCountAll({
-      where: { companyId: companyId },
-      limit: limit,
-      offset: (page - 1) * limit,
+      where: { companyId },
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
       include: [
         {
           model: Company,
@@ -572,24 +588,27 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
       ],
     });
 
-    // If no departments are found, throw an error
-    if (count === 0) {
-      throw new AppError('No departments found', 404);
-    }
+    // Calculate pagination info
+    const totalPages = Math.ceil(count / limitNum);
 
-    const totalPages = Math.ceil(count / limit);
-
-    // If the page exceeds total pages, throw an error
-    if (page > totalPages) {
+    // Check if page exists
+    if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
-    // Return departments with pagination details
+    // Return response with pagination
     res.status(200).json({
       success: true,
+      messages: count === 0 ? ['No departments found'] : ['Departments retrieved successfully'],
       departments,
-      pagination: { totalItems: count, totalPages, currentPage: page, itemsPerPage: limit },
+      pagination: {
+        totalItems: count,
+        totalPages,
+        currentPage: pageNum,
+        itemsPerPage: limitNum
+      },
     });
+
   } catch (error) {
     console.error('Error fetching departments for company:', error);
     next(error);
@@ -602,10 +621,23 @@ export const getUsersByCompanyId = async (req, res, next) => {
   const { roleId, departments } = req.user;
 
   try {
+
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      throw new AppError('Company not found', 404);
+    }
+
+    // Validate pagination params
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      throw new AppError('Invalid pagination parameters', 400);
+    }
+
     // Get department IDs from the user's departments
     const departmentIds = departments.map(department => department.id);
 
-    // Define base query options
+    // Rest of the code remains the same...
     let queryOptions = {
       where: {
         companyId,
@@ -618,86 +650,57 @@ export const getUsersByCompanyId = async (req, res, next) => {
           model: Department,
           as: 'departments',
           through: {
-            attributes: [], // Exclude junction table attributes
+            attributes: [],
           },
           required: false,
           attributes: ['id'],
         }
       ],
-      limit: parseInt(limit, 10),
-      offset: (parseInt(page, 10) - 1) * parseInt(limit, 10),
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
       distinct: true,
       subQuery: false,
     };
 
-    // Apply role-based filtering
     if (['admin', 'superadmin', 'departmentmanager'].includes(roleId)) {
       // These roles can see all users in the company
-      // No additional filtering needed
     } else if (['assessor', 'reviewer'].includes(roleId)) {
-      // These roles can only see:
-      // 1. Company admins
-      // 2. Users from their own departments
       queryOptions.where[Op.or] = [
-        { roleId: 'admin' }, // Can see admins
+        { roleId: 'admin' },
         {
           [Op.and]: [
-            { '$departments.id$': { [Op.in]: departmentIds } }, // Users from their departments
+            { '$departments.id$': { [Op.in]: departmentIds } },
           ]
         }
       ];
     } else {
-      // Unknown role - throw an error
       throw new AppError('Unauthorized access', 403);
     }
 
-    // Fetch users based on the query options
     const { count, rows: users } = await User.findAndCountAll(queryOptions);
 
-    // Calculate pagination values
-    const totalItems = count;
-    const totalPages = Math.ceil(totalItems / limit);
-    const currentPage = parseInt(page, 10);
+    const totalPages = Math.ceil(count / limitNum);
 
-    // Handle no users found
-    if (totalItems === 0) {
-      return res.status(200).json({
-        success: true,
-        messages: ['No users found'],
-        users: [],
-        pagination: {
-          totalItems: 0,
-          totalPages: 0,
-          currentPage,
-          itemsPerPage: parseInt(limit, 10),
-        },
-      });
-    }
-
-    // Handle invalid page number
-    if (currentPage > totalPages) {
+    if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
-    // Return successful response
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      messages: ['Users retrieved successfully'],
+      messages: count === 0 ? ['No users found'] : ['Users retrieved successfully'],
       users,
       pagination: {
-        totalItems,
+        totalItems: count,
         totalPages,
-        currentPage,
-        itemsPerPage: parseInt(limit, 10),
+        currentPage: pageNum,
+        itemsPerPage: limitNum
       },
     });
 
   } catch (error) {
-    console.error('Error fetching users by company:', error);
     next(error);
   }
 };
-
 
 export const getReportByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
@@ -772,7 +775,6 @@ export const getReportByCompanyId = async (req, res, next) => {
     next(error);
   }
 };
-
 
 export const getCompanyLogo = async (req, res, next) => {
   try {
