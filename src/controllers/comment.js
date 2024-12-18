@@ -114,7 +114,6 @@ export const updateComment = async (req, res, next) => {
   }
 };
 
-
 export const deleteComment = async (req, res, next) => {
   const { commentId } = req.params;  // Extract the comment ID from the URL parameters
 

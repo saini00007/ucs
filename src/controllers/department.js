@@ -337,54 +337,30 @@ export const deleteDepartment = async (req, res, next) => {
 
 export const getAssessmentByDepartmentId = async (req, res, next) => {
     const { departmentId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-
+    
     try {
         const department = await Department.findByPk(departmentId);
         if (!department) {
             throw new AppError('Department not found', 404);
         }
-
-        // Validate pagination params
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
-            throw new AppError('Invalid pagination parameters', 400);
-        }
-
+        
         // Find all assessments associated with the given department ID
-        const { count, rows: assessments } = await Assessment.findAndCountAll({
+        const assessments = await Assessment.findAll({
             where: { departmentId },
             include: [{
                 model: Department,
                 as: 'department',
                 attributes: ['id', 'departmentName']
-            }],
-            limit: limitNum,
-            offset: (pageNum - 1) * limitNum
+            }]
         });
-
-        // Calculate pagination info
-        const totalPages = Math.ceil(count / limitNum);
-
-        // Check if page exists
-        if (pageNum > totalPages && count > 0) {
-            throw new AppError('Page not found', 404);
-        }
-
-        // Return response with pagination
+        
+        // Return response
         res.status(200).json({
             success: true,
-            messages: count === 0 ? ['No assessments found'] : ['Assessments retrieved successfully'],
-            assessments,
-            pagination: {
-                totalItems: count,
-                totalPages,
-                currentPage: pageNum,
-                itemsPerPage: limitNum
-            },
+            messages: assessments.length === 0 ? ['No assessments found'] : ['Assessments retrieved successfully'],
+            assessments
         });
-
+        
     } catch (error) {
         console.error('Error fetching assessments for department:', error);
         next(error);

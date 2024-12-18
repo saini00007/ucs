@@ -172,60 +172,39 @@ export const getAnswerByAssessmentQuestionId = async (req, res, next) => {
 
 export const getCommentsByAssessmentQuestionId = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
-
+  
   try {
-    const assessmentQuestion = await AssessmentQuestion.findByPk(assessmentQuestionId);
-    if (!assessmentQuestion) {
-      throw new AppError('Assessment question not found', 404);
-    }
-    // Parse and validate pagination params
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
-      throw new AppError('Invalid pagination parameters', 400);
-    }
-    // Fetch comments with pagination
-    const { count, rows: comments } = await Comment.findAndCountAll({
-      where: { assessmentQuestionId },
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['id', 'username']
-      }],
-      paranoid: false,
-      order: [['createdAt', 'ASC']],
-      limit: limitNum,
-      offset: (pageNum - 1) * limitNum,
-    });
+      const assessmentQuestion = await AssessmentQuestion.findByPk(assessmentQuestionId);
+      if (!assessmentQuestion) {
+          throw new AppError('Assessment question not found', 404);
+      }
 
-    // Calculate pagination info
-    const totalPages = Math.ceil(count / limitNum);
+      // Fetch all comments
+      const comments = await Comment.findAll({
+          where: { assessmentQuestionId },
+          include: [{
+              model: User,
+              as: 'creator',
+              attributes: ['id', 'username']
+          }],
+          paranoid: false,
+          order: [['createdAt', 'ASC']]
+      });
 
-    // Check if page exists
-    if (pageNum > totalPages && count > 0) {
-      throw new AppError('Page not found', 404);
-    }
-
-    // Return response with pagination
-    res.status(200).json({
-      success: true,
-      messages: count === 0 ? ['No comments found for the given assessment question'] : ['Comments retrieved successfully'],
-      comments,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: pageNum,
-        itemsPerPage: limitNum
-      },
-    });
+      // Return response
+      res.status(200).json({
+          success: true,
+          messages: comments.length === 0 
+              ? ['No comments found for the given assessment question'] 
+              : ['Comments retrieved successfully'],
+          comments
+      });
 
   } catch (error) {
-    console.error('Error fetching comments:', error);
-    next(error);
+      console.error('Error fetching comments:', error);
+      next(error);
   }
 };
-
 
 // export const deleteAssessmentQuestions = async (req, res) => {
 //   const { questionIds } = req.body;
