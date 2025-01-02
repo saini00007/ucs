@@ -2,6 +2,27 @@ import { Answer, Assessment, AssessmentQuestion, Department, MasterQuestion } fr
 import AppError from './AppError';
 import { literal, QueryTypes, Sequelize } from 'sequelize';
 
+const ANSWER_TYPES = {
+    YES: 'yes',
+    NO: 'no',
+    NOT_APPLICABLE: 'notApplicable'
+};
+
+const formatControlStats = (answerType, controlStats) => {
+    const groupedCounts = {};
+
+    controlStats
+        .filter(stat => stat.answer_text === answerType)
+        .forEach(stat => {
+            if (stat.sp80053ControlNum) {
+                const prefix = stat.sp80053ControlNum.split('-')[0];
+                groupedCounts[prefix] = (groupedCounts[prefix] || 0) + parseInt(stat.count);
+            }
+        });
+
+    return groupedCounts;
+};
+
 // Assessment level statistics
 export const calculateAssessmentStatistics = async (assessmentId) => {
     try {
@@ -14,9 +35,9 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
         const stats = await Answer.findAll({
             attributes: [
                 [literal('COUNT(*)'), 'totalAnswers'],
-                [literal('SUM(CASE WHEN LOWER(answer_text) = \'yes\' THEN 1 ELSE 0 END)'), 'yesCount'],
-                [literal('SUM(CASE WHEN LOWER(answer_text) = \'no\' THEN 1 ELSE 0 END)'), 'noCount'],
-                [literal('SUM(CASE WHEN LOWER(answer_text) = \'notapplicable\' THEN 1 ELSE 0 END)'), 'notApplicableCount']
+                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.YES}' THEN 1 ELSE 0 END)`), 'yesCount'],
+                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NO}' THEN 1 ELSE 0 END)`), 'noCount'],
+                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NOT_APPLICABLE}' THEN 1 ELSE 0 END)`), 'notApplicableCount']
             ],
             include: [{
                 model: AssessmentQuestion,
@@ -49,34 +70,21 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
             }
         );
 
-        // Format control stats by answer type
-        const formatControlStats = (answerType) => {
-            const controls = {};
-            controlStats
-                .filter(stat => stat.answer_text.toLowerCase() === answerType.toLowerCase())
-                .forEach(stat => {
-                    if (stat.sp80053ControlNum) {
-                        controls[stat.sp80053ControlNum] = parseInt(stat.count);
-                    }
-                });
-            return controls;
-        };
-
         // Format the response
         const statistics = {
             totalQuestions,
             totalAnswers: parseInt(stats[0]?.totalAnswers) || 0,
             yesStats: {
                 count: parseInt(stats[0]?.yesCount) || 0,
-                sp80053ControlNum: formatControlStats('yes')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.YES, controlStats)
             },
             noStats: {
                 count: parseInt(stats[0]?.noCount) || 0,
-                sp80053ControlNum: formatControlStats('no')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NO, controlStats)
             },
             notApplicableStats: {
                 count: parseInt(stats[0]?.notApplicableCount) || 0,
-                sp80053ControlNum: formatControlStats('notapplicable')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NOT_APPLICABLE, controlStats)
             }
         };
 
@@ -114,9 +122,9 @@ export const calculateCompanyStatistics = async (companyId) => {
         const statsQuery = `
             SELECT 
                 COUNT(*) as "totalAnswers",
-                SUM(CASE WHEN LOWER(answer_text) = 'yes' THEN 1 ELSE 0 END) as "yesCount",
-                SUM(CASE WHEN LOWER(answer_text) = 'no' THEN 1 ELSE 0 END) as "noCount",
-                SUM(CASE WHEN LOWER(answer_text) = 'notapplicable' THEN 1 ELSE 0 END) as "notApplicableCount"
+                SUM(CASE WHEN answer_text = '${ANSWER_TYPES.YES}' THEN 1 ELSE 0 END) as "yesCount",
+                SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NO}' THEN 1 ELSE 0 END) as "noCount",
+                SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NOT_APPLICABLE}' THEN 1 ELSE 0 END) as "notApplicableCount"
             FROM answers a
             INNER JOIN assessment_questions aq ON a.assessment_question_id = aq.id
             INNER JOIN assessments ast ON aq.assessment_id = ast.id
@@ -155,34 +163,21 @@ export const calculateCompanyStatistics = async (companyId) => {
             }
         );
 
-        // Format control stats by answer type
-        const formatControlStats = (answerType) => {
-            const controls = {};
-            controlStats
-                .filter(stat => stat.answer_text.toLowerCase() === answerType.toLowerCase())
-                .forEach(stat => {
-                    if (stat.sp80053ControlNum) {
-                        controls[stat.sp80053ControlNum] = parseInt(stat.count);
-                    }
-                });
-            return controls;
-        };
-
         // Format the response
         const statistics = {
-            totalQuestions,
+            totalQuestions: parseInt(totalQuestions),
             totalAnswers: parseInt(stats?.totalAnswers) || 0,
             yesStats: {
                 count: parseInt(stats?.yesCount) || 0,
-                sp80053ControlNum: formatControlStats('yes')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.YES, controlStats)
             },
             noStats: {
                 count: parseInt(stats?.noCount) || 0,
-                sp80053ControlNum: formatControlStats('no')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NO, controlStats)
             },
             notApplicableStats: {
                 count: parseInt(stats?.notApplicableCount) || 0,
-                sp80053ControlNum: formatControlStats('notapplicable')
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NOT_APPLICABLE, controlStats)
             }
         };
 

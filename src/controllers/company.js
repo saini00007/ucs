@@ -639,8 +639,9 @@ export const getReportByCompanyId = async (req, res, next) => {
           departmentData.assessments.map(async (assessment) => {
             const assessmentStats = await calculateAssessmentStatistics(assessment.id);
             return {
+              stats: assessmentStats,
               ...assessment,
-              stats: assessmentStats
+              
             };
           })
         );
