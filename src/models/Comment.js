@@ -43,4 +43,20 @@ const Comment = sequelize.define('Comment', {
   paranoid: true,
 });
 
+Comment.associate = (models) => {
+  // AssessmentQuestion association
+  Comment.belongsTo(models.AssessmentQuestion, { 
+    foreignKey: 'assessmentQuestionId', 
+    targetKey: 'id', 
+    as: 'assessmentQuestion' 
+  });
+  
+  // User association
+  Comment.belongsTo(models.User, { 
+    foreignKey: 'createdByUserId', 
+    targetKey: 'id', 
+    as: 'creator' 
+  });
+};
+
 export default Comment;

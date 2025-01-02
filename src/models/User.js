@@ -95,5 +95,51 @@ const User = sequelize.define('User', {
   },
 });
 
+User.associate = (models) => {
+  // Company association
+  User.belongsTo(models.Company, { 
+    foreignKey: 'companyId', 
+    targetKey: 'id', 
+    as: 'company' 
+  });
+  
+  // Department association (many-to-many)
+  User.belongsToMany(models.Department, { 
+    through: models.UserDepartmentLink, 
+    foreignKey: 'userId', 
+    as: 'departments' 
+  });
+  
+  // Role association
+  User.belongsTo(models.Role, { 
+    foreignKey: 'roleId', 
+    targetKey: 'id', 
+    as: 'role' 
+  });
+  
+  // Otp association
+  User.hasMany(models.Otp, { 
+    foreignKey: 'userId', 
+    as: 'otps' 
+  });
+  
+  // Answer association
+  User.hasMany(models.Answer, { 
+    foreignKey: 'createdByUserId', 
+    as: 'createdAnswers' 
+  });
+  
+  // Comment association
+  User.hasMany(models.Comment, { 
+    foreignKey: 'createdByUserId', 
+    as: 'createdComments' 
+  });
+  
+  // EvidenceFile association
+  User.hasMany(models.EvidenceFile, { 
+    foreignKey: 'createdByUserId', 
+    as: 'createdEvidenceFiles' 
+  });
+};
 
 export default User;

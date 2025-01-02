@@ -2,163 +2,9 @@ import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, E
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
+import { calculateAssessmentStatistics, calculateCompanyStatistics } from '../utils/calculateStatistics.js';
 
-const validateEmailForCompany = async (email, companyId = null) => {
-  // Check the Company table for the email conflict
-  const existingCompany = await Company.findOne({
-    where: {
-      [Op.or]: [
-        { primaryEmail: email },
-        { secondaryEmail: email }
-      ],
-      ...(companyId && { id: { [Op.ne]: companyId } })
-    },
-    paranoid: false
-  });
-
-  // Check the User table for the email conflict
-  const existingUserEmail = await User.findOne({
-    where: { email },
-    paranoid: false
-  });
-
-  if (existingCompany) {
-    return {
-      isValid: false,
-      message: 'Email already exists in another company'
-    };
-  }
-
-  if (existingUserEmail) {
-    return {
-      isValid: false,
-      message: 'Email is already in use by a user'
-    };
-  }
-
-  return { isValid: true };
-};
-
-const handleCompanyEmailUpdates = async (company, primaryEmail, secondaryEmail, transaction) => {
-  const originalPrimaryEmail = company.primaryEmail;
-  const originalSecondaryEmail = company.secondaryEmail;
-  const emailUpdates = [];
-
-  // If primary wants secondary's current email, update secondary first
-  if (primaryEmail === originalSecondaryEmail) {
-    if (!secondaryEmail) {
-      throw new AppError('New secondary email required when swapping with primary', 400);
-    }
-
-    const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
-    if (!secondaryEmailValidation.isValid) {
-      throw new AppError(`Secondary email ${secondaryEmailValidation.message}`, 400);
-    }
-
-    // Update secondary first
-    const secondaryAdmin = await User.findOne({
-      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (secondaryAdmin) {
-      secondaryAdmin.email = secondaryEmail;
-      await secondaryAdmin.save({ transaction });
-      emailUpdates.push('Secondary admin email updated');
-    }
-
-    // Then update primary
-    const primaryAdmin = await User.findOne({
-      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (primaryAdmin) {
-      primaryAdmin.email = primaryEmail;
-      await primaryAdmin.save({ transaction });
-      emailUpdates.push('Primary admin email updated');
-    }
-
-    company.secondaryEmail = secondaryEmail;
-    company.primaryEmail = primaryEmail;
-    return emailUpdates;
-  }
-
-  // If secondary wants primary's current email, update primary first
-  if (secondaryEmail === originalPrimaryEmail) {
-    if (!primaryEmail) {
-      throw new AppError('New primary email required when swapping with secondary', 400);
-    }
-
-    const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
-    if (!primaryEmailValidation.isValid) {
-      throw new AppError(`Primary email ${primaryEmailValidation.message}`, 400);
-    }
-
-    // Update primary first
-    const primaryAdmin = await User.findOne({
-      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (primaryAdmin) {
-      primaryAdmin.email = primaryEmail;
-      await primaryAdmin.save({ transaction });
-      emailUpdates.push('Primary admin email updated');
-    }
-
-    // Then update secondary
-    const secondaryAdmin = await User.findOne({
-      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (secondaryAdmin) {
-      secondaryAdmin.email = secondaryEmail;
-      await secondaryAdmin.save({ transaction });
-      emailUpdates.push('Secondary admin email updated');
-    }
-
-    company.primaryEmail = primaryEmail;
-    company.secondaryEmail = secondaryEmail;
-    return emailUpdates;
-  }
-
-  // Handle regular updates
-  if (primaryEmail && primaryEmail !== originalPrimaryEmail) {
-    const primaryEmailValidation = await validateEmailForCompany(primaryEmail, company.id);
-    if (!primaryEmailValidation.isValid) {
-      throw new AppError(`Primary email ${primaryEmailValidation.message}`, 400);
-    }
-
-    const primaryAdmin = await User.findOne({
-      where: { email: originalPrimaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (primaryAdmin) {
-      primaryAdmin.email = primaryEmail;
-      await primaryAdmin.save({ transaction });
-      emailUpdates.push('Primary admin email updated');
-    }
-    company.primaryEmail = primaryEmail;
-  }
-
-  if (secondaryEmail && secondaryEmail !== originalSecondaryEmail) {
-    const secondaryEmailValidation = await validateEmailForCompany(secondaryEmail, company.id);
-    if (!secondaryEmailValidation.isValid) {
-      throw new AppError(`Secondary email ${secondaryEmailValidation.message}`, 400);
-    }
-
-    const secondaryAdmin = await User.findOne({
-      where: { email: originalSecondaryEmail, companyId: company.id, roleId: 'admin' },
-      transaction,
-    });
-    if (secondaryAdmin) {
-      secondaryAdmin.email = secondaryEmail;
-      await secondaryAdmin.save({ transaction });
-      emailUpdates.push('Secondary admin email updated');
-    }
-    company.secondaryEmail = secondaryEmail;
-  }
-
-  return emailUpdates;
-};
+import {handleCompanyEmailUpdates,validateEmailForCompany} from '../utils/companyUtils.js'
 
 export const createCompany = async (req, res, next) => {
   const {
@@ -364,7 +210,6 @@ export const updateCompany = async (req, res, next) => {
       throw new AppError('Primary phone is same as secondary phone in database and vice versa.', 400);
     }
 
-
     if (industrySectorId) {
       const industrySector = await IndustrySector.findByPk(industrySectorId);
       if (!industrySector) {
@@ -406,7 +251,6 @@ export const updateCompany = async (req, res, next) => {
       ],
       company: updatedCompany,
     });
-
   } catch (error) {
     await transaction.rollback();
     next(error);
@@ -706,6 +550,16 @@ export const getReportByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
+    // Get company basic info
+    const company = await Company.findByPk(companyId, {
+      attributes: ['id', 'companyName']
+    });
+
+    if (!company) {
+      throw new AppError(`Company not found with ID: ${companyId}`, 404);
+    }
+
+    // Get departments and check submissions
     const departments = await Department.findAll({
       where: { companyId },
       attributes: ['id'],
@@ -720,7 +574,7 @@ export const getReportByCompanyId = async (req, res, next) => {
       throw new AppError(`No departments found for company ID: ${companyId}`, 404);
     }
 
-    // Check assessment submissions before fetching question data
+    // Validate all assessments are submitted
     const hasUnsubmittedAssessment = departments.some(dept =>
       dept.assessments.some(assessment => !assessment.submitted)
     );
@@ -729,11 +583,16 @@ export const getReportByCompanyId = async (req, res, next) => {
       throw new AppError('All assessments must be submitted before generating report', 400);
     }
 
-    // Only if all assessments are submitted, fetch the full data
-    const fullReport = await Department.findAll({
+    // Get detailed department data with assessments using the risk report scope
+    const departmentReport = await Department.findAll({
       where: { companyId },
       attributes: ['id', 'departmentName'],
       include: [
+        {
+          model: MasterDepartment,
+          as: 'masterDepartment',
+          attributes: ['id', 'departmentName'],
+        },
         {
           model: Assessment,
           as: 'assessments',
@@ -744,10 +603,8 @@ export const getReportByCompanyId = async (req, res, next) => {
             attributes: ['id'],
             include: [
               {
-                model: MasterQuestion,
-                as: 'masterQuestion',
-                attributes: { exclude: ['questionText', 'vulnerabilityValue', 'riskLikelihoodScore', 'riskLikelihoodValue', 'riskLikelihoodRating', 'financialImpactRating', 'reputationalImpactRating', 'legalImpactRating', 'complianceImpactRating', 'objAndProdOperImpactRating', 'riskImpactValue', 'riskImpactRating', 'inherentRisk', 'currentRiskValue', 'revRiskLikelihoodRating', 'revRiskImpactRating', 'targetRiskRating', 'department', 'id', 'createdAt', 'updatedAt'] }
-
+                model: MasterQuestion.scope('riskReport'),
+                as: 'masterQuestion'
               },
               {
                 model: Answer,
@@ -756,18 +613,55 @@ export const getReportByCompanyId = async (req, res, next) => {
                 where: {
                   answerText: 'no'
                 },
-                attributes: []
+                attributes: ['answerText']
               }
             ]
           }]
         }
+      ],
+      order: [
+        ['departmentName', 'ASC'],
+        [{ model: Assessment, as: 'assessments' }, 'assessmentName', 'ASC'],
+        [{ model: Assessment, as: 'assessments' }, { model: AssessmentQuestion, as: 'questions' }, 'id', 'ASC']
       ]
     });
+
+    // Get company level statistics
+    const companyStats = await calculateCompanyStatistics(companyId);
+
+    // Enhance department report with assessment statistics
+    const enhancedDepartmentReport = await Promise.all(
+      departmentReport.map(async (department) => {
+        const departmentData = department.toJSON();
+
+        // Add statistics to each assessment
+        departmentData.assessments = await Promise.all(
+          departmentData.assessments.map(async (assessment) => {
+            const assessmentStats = await calculateAssessmentStatistics(assessment.id);
+            return {
+              ...assessment,
+              stats: assessmentStats
+            };
+          })
+        );
+
+        return departmentData;
+      })
+    );
+
+    // Combine all data in final response
+    const finalReport = {
+
+      ...company.toJSON(),
+      stats: companyStats
+      ,
+      departments: enhancedDepartmentReport
+    };
 
     res.status(200).json({
       success: true,
       messages: ['Report data successfully fetched'],
-      reportData: fullReport
+      reportData: finalReport
     });
 
   } catch (error) {
@@ -789,6 +683,8 @@ export const getCompanyLogo = async (req, res, next) => {
     if (!company || !company.companyLogo) {
       throw new AppError('Logo not found for the company', 404);
     }
+    // console.log(company.companyLogo)
+    console.log(res.headers);
 
     res.set('Content-Type', 'image/png');
     return res.status(200).send(company.companyLogo);

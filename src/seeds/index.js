@@ -39,7 +39,6 @@ const runSeeds = async () => {
 const startServerAndSeed = async () => {
     try {
         await initializeDatabase();
-
         app.listen(PORT, async () => {
             console.log(`Server is running on port ${PORT}`);
             await runSeeds();

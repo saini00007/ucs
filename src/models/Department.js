@@ -43,4 +43,33 @@ const Department = sequelize.define('Department', {
   paranoid: true,
 });
 
+Department.associate = (models) => {
+  // User association (many-to-many)
+  Department.belongsToMany(models.User, { 
+    through: models.UserDepartmentLink, 
+    foreignKey: 'departmentId', 
+    as: 'users' 
+  });
+  
+  // Company association
+  Department.belongsTo(models.Company, { 
+    foreignKey: 'companyId', 
+    targetKey: 'id', 
+    as: 'company' 
+  });
+  
+  // Assessment association
+  Department.hasMany(models.Assessment, { 
+    foreignKey: 'departmentId', 
+    as: 'assessments' 
+  });
+  
+  // MasterDepartment association
+  Department.belongsTo(models.MasterDepartment, { 
+    foreignKey: 'masterDepartmentId', 
+    targetKey: 'id', 
+    as: 'masterDepartment' 
+  });
+};
+
 export default Department;

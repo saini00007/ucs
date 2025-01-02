@@ -82,7 +82,6 @@ const updateUserSchema = Joi.object({
     username: Joi.string()
         .min(1)
         .max(255)
-        .allow('')
         .optional()
         .messages({
             'string.base': 'Username must be a string.',
@@ -93,7 +92,6 @@ const updateUserSchema = Joi.object({
     email: Joi.string()
         .email()
         .max(100)
-        .allow('')
         .optional()
         .messages({
             'string.base': 'Email must be a string.',
@@ -105,7 +103,6 @@ const updateUserSchema = Joi.object({
         .min(1)
         .max(5)
         .optional()
-        .allow('')
         .pattern(/^\+?\d+$/)
         .messages({
             'string.min': 'Country code must be between 1 and 5 characters',
@@ -114,7 +111,6 @@ const updateUserSchema = Joi.object({
         }),
     roleId: Joi.string()
         .valid('admin', 'assessor', 'reviewer', 'departmentmanager')
-        .allow('')
         .optional()
         .messages({
             'string.base': 'Role ID must be a string.',
@@ -123,7 +119,6 @@ const updateUserSchema = Joi.object({
     phoneNumber: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
-        .allow('')
         .optional()
         .messages({
             'string.base': 'Phone number must be a string.',

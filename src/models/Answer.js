@@ -35,4 +35,26 @@ const Answer = sequelize.define('Answer', {
   paranoid: true,
 });
 
+Answer.associate = (models) => {
+  // AssessmentQuestion association
+  Answer.belongsTo(models.AssessmentQuestion, { 
+    foreignKey: 'assessmentQuestionId', 
+    targetKey: 'id', 
+    as: 'assessmentQuestion' 
+  });
+  
+  // User association
+  Answer.belongsTo(models.User, { 
+    foreignKey: 'createdByUserId', 
+    targetKey: 'id', 
+    as: 'creator' 
+  });
+  
+  // EvidenceFile association
+  Answer.hasMany(models.EvidenceFile, { 
+    foreignKey: 'answerId', 
+    as: 'evidenceFiles' 
+  });
+};
+
 export default Answer;

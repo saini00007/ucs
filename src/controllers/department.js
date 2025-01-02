@@ -15,6 +15,8 @@ import {
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
+import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
+
 
 export const getDepartmentById = async (req, res, next) => {
     const { departmentId } = req.params;
@@ -337,30 +339,43 @@ export const deleteDepartment = async (req, res, next) => {
 
 export const getAssessmentByDepartmentId = async (req, res, next) => {
     const { departmentId } = req.params;
-    
+
     try {
         const department = await Department.findByPk(departmentId);
         if (!department) {
             throw new AppError('Department not found', 404);
         }
-        
+
         // Find all assessments associated with the given department ID
         const assessments = await Assessment.findAll({
             where: { departmentId },
-            include: [{
-                model: Department,
-                as: 'department',
-                attributes: ['id', 'departmentName']
-            }]
+            include: [
+                {
+                    model: Department,
+                    as: 'department',
+                    attributes: ['id', 'departmentName']
+                }
+            ]
         });
-        
+
+        // Calculate answer statistics for each assessment
+        const assessmentsWithStats = await Promise.all(
+            assessments.map(async (assessment) => {
+                const stats = await calculateAssessmentStatistics(assessment.id);
+                return {
+                    ...assessment.toJSON(),
+                    stats
+                };
+            })
+        );
+
         // Return response
         res.status(200).json({
             success: true,
             messages: assessments.length === 0 ? ['No assessments found'] : ['Assessments retrieved successfully'],
-            assessments
+            assessments: assessmentsWithStats
         });
-        
+
     } catch (error) {
         console.error('Error fetching assessments for department:', error);
         next(error);

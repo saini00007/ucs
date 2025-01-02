@@ -21,14 +21,14 @@ const parseFloatSafe = (value) => {
 const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH) => {
   try {
     const filePath = customFilePath || DEFAULT_EXCEL_PATH;
-    
+
     if (!fs.existsSync(filePath)) {
       throw new Error(`Excel file not found at path: ${filePath}`);
     }
 
     console.log(`Reading Excel file from: ${filePath}`);
     const workbook = xlsx.readFile(filePath);
-    
+
     if (!workbook.SheetNames.length) {
       throw new Error('Excel file contains no sheets');
     }
@@ -93,7 +93,7 @@ const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH)
         // If department is specified, create the link
         if (questionData.department) {
           const departmentName = questionData.department.trim();
-          
+
           // Find the department
           const department = await MasterDepartment.findOne({
             where: { departmentName: departmentName }

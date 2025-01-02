@@ -43,4 +43,19 @@ const Assessment = sequelize.define('Assessment', {
   paranoid: true,
 });
 
+Assessment.associate = (models) => {
+  // Department association
+  Assessment.belongsTo(models.Department, { 
+    foreignKey: 'departmentId', 
+    targetKey: 'id', 
+    as: 'department' 
+  });
+  
+  // AssessmentQuestion association
+  Assessment.hasMany(models.AssessmentQuestion, { 
+    foreignKey: 'assessmentId', 
+    as: 'questions' 
+  });
+};
+
 export default Assessment;

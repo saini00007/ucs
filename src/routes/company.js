@@ -82,8 +82,8 @@ router.get('/:companyId/report',
 )
 
 router.get('/:companyId/logo',
-    attachResourceInfo('Company', 'Company', 'companyId', 'read'),
-    checkAccess,
+    // attachResourceInfo('Company', 'Company', 'companyId', 'read'),
+    // checkAccess,
     getCompanyLogo
 )
 

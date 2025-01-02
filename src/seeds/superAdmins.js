@@ -1,4 +1,4 @@
-import {  User, Role } from '../models/index.js';
+import { User, Role } from '../models/index.js';
 import sequelize from '../config/db.js';
 import bcrypt from 'bcrypt';
 

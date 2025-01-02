@@ -74,4 +74,25 @@ const Company = sequelize.define('Company', {
   paranoid: true,
 });
 
+Company.associate = (models) => {
+  // User association
+  Company.hasMany(models.User, { 
+    foreignKey: 'companyId', 
+    as: 'users' 
+  });
+  
+  // Department association
+  Company.hasMany(models.Department, { 
+    foreignKey: 'companyId', 
+    as: 'departments' 
+  });
+  
+  // IndustrySector association
+  Company.belongsTo(models.IndustrySector, { 
+    foreignKey: 'industrySectorId', 
+    targetKey: 'id', 
+    as: 'industrySector' 
+  });
+};
+
 export default Company;

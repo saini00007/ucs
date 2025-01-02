@@ -118,7 +118,6 @@ const createCompanySchema = baseCompanySchema;
 const updateCompanySchema = Joi.object({
     companyName: Joi.string()
         .max(255)
-        .allow('')
         .optional()
         .messages({
             'string.empty': 'Company name cannot be empty',
@@ -127,7 +126,6 @@ const updateCompanySchema = Joi.object({
 
     postalAddress: Joi.string()
         .max(255)
-        .allow('')
         .optional()
         .messages({
             'string.empty': 'Postal address cannot be empty',
@@ -137,7 +135,6 @@ const updateCompanySchema = Joi.object({
     gstNumber: Joi.string()
         .length(15)
         .pattern(/^\d+$/)
-        .allow('')
         .optional()
         .messages({
             'string.length': 'GST number must be exactly 15 digits',
@@ -147,7 +144,6 @@ const updateCompanySchema = Joi.object({
     panNumber: Joi.string()
         .length(10)
         .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
-        .allow('')
         .optional()
         .messages({
             'string.length': 'PAN number must be exactly 10 characters',
@@ -156,7 +152,6 @@ const updateCompanySchema = Joi.object({
 
     industrySectorId: Joi.string()
         .uuid()
-        .allow('')
         .optional()
         .messages({
             'string.uuid': 'Industry sector ID must be a valid UUID',
@@ -164,7 +159,6 @@ const updateCompanySchema = Joi.object({
 
     primaryEmail: Joi.string()
         .email()
-        .allow('')
         .optional()
         .messages({
             'string.email': 'Primary email must be a valid email address',
@@ -172,7 +166,6 @@ const updateCompanySchema = Joi.object({
 
     secondaryEmail: Joi.string()
         .email()
-        .allow('')
         .optional()
         .messages({
             'string.email': 'Secondary email must be a valid email address',
@@ -181,7 +174,6 @@ const updateCompanySchema = Joi.object({
     primaryPhone: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
-        .allow('')
         .optional()
         .messages({
             'string.length': 'Primary phone must be exactly 10 digits',
@@ -191,7 +183,6 @@ const updateCompanySchema = Joi.object({
     secondaryPhone: Joi.string()
         .length(10)
         .pattern(/^\d+$/)
-        .allow('')
         .optional()
         .messages({
             'string.length': 'Secondary phone must be exactly 10 digits',
@@ -202,7 +193,6 @@ const updateCompanySchema = Joi.object({
         .min(1)
         .max(5)
         .optional()
-        .allow('')
         .pattern(/^\+?\d+$/)
         .messages({
             'string.min': 'Country code must be between 1 and 5 characters',
@@ -214,7 +204,6 @@ const updateCompanySchema = Joi.object({
         .min(1)
         .max(5)
         .optional()
-        .allow('')
         .pattern(/^\+?\d+$/)
         .messages({
             'string.min': 'Country code must be between 1 and 5 characters',

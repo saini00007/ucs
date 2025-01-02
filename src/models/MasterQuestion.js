@@ -49,13 +49,13 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   vulnerabilityValue: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   riskLikelihoodScore: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   riskLikelihoodValue: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   riskLikelihoodRating: {
     type: DataTypes.TEXT,
@@ -70,22 +70,22 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   financialImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   reputationalImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   legalImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   complianceImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   objAndProdOperImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   riskImpactValue: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   riskImpactRating: {
     type: DataTypes.TEXT,
@@ -94,7 +94,7 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   currentRiskValue: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   currentRiskRating: {
     type: DataTypes.TEXT,
@@ -121,10 +121,10 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
     type: DataTypes.TEXT,
   },
   revRiskLikelihoodRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   revRiskImpactRating: {
-    type: DataTypes.FLOAT, // Now accepts both integers and float values
+    type: DataTypes.FLOAT,
   },
   targetRiskRating: {
     type: DataTypes.TEXT,
@@ -136,6 +136,48 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   tableName: 'master_questions',
   timestamps: true,
   underscored: true,
+  scopes: {
+    riskReport: {
+      attributes: [
+        'srno',
+        'sp80053ControlNum',
+        'controlName',
+        'iso270012022CIdNum',
+        'nistCsfControlId',
+        'mitreDefendControlId',
+        'nist80082ControlId',
+        'iec62443ControlId',
+        'pcidss',
+        'vulnerabilityDesc',
+        'vulnerabilityRating',
+        'ermLikelihoodRating',
+        'operationalImpactDesc',
+        'businessImpactDesc',
+        'currentRiskRating',
+        'ermRiskRating',
+        'riskOwner',
+        'riskTreatmentPlan1',
+        'riskTreatmentPlan2',
+        'riskTreatmentPlan3',
+        'riskTreatmentPlan4',
+        'riskTreatmentPlan5'
+      ]
+    }
+  }
 });
+
+MasterQuestion.associate = (models) => {
+  MasterQuestion.hasMany(models.AssessmentQuestion, {
+    foreignKey: 'masterQuestionId',
+    as: 'assessmentQuestions'
+  });
+
+  MasterQuestion.belongsToMany(models.MasterDepartment, {
+    through: models.QuestionDepartmentLink,
+    foreignKey: 'masterQuestionId',
+    otherKey: 'masterDepartmentId',
+    as: 'masterDepartments'
+  });
+};
 
 export default MasterQuestion;

@@ -197,7 +197,6 @@ export const verifyOtp = async (req, res, next) => {
     // Destroy the OTP record to prevent reuse
     await Otp.destroy({ where: { userId } });
 
-
     // Respond with success and user data
     res.status(200).json({
       success: true,

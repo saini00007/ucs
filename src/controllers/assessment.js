@@ -1,6 +1,7 @@
 import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment } from '../models/index.js';
 import { checkAssessmentState } from '../utils/accessValidators.js';
 import AppError from '../utils/AppError.js';
+import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
 
 export const startAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
@@ -36,11 +37,19 @@ export const startAssessment = async (req, res, next) => {
       throw new AppError('Assessment not found', 404);
     }
 
+    // Calculate answer statistics for the assessment
+    const stats = await calculateAssessmentStatistics(assessment.id);
+
+    // Add the statistics to the assessment data
+
+    const assessmentResponse = updatedAssessments[0].toJSON();
+    assessmentResponse.stats = stats;
+
     // Return a success response with the updated assessment
     res.status(200).json({
       success: true,
       messages: ['Assessment marked as started'],
-      assessment: updatedAssessments[0],
+      assessment: assessmentResponse,
     });
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
@@ -85,11 +94,19 @@ export const submitAssessment = async (req, res, next) => {
       }
     );
 
+    // Calculate answer statistics for the assessment
+    const stats = await calculateAssessmentStatistics(assessment.id);
+
+    // Add the statistics to the assessment data
+
+    const assessmentResponse = updatedAssessments[0].toJSON();
+    assessmentResponse.stats = stats;
+
     // Return a success response with the updated assessment
     res.status(200).json({
       success: true,
       messages: ['Assessment submitted successfully'],
-      assessment: updatedAssessments[0],
+      assessment: assessmentResponse,
     });
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
@@ -115,11 +132,19 @@ export const getAssessmentById = async (req, res, next) => {
       throw new AppError('Assessment not found', 404);
     }
 
+    // Calculate answer statistics for the assessment
+    const stats = await calculateAssessmentStatistics(assessment.id);
+
+    // Add the statistics to the assessment data
+
+    const assessmentResponse = assessment.toJSON();
+    assessmentResponse.stats = stats;
+
     // Return a success response with the found assessment
     res.status(200).json({
       success: true,
       messages: ['Assessment retrieved successfully'],
-      assessment,
+      assessment: assessmentResponse,
     });
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
@@ -162,11 +187,18 @@ export const reopenAssessment = async (req, res, next) => {
       throw new AppError('Assessment not found', 404);
     }
 
+    // Calculate answer statistics for the assessment
+    const stats = await calculateAssessmentStatistics(assessment.id);
+
+    // Add the statistics to the assessment data
+    const assessmentResponse = updatedAssessments[0].toJSON();
+    assessmentResponse.stats = stats;
+
     // Return a success response with the updated assessment
     res.status(200).json({
       success: true,
       messages: ['Assessment reopened successfully'],
-      assessment: updatedAssessments[0],
+      assessment: assessmentResponse,
     });
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
@@ -191,7 +223,7 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res, next) => {
 
     // Check assessment state
     const assessmentState = checkAssessmentState(assessment);
-    
+
     // Parse and validate pagination params
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);

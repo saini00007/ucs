@@ -29,14 +29,12 @@ const createDepartmentSchema = baseDepartmentSchema;
 const updateDepartmentSchema = Joi.object({
   departmentName: Joi.string()
     .min(5)
-    .allow('')
     .optional()
     .messages({
       'string.min': 'Department name must be at least 5 characters long',
     }),
   masterDepartmentId: Joi.string()
     .guid({ version: ['uuidv4'] })
-    .allow('')
     .optional()
     .messages({
       'string.guid': 'Master Department ID must be a valid UUID',

@@ -32,4 +32,32 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
   paranoid: true,
 });
 
+AssessmentQuestion.associate = (models) => {
+  // Assessment association
+  AssessmentQuestion.belongsTo(models.Assessment, { 
+    foreignKey: 'assessmentId', 
+    targetKey: 'id', 
+    as: 'assessment' 
+  });
+  
+  // MasterQuestion association
+  AssessmentQuestion.belongsTo(models.MasterQuestion, { 
+    foreignKey: 'masterQuestionId', 
+    targetKey: 'id', 
+    as: 'masterQuestion' 
+  });
+  
+  // Answer association
+  AssessmentQuestion.hasOne(models.Answer, { 
+    foreignKey: 'assessmentQuestionId', 
+    as: 'answer' 
+  });
+  
+  // Comment association
+  AssessmentQuestion.hasMany(models.Comment, { 
+    foreignKey: 'assessmentQuestionId', 
+    as: 'comments' 
+  });
+};
+
 export default AssessmentQuestion;

@@ -18,4 +18,20 @@ const MasterDepartment = sequelize.define('MasterDepartment', {
   underscored: true,
 });
 
+MasterDepartment.associate = (models) => {
+  // Department association
+  MasterDepartment.hasMany(models.Department, { 
+    foreignKey: 'masterDepartmentId', 
+    as: 'departments' 
+  });
+  
+  // MasterQuestion association (many-to-many)
+  MasterDepartment.belongsToMany(models.MasterQuestion, { 
+    through: models.QuestionDepartmentLink, 
+    foreignKey: 'masterDepartmentId', 
+    otherKey: 'masterQuestionId', 
+    as: 'masterQuestions' 
+  });
+};
+
 export default MasterDepartment;

@@ -42,4 +42,19 @@ const EvidenceFile = sequelize.define('EvidenceFile', {
   paranoid: true,
 });
 
+EvidenceFile.associate = (models) => {
+  // User association
+  EvidenceFile.belongsTo(models.User, {
+    foreignKey: 'createdByUserId',
+    targetKey: 'id',
+    as: 'creator'
+  });
+
+  // Answer association
+  EvidenceFile.belongsTo(models.Answer, {
+    foreignKey: 'answerId',
+    as: 'answer'
+  });
+};
+
 export default EvidenceFile;

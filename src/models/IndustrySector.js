@@ -22,4 +22,12 @@ const IndustrySector = sequelize.define('IndustrySector', {
     paranoid: true,
 });
 
+IndustrySector.associate = (models) => {
+    // Company association
+    IndustrySector.hasMany(models.Company, { 
+      foreignKey: 'industrySectorId', 
+      as: 'companies' 
+    });
+  };
+  
 export default IndustrySector;
