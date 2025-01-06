@@ -13,19 +13,19 @@ const Company = sequelize.define('Company', {
   },
   companyLogo: {
     type: DataTypes.BLOB,
-    allowNull: false,
+    allowNull: true,
   },
   postalAddress: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true,
   },
   gstNumber: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true,
   },
   panNumber: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true,
   },
   primaryEmail: {
     type: DataTypes.TEXT,
@@ -37,19 +37,19 @@ const Company = sequelize.define('Company', {
   },
   primaryPhone: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true,
   },
   secondaryPhone: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true,
   },
   primaryCountryCode: {
     type: DataTypes.STRING(5),
-    allowNull: false,
+    allowNull: true,
   },
   secondaryCountryCode: {
     type: DataTypes.STRING(5),
-    allowNull: false,
+    allowNull: true,
   },
   createdByUserId: {
     type: DataTypes.STRING(12),

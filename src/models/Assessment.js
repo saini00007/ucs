@@ -60,12 +60,6 @@ Assessment.associate = (models) => {
     foreignKey: 'assessmentId',
     as: 'questions'
   });
-
-    // SubAssessment association
-    Assessment.hasMany(models.SubAssessment, {
-      foreignKey: 'assessmentId',
-      as: 'subAssessments'
-    });
 };
 
 export default Assessment;

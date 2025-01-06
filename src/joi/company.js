@@ -11,35 +11,6 @@ const baseCompanySchema = Joi.object({
             'any.required': 'Company name is required',
         }),
 
-    postalAddress: Joi.string()
-        .min(1)
-        .max(255)
-        .required()
-        .messages({
-            'string.empty': 'Postal address cannot be empty',
-            'string.max': 'Postal address must be less than or equal to 255 characters',
-            'any.required': 'Postal address is required',
-        }),
-
-    gstNumber: Joi.string()
-        .length(15)
-        .pattern(/^\d+$/)
-        .required()
-        .messages({
-            'string.length': 'GST number must be exactly 15 digits',
-            'string.pattern.base': 'GST number must contain only digits',
-            'any.required': 'GST number is required',
-        }),
-
-    panNumber: Joi.string()
-        .length(10)
-        .required()
-        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/)
-        .messages({
-            'string.length': 'PAN number must be exactly 10 characters',
-            'string.pattern.base': 'PAN number must match the pattern XXXXX1234X',
-        }),
-
     industrySectorId: Joi.string()
         .uuid()
         .required()
@@ -60,57 +31,6 @@ const baseCompanySchema = Joi.object({
         .optional()
         .messages({
             'string.email': 'Secondary email must be a valid email address',
-        }),
-    controlFrameworkIds: Joi.array()
-        .items(Joi.string().uuid())
-        .min(1)
-        .required()
-        .messages({
-            'array.base': 'Control frameworks must be provided as an array',
-            'array.min': 'At least one control framework is required',
-            'array.items.string.uuid': 'Each control framework ID must be a valid UUID',
-            'any.required': 'Control frameworks are required'
-        }),
-
-    primaryPhone: Joi.string()
-        .length(10)
-        .pattern(/^\d+$/)
-        .required()
-        .messages({
-            'string.length': 'Primary phone must be exactly 10 digits',
-            'string.pattern.base': 'Primary phone must contain only digits',
-            'any.required': 'Primary phone is required',
-        }),
-
-    secondaryPhone: Joi.string()
-        .length(10)
-        .pattern(/^\d+$/)
-        .required()
-        .messages({
-            'string.length': 'Secondary phone must be exactly 10 digits',
-            'string.pattern.base': 'Secondary phone must contain only digits',
-        }),
-
-    primaryCountryCode: Joi.string()
-        .min(1)
-        .max(5)  // Correct usage for length range
-        .required()
-        .pattern(/^\+?\d+$/)
-        .messages({
-            'string.min': 'Country code must be between 1 and 5 characters',
-            'string.max': 'Country code must be between 1 and 5 characters',
-            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
-        }),
-
-    secondaryCountryCode: Joi.string()
-        .min(1)
-        .max(5)
-        .required()
-        .pattern(/^\+?\d+$/)
-        .messages({
-            'string.min': 'Country code must be between 1 and 5 characters',
-            'string.max': 'Country code must be between 1 and 5 characters',
-            'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
 
 })
@@ -184,7 +104,7 @@ const updateCompanySchema = Joi.object({
     controlFrameworkIds: Joi.array()
         .items(Joi.string().uuid())
         .min(1)
-        .required()
+        .optional()
         .messages({
             'array.base': 'Control frameworks must be provided as an array',
             'array.min': 'At least one control framework is required',

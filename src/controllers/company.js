@@ -11,17 +11,9 @@ import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
 export const createCompany = async (req, res, next) => {
   const {
     companyName,
-    postalAddress,
-    gstNumber,
     primaryEmail,
     secondaryEmail,
-    primaryPhone,
-    secondaryPhone,
-    primaryCountryCode,
-    secondaryCountryCode,
-    panNumber,
-    industrySectorId,
-    controlFrameworkIds
+    industrySectorId
   } = req.body;
   const transaction = await sequelize.transaction();
   try {
@@ -37,12 +29,6 @@ export const createCompany = async (req, res, next) => {
       throw new AppError(`Secondary ${secondaryEmailValidation.message}`, 409);
     }
 
-    // Check for company logo
-    const companyLogo = req.files?.['companyLogo'];
-    if (!companyLogo || companyLogo.length === 0) {
-      throw new AppError('Company Logo is required', 409);
-    }
-
     // Check if the industry sector ID is provided and valid
     let industrySector = null;
     if (industrySectorId) {
@@ -56,54 +42,25 @@ export const createCompany = async (req, res, next) => {
     const newCompany = await Company.create(
       {
         companyName,
-        postalAddress,
-        gstNumber,
         primaryEmail,
         secondaryEmail,
-        primaryPhone,
-        secondaryPhone,
-        primaryCountryCode,
-        secondaryCountryCode,
-        panNumber,
-        companyLogo: companyLogo[0]?.buffer,
         createdByUserId: req.user.id,
         industrySectorId
       },
       { transaction }
     );
 
-    await validateControlFrameworkIds(controlFrameworkIds);
-
-    // Create control framework associations 
-    await Promise.all(
-      controlFrameworkIds.map(async (frameworkId) => {
-        await CompanyControlFrameworkLink.create({
-          companyId: newCompany.id,
-          controlFrameworkId: frameworkId,
-        }, { transaction });
-      })
-    );
-
-
     // Commit the transaction
     await transaction.commit();
 
     // Refetch the company and include only desired attributes
     const refetchedCompany = await Company.findByPk(newCompany.id, {
-      attributes: { exclude: ['companyLogo'] },
+      attributes: ['id', 'companyName', 'primaryEmail', 'secondaryEmail'],
       include: [{
         model: IndustrySector,
         as: 'industrySector',
         attributes: ['id', 'sectorName', 'sectorType'],
-      },
-      {
-        model: ControlFramework,
-        as: 'controlFrameworks',
-        through: {
-          attributes: []
-        },
-        attributes: ['id', 'frameworkType']
-      }],
+      },],
     });
 
     res.status(201).json({

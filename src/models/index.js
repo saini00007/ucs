@@ -18,8 +18,6 @@ import UserDepartmentLink from './UserDepartmentLink.js';
 import IndustrySector from './IndustrySector.js';
 import ControlFramework from './ControlFramework.js';
 import CompanyControlFrameworkLink from './CompanyControlFrameworkLink.js';
-import SubDepartment from './SubDeartment.js';
-import SubAssessment from './subAssessment.js';
 
 const models = {
   User,
