@@ -1,6 +1,7 @@
 import AppError from "../utils/AppError";
 const validate = (schema) => (req, res, next) => {
     try {
+        console.log(req.body)
         const { error } = schema.validate(req.body, { abortEarly: false });
         if (error) {
             const errors = error.details.map(detail => detail.message);

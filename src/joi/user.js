@@ -1,4 +1,8 @@
 import Joi from 'joi';
+import { ROLE_IDS } from '../utils/constants';
+const validRoleValues = Object.values(ROLE_IDS).filter(
+    role => role !== ROLE_IDS.SUPER_ADMIN
+);
 
 const baseUserSchema = Joi.object({
     username: Joi.string()
@@ -24,6 +28,7 @@ const baseUserSchema = Joi.object({
             'any.required': 'Email is required.'
         }),
     roleId: Joi.string()
+        .valid(...validRoleValues)
         .required()
         .messages({
             'string.base': 'Role ID must be a string.',
@@ -110,7 +115,7 @@ const updateUserSchema = Joi.object({
             'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
     roleId: Joi.string()
-        .valid('admin', 'assessor', 'reviewer', 'departmentmanager')
+        .valid(...validRoleValues)
         .optional()
         .messages({
             'string.base': 'Role ID must be a string.',

@@ -93,6 +93,13 @@ Company.associate = (models) => {
     targetKey: 'id', 
     as: 'industrySector' 
   });
+
+  Company.belongsToMany(models.ControlFramework, {
+    through: models.CompanyControlFrameworkLink,
+    foreignKey: 'companyId',
+    otherKey: 'controlFrameworkId',
+    as: 'controlFrameworks'
+  });
 };
 
 export default Company;

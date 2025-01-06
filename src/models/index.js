@@ -16,6 +16,8 @@ import Action from './Action.js';
 import Resource from './Resource.js';
 import UserDepartmentLink from './UserDepartmentLink.js';
 import IndustrySector from './IndustrySector.js';
+import ControlFramework from './ControlFramework.js';
+import CompanyControlFrameworkLink from './CompanyControlFrameworkLink.js';
 
 const models = {
   User,
@@ -35,7 +37,9 @@ const models = {
   Action,
   Resource,
   UserDepartmentLink,
-  IndustrySector
+  IndustrySector,
+  ControlFramework,
+  CompanyControlFrameworkLink
 };
 
 Object.values(models)
@@ -60,5 +64,7 @@ export {
   Action,
   Resource,
   UserDepartmentLink,
-  IndustrySector
+  IndustrySector,
+  ControlFramework,
+  CompanyControlFrameworkLink
 };

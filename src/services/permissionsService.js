@@ -10,17 +10,18 @@ import {
   checkUserAccess
 } from "./contextChecks/index.js";
 import AppError from "../utils/AppError.js";
+import { CONTENT_RESOURCE_TYPES } from "../utils/constants.js";
 
 // Mapping of resource types to their corresponding access check functions.
 const resourceAccessCheckMap = {
-  Assessment: checkAssessmentAccess,
-  Department: checkDepartmentAccess,
-  Company: checkCompanyAccess,
-  AssessmentQuestion: checkAssessmentQuestionAccess,
-  Answer: checkAnswerAccess,
-  EvidenceFile: checkEvidenceFileAccess,
-  Comment: checkCommentAccess,
-  User: checkUserAccess
+  [CONTENT_RESOURCE_TYPES.ASSESSMENT]: checkAssessmentAccess,
+  [CONTENT_RESOURCE_TYPES.DEPARTMENT]: checkDepartmentAccess,
+  [CONTENT_RESOURCE_TYPES.COMPANY]: checkCompanyAccess,
+  [CONTENT_RESOURCE_TYPES.ASSESSMENT_QUESTION]: checkAssessmentQuestionAccess,
+  [CONTENT_RESOURCE_TYPES.ANSWER]: checkAnswerAccess,
+  [CONTENT_RESOURCE_TYPES.EVIDENCE_FILE]: checkEvidenceFileAccess,
+  [CONTENT_RESOURCE_TYPES.COMMENT]: checkCommentAccess,
+  [CONTENT_RESOURCE_TYPES.USER]: checkUserAccess
 };
 
 const permissionsService = {
@@ -28,6 +29,9 @@ const permissionsService = {
   async hasRolePermission({ user, resourceId, actionId }) {
     try {
       // Find a matching permission in the RoleResourceActionLink table.
+      console.log(user.roleId);
+      console.log(resourceId);
+      console.log(actionId);
       const permission = await RoleResourceActionLink.findOne({
         where: {
           roleId: user.roleId,
@@ -35,7 +39,6 @@ const permissionsService = {
           actionId: actionId,
         },
       });
-
       if (!permission) {
         // If no permission is found, throw an error
         throw new AppError('Permission not found for the user on the specified resource', 404);
@@ -43,7 +46,6 @@ const permissionsService = {
 
       return { success: true };
     } catch (error) {
-      console.error(`Error checking role permission for user ${user.id} on resource ${resourceId}:`, error);
       throw error;
     }
   },
@@ -68,7 +70,6 @@ const permissionsService = {
       }
       return result;
     } catch (error) {
-      console.error(`Error checking content access for user ${user.id} on ${resourceType} ${resourceId}:`, error);
       throw error;
     }
   }

@@ -1,6 +1,7 @@
 import { Comment, AssessmentQuestion, Assessment, Department } from "../../models/index.js";
 import { checkAccessScope, checkAssessmentState } from "../../utils/accessValidators.js";
 import AppError from "../../utils/AppError.js";
+import { ROLE_IDS } from "../../utils/constants.js";
 
 const checkCommentAccess = async (user, resourceId, actionId) => {
     try {
@@ -46,7 +47,7 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
 
         // Check owner permissions for update/delete
         if ((actionId === 'remove' || actionId === 'update') &&
-            user.roleId !== 'superadmin' &&
+            user.roleId !== ROLE_IDS.SUPER_ADMIN &&
             comment.createdByUserId !== user.id) {
             // If the user is not a superadmin and does not own the comment, deny access
             throw new AppError('You do not have permission to modify this comment', 403);

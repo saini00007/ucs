@@ -8,6 +8,7 @@ import seedSuperAdmins from './superAdmins.js';
 import seedMasterDepartments from './masterDepartments.js';
 import seedMasterQuestions from './masterQuestions.js';
 import seedRoleResourceActionLinks from './roleResourceActionLinks.js';
+import seedControlFrameworks from './controlFrameworks.js';
 import initializeDatabase from '../initializeDatabase.js';
 import seedIndustrySectors from './industrySectors.js';
 
@@ -23,10 +24,12 @@ const runSeeds = async () => {
         await seedResources({ transaction });
         await seedActions({ transaction });
         await seedRoleResourceActionLinks({ transaction });
-        await seedSuperAdmins({ transaction });
-        await seedMasterDepartments({ transaction });
-        await seedIndustrySectors({ transaction });
-        await seedMasterQuestions();
+        // await seedSuperAdmins({ transaction });
+        // await seedMasterDepartments({ transaction });
+        // await seedIndustrySectors({ transaction });
+        // await seedControlFrameworks({ transaction });
+        // await seedMasterQuestions();
+
         await transaction.commit();
         console.log('Seeding completed successfully!');
     } catch (error) {

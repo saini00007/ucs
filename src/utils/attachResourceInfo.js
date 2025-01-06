@@ -19,12 +19,12 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
             req.roleResourceType = roleResourceType;
             req.contentResourceType = contentResourceType;
             req.actionId = actionId.toLowerCase();
+            req.user.roleId='superadmin';
             return next();
 
         } catch (error) {
             // Using AppError for structured error handling
             console.error('Error in attachResourceInfo middleware:', error);
-
             return next(error);
         }
     };

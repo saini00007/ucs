@@ -1,9 +1,10 @@
 import Joi from 'joi';
+import { ANSWER_TYPES } from '../utils/constants';
+const validAnswerValues = Object.values(ANSWER_TYPES);
 
 const createAnswerSchema = Joi.object({
   answerText: Joi.string()
-    .allow("")
-    .valid('yes', 'no', 'notApplicable')
+    .valid(...validAnswerValues)
     .insensitive()
     .required()
     .custom((value, helpers) => {

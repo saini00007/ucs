@@ -18,7 +18,9 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'role', actionIds: ['list'] },
         { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
         { resourceId: 'report', actionIds: ['read'] },
-        { resourceId: 'industrysector', actionIds: ['list'] }
+        { resourceId: 'industrysector', actionIds: ['list'] },
+        { resourceId: 'controlframework', actionIds: ['list'] },
+        { resourceId: 'companyprogressreport', actionIds: ['read'] },
       ]
     },
     {
@@ -34,7 +36,8 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'user', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
         { resourceId: 'role', actionIds: ['list'] },
         { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
-        { resourceId: 'report', actionIds: ['read'] }
+        { resourceId: 'report', actionIds: ['read'] },
+        { resourceId: 'companyprogressreport', actionIds: ['read'] },
       ]
     },
     {
@@ -57,6 +60,7 @@ const seedRoleResourceActionLinks = async () => {
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },
         { resourceId: 'department', actionIds: ['read'] },
+        { resourceId: 'assessment', actionIds: ['start', 'read', 'list', 'submit'] },
         { resourceId: 'assessment', actionIds: ['start', 'read', 'list', 'submit'] },
         { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
         { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },

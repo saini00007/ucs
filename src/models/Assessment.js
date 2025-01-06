@@ -35,6 +35,10 @@ const Assessment = sequelize.define('Assessment', {
   submittedAt: {
     type: DataTypes.DATE,
     allowNull: true,
+  },
+  deadline: {
+    type: DataTypes.DATE,
+    allowNull: true
   }
 }, {
   tableName: 'assessments',
@@ -45,16 +49,16 @@ const Assessment = sequelize.define('Assessment', {
 
 Assessment.associate = (models) => {
   // Department association
-  Assessment.belongsTo(models.Department, { 
-    foreignKey: 'departmentId', 
-    targetKey: 'id', 
-    as: 'department' 
+  Assessment.belongsTo(models.Department, {
+    foreignKey: 'departmentId',
+    targetKey: 'id',
+    as: 'department'
   });
-  
+
   // AssessmentQuestion association
-  Assessment.hasMany(models.AssessmentQuestion, { 
-    foreignKey: 'assessmentId', 
-    as: 'questions' 
+  Assessment.hasMany(models.AssessmentQuestion, {
+    foreignKey: 'assessmentId',
+    as: 'questions'
   });
 };
 

@@ -1,5 +1,6 @@
 import permissionsService from '../services/permissionsService.js';
 import AppError from '../utils/AppError.js';
+import { resourceTypeToId, ROLE_IDS } from '../utils/constants.js';
 
 const checkAccess = async (req, res, next) => {
   const { roleId } = req.user;
@@ -9,10 +10,11 @@ const checkAccess = async (req, res, next) => {
   const actionId = req.actionId;
 
   try {
-    const roleResourceId = roleResourceType.toLowerCase();
-    console.log(`User Id: ${req.user.id}, Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
+    const roleResourceId = resourceTypeToId[roleResourceType];
 
+    console.log(`User Id: ${req.user.id}, Role ID: ${roleId}, Role Resource Type: ${roleResourceType}, Action: ${actionId}, Content Resource Type: ${contentResourceType}, Content Resource ID: ${contentResourceId}`);
     // Check if the user has the required role permission
+
     const rolePermission = await permissionsService.hasRolePermission({
       user: req.user,
       resourceId: roleResourceId,
@@ -44,10 +46,8 @@ const checkAccess = async (req, res, next) => {
 
     return next();
   } catch (error) {
-    console.error('Error checking access:', error);
-
     // For superadmins, propagate the error with its message and status
-    if (req.user.roleId === 'superadmin') {
+    if (req.user.roleId === ROLE_IDS.SUPER_ADMIN) {
       return next(error);
     }
 

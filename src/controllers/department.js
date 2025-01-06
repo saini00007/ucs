@@ -52,7 +52,7 @@ export const getDepartmentById = async (req, res, next) => {
 };
 
 export const createDepartment = async (req, res, next) => {
-    const { departmentName, masterDepartmentId, companyId } = req.body;
+    const { departmentName, masterDepartmentId, companyId, deadline } = req.body;
 
     // Start a new transaction
     const transaction = await sequelize.transaction();
@@ -81,6 +81,7 @@ export const createDepartment = async (req, res, next) => {
         // Create a new assessment for the new department
         const newAssessment = await Assessment.create({
             departmentId: newDepartment.id,
+            deadline: deadline
         }, { transaction });
 
         // Find questions linked to the master department
@@ -127,7 +128,7 @@ export const createDepartment = async (req, res, next) => {
 
 export const updateDepartment = async (req, res, next) => {
     const { departmentId } = req.params;
-    const { departmentName, masterDepartmentId } = req.body;
+    const { departmentName, masterDepartmentId,deadline } = req.body;
 
     const transaction = await sequelize.transaction();
 
@@ -188,7 +189,8 @@ export const updateDepartment = async (req, res, next) => {
 
                 // Create new assessment
                 const newAssessment = await Assessment.create({
-                    departmentId
+                    departmentId,
+                    deadline: deadline
                 }, { transaction });
 
                 // Get questions for new master department

@@ -1,7 +1,7 @@
-
 import { User, Company } from '../models/index.js';
 import { Op } from 'sequelize';
 import AppError from '../utils/AppError.js';
+import { ROLE_IDS } from './constants.js';
 
 
 export const validateEmailForUser = async (email, userId = null, roleId = null, companyId = null) => {
@@ -19,7 +19,7 @@ export const validateEmailForUser = async (email, userId = null, roleId = null, 
     }
 
     // Admin email validation
-    if (roleId === 'admin' && companyId) {
+    if (roleId === ROLE_IDS.ADMIN && companyId) {
         const company = await Company.findByPk(companyId);
         if (!company) {
             throw new AppError('Company not found', 404);
@@ -50,36 +50,36 @@ export const validateEmailForUser = async (email, userId = null, roleId = null, 
 
 export const validateRoleAssignment = async (currentUser, targetRoleId, existingRoleId = null) => {
     // Superadmin validation
-    if (targetRoleId === 'superadmin') {
+    if (targetRoleId === ROLE_IDS.SUPER_ADMIN) {
         throw new AppError('Cannot assign superadmin role', 403);
     }
 
     // Admin role validations
-    if (currentUser.roleId === 'admin' && targetRoleId === 'admin') {
+    if (currentUser.roleId === ROLE_IDS.ADMIN && targetRoleId === ROLE_IDS.ADMIN) {
         throw new AppError('Admin cannot add admin', 403);
     }
 
     // Department manager validations
-    if (currentUser.roleId === 'departmentmanager' &&
-        ['admin', 'departmentmanager'].includes(targetRoleId)) {
+    if (currentUser.roleId === ROLE_IDS.DEPARTMENT_MANAGER &&
+        [ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(targetRoleId)) {
         throw new AppError('Department Manager cannot add admin or department manager', 403);
     }
 
     // Role change validations
     if (existingRoleId) {
-        if (existingRoleId === 'admin' && targetRoleId !== 'admin') {
+        if (existingRoleId === ROLE_IDS.ADMIN && targetRoleId !== ROLE_IDS.ADMIN) {
             throw new AppError('Cannot change admin role', 403);
         }
 
-        if (targetRoleId === 'admin' && existingRoleId !== 'admin') {
+        if (targetRoleId === ROLE_IDS.ADMIN && existingRoleId !== ROLE_IDS.ADMIN) {
             throw new AppError('Cannot assign admin role', 403);
         }
 
-        if (existingRoleId === 'departmentmanager' && targetRoleId !== 'departmentmanager') {
+        if (existingRoleId === ROLE_IDS.DEPARTMENT_MANAGER && targetRoleId !== ROLE_IDS.DEPARTMENT_MANAGER) {
             throw new AppError('Cannot change departmentmanager role', 403);
         }
 
-        if (targetRoleId === 'departmentmanager' && existingRoleId !== 'departmentmanager') {
+        if (targetRoleId === ROLE_IDS.DEPARTMENT_MANAGER && existingRoleId !== ROLE_IDS.DEPARTMENT_MANAGER) {
             throw new AppError('Cannot assign departmentmanager role', 403);
         }
     }
@@ -96,7 +96,7 @@ export const validateAdminAssignment = async (companyId) => {
 
     // Check existing admins count
     const existingAdmins = await User.findAll({
-        where: { companyId, roleId: 'admin' }
+        where: { companyId, roleId: ROLE_IDS.ADMIN }
     });
 
     if (existingAdmins.length >= 2) {

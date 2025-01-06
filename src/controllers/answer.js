@@ -1,6 +1,7 @@
 import { AssessmentQuestion, EvidenceFile, Answer, User } from '../models/index.js';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
+import { ANSWER_TYPES } from '../utils/constants.js';
 
 export const createAnswer = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
@@ -38,7 +39,7 @@ export const createAnswer = async (req, res, next) => {
     }
 
     // Validate that evidence files are uploaded if the answer is "yes"
-    const isAnswerYes = answerText.toLowerCase() === "yes";
+    const isAnswerYes = answerText === ANSWER_TYPES.YES;
     if (isAnswerYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
       throw new AppError('Evidence files are required when the answer is "yes".', 400);
     }
@@ -128,8 +129,8 @@ export const updateAnswer = async (req, res, next) => {
     }
 
     // Check if the answer is being updated to "yes" or "no"
-    const isUpdatingToYes = answerText.toLowerCase() === "yes";
-    const isUpdatingToNo = answerText.toLowerCase() === "no" || answerText.toLowerCase() === "notapplicable";
+    const isUpdatingToYes = answerText === ANSWER_TYPES.YES;
+    const isUpdatingToNo = answerText === ANSWER_TYPES.NO || answerText === ANSWER_TYPES.NOT_APPLICABLE;
     const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
     // Validation: No evidence files should be uploaded when updating to "no" or "not applicable"

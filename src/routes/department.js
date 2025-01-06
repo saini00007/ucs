@@ -8,23 +8,33 @@ import {
     deleteDepartment,
     getAssessmentByDepartmentId,
     getUsersByDepartmentId,
-
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
+import { RESOURCE_TYPES, ACTION_IDS ,CONTENT_RESOURCE_TYPES} from '../utils/constants.js';
 
 const router = express.Router();
 
 // Route to get a department by its ID
 router.get('/:departmentId',
-    attachResourceInfo('Department', 'Department', 'departmentId', 'read'),
+    attachResourceInfo(
+        RESOURCE_TYPES.DEPARTMENT,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.READ
+    ),
     checkAccess,
     getDepartmentById
 );
 
 // Route to create a new department
 router.post('/',
-    attachResourceInfo('Department', 'Company', 'companyId', 'create'),
+    attachResourceInfo(
+        RESOURCE_TYPES.DEPARTMENT,
+        CONTENT_RESOURCE_TYPES.COMPANY,
+        'companyId',
+        ACTION_IDS.CREATE
+    ),
     checkAccess,
     validate(createDepartmentSchema),
     createDepartment
@@ -32,7 +42,12 @@ router.post('/',
 
 // Route to update a department by its ID
 router.put('/:departmentId',
-    attachResourceInfo('Department', 'Department', 'departmentId', 'update'),
+    attachResourceInfo(
+        RESOURCE_TYPES.DEPARTMENT,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.UPDATE
+    ),
     checkAccess,
     validate(updateDepartmentSchema),
     updateDepartment
@@ -40,21 +55,36 @@ router.put('/:departmentId',
 
 // Route to delete a department by its ID
 router.delete('/:departmentId',
-    attachResourceInfo('Department', 'Department', 'departmentId', 'remove'),
+    attachResourceInfo(
+        RESOURCE_TYPES.DEPARTMENT,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.REMOVE
+    ),
     checkAccess,
     deleteDepartment
 );
 
 // Route to get all assessments for a department
 router.get('/:departmentId/assessments',
-    attachResourceInfo('Assessment', 'Department', 'departmentId', 'list'),
+    attachResourceInfo(
+        RESOURCE_TYPES.ASSESSMENT,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.LIST
+    ),
     checkAccess,
     getAssessmentByDepartmentId
 );
 
 // Route to get users by department
 router.get('/:departmentId/users',
-    attachResourceInfo('User', 'Department', 'departmentId', 'list'),
+    attachResourceInfo(
+        RESOURCE_TYPES.USER,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.LIST
+    ),
     checkAccess,
     getUsersByDepartmentId
 );

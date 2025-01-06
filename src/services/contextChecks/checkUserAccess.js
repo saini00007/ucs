@@ -1,5 +1,6 @@
 import { User, Department } from "../../models/index.js";
 import AppError from "../../utils/AppError.js";
+import { ROLE_IDS } from "../../utils/constants.js";
 
 const checkUserAccess = async (user, resourceId) => {
     try {
@@ -18,11 +19,11 @@ const checkUserAccess = async (user, resourceId) => {
         }
 
         // Superadmin has universal access
-        if (user.roleId === 'superadmin') {
+        if (user.roleId === ROLE_IDS.SUPER_ADMIN) {
             return { success: true };
         }
 
-        if (user.roleId === 'admin') {
+        if (user.roleId === ROLE_IDS.ADMIN) {
             // Admin can access only if they belong to the same company
             if (user.companyId !== userDb.companyId) {
                 throw new AppError('Access denied: user does not belong to the same company', 403);
@@ -30,7 +31,7 @@ const checkUserAccess = async (user, resourceId) => {
             return { success: true };
         }
 
-        if (user.roleId === 'departmentmanager') {
+        if (user.roleId === ROLE_IDS.DEPARTMENT_MANAGER) {
             // Check if the user has access to any of the same departments
             const hasDepartmentAccess = user.departments.some(department =>
                 userDb.departments.some(dbDept => dbDept.id === department.id)

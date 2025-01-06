@@ -1,5 +1,6 @@
-import { Role, MasterDepartment, IndustrySector } from '../models/index.js';
+import { Role, MasterDepartment, IndustrySector, ControlFramework } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import { ROLE_IDS } from '../utils/constants.js';
 
 export const getRoles = async (req, res, next) => {
     try {
@@ -11,19 +12,19 @@ export const getRoles = async (req, res, next) => {
 
         // Filter roles based on user's role
         switch (userRole) {
-            case 'superadmin':
+            case ROLE_IDS.SUPER_ADMIN:
                 filteredRoles = roles;
                 break;
 
-            case 'admin':
+            case ROLE_IDS.ADMIN:
                 filteredRoles = roles.filter(role =>
-                    !['superadmin', 'admin'].includes(role.id)
+                    ![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN].includes(role.id)
                 );
                 break;
 
-            case 'departmentmanager':
+            case ROLE_IDS.DEPARTMENT_MANAGER:
                 filteredRoles = roles.filter(role =>
-                    !['superadmin', 'admin', 'departmentmanager'].includes(role.id)
+                    ![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(role.id)
                 );
                 break;
 
@@ -79,3 +80,26 @@ export const getIndustrySectors = async (req, res, next) => {
     }
 };
 
+
+export const getControlFrameworks = async (req, res, next) => {
+    try {
+
+        const controlFrameworks = await ControlFramework.findAll({
+            order: [['framework_type', 'ASC']],
+            attributes:['id','frameworkType']
+        });
+
+
+        res.status(200).json({
+            success: true,
+            messages: [controlFrameworks.length === 0 ?
+                'No control frameworks found' :
+                'Control frameworks retrieved successfully'
+            ],
+            controlFrameworks,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

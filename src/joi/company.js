@@ -61,6 +61,16 @@ const baseCompanySchema = Joi.object({
         .messages({
             'string.email': 'Secondary email must be a valid email address',
         }),
+    controlFrameworkIds: Joi.array()
+        .items(Joi.string().uuid())
+        .min(1)
+        .required()
+        .messages({
+            'array.base': 'Control frameworks must be provided as an array',
+            'array.min': 'At least one control framework is required',
+            'array.items.string.uuid': 'Each control framework ID must be a valid UUID',
+            'any.required': 'Control frameworks are required'
+        }),
 
     primaryPhone: Joi.string()
         .length(10)
@@ -102,6 +112,7 @@ const baseCompanySchema = Joi.object({
             'string.max': 'Country code must be between 1 and 5 characters',
             'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
+
 })
     .custom((value, helpers) => {
         if (value.primaryEmail && value.secondaryEmail && value.primaryEmail === value.secondaryEmail) {
@@ -169,6 +180,16 @@ const updateCompanySchema = Joi.object({
         .optional()
         .messages({
             'string.email': 'Secondary email must be a valid email address',
+        }),
+    controlFrameworkIds: Joi.array()
+        .items(Joi.string().uuid())
+        .min(1)
+        .required()
+        .messages({
+            'array.base': 'Control frameworks must be provided as an array',
+            'array.min': 'At least one control framework is required',
+            'array.items.string.uuid': 'Each control framework ID must be a valid UUID',
+            'any.required': 'Control frameworks are required'
         }),
 
     primaryPhone: Joi.string()

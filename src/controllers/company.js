@@ -1,10 +1,12 @@
-import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector } from '../models/index.js';
+import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector, ControlFramework, CompanyControlFrameworkLink } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateCompanyStatistics } from '../utils/calculateStatistics.js';
 
-import {handleCompanyEmailUpdates,validateEmailForCompany} from '../utils/companyUtils.js'
+import { handleCompanyEmailUpdates, validateControlFrameworkIds, validateEmailForCompany } from '../utils/companyUtils.js'
+import { ROLE_IDS } from '../utils/constants.js';
+import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
 
 export const createCompany = async (req, res, next) => {
   const {
@@ -19,6 +21,7 @@ export const createCompany = async (req, res, next) => {
     secondaryCountryCode,
     panNumber,
     industrySectorId,
+    controlFrameworkIds
   } = req.body;
   const transaction = await sequelize.transaction();
   try {
@@ -69,6 +72,18 @@ export const createCompany = async (req, res, next) => {
       { transaction }
     );
 
+    await validateControlFrameworkIds(controlFrameworkIds);
+
+    // Create control framework associations 
+    await Promise.all(
+      controlFrameworkIds.map(async (frameworkId) => {
+        await CompanyControlFrameworkLink.create({
+          companyId: newCompany.id,
+          controlFrameworkId: frameworkId,
+        }, { transaction });
+      })
+    );
+
 
     // Commit the transaction
     await transaction.commit();
@@ -80,6 +95,14 @@ export const createCompany = async (req, res, next) => {
         model: IndustrySector,
         as: 'industrySector',
         attributes: ['id', 'sectorName', 'sectorType'],
+      },
+      {
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        through: {
+          attributes: []
+        },
+        attributes: ['id', 'frameworkType']
       }],
     });
 
@@ -111,6 +134,14 @@ export const getAllCompanies = async (req, res, next) => {
         model: IndustrySector,
         as: 'industrySector',
         attributes: ['id', 'sectorName', 'sectorType'],
+      },
+      {
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        through: {
+          attributes: []
+        },
+        attributes: ['id', 'frameworkType']
       }],
       limit: limitNum,
       offset: (pageNum - 1) * limitNum,
@@ -154,6 +185,13 @@ export const getCompanyById = async (req, res, next) => {
         model: IndustrySector,
         as: 'industrySector',
         attributes: ['id', 'sectorName', 'sectorType'],
+      }, {
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        through: {
+          attributes: []
+        },
+        attributes: ['id', 'frameworkType']
       }],
     });
 
@@ -187,6 +225,7 @@ export const updateCompany = async (req, res, next) => {
     secondaryCountryCode,
     panNumber,
     industrySectorId,
+    controlFrameworkIds
   } = req.body;
 
   const transaction = await sequelize.transaction();
@@ -229,8 +268,24 @@ export const updateCompany = async (req, res, next) => {
     if (panNumber) company.panNumber = panNumber;
     if (req.files?.['companyLogo']) company.companyLogo = req.files['companyLogo'][0].buffer;
 
-
     await company.save({ transaction });
+
+    if (controlFrameworkIds) {
+      await validateControlFrameworkIds(controlFrameworkIds);
+      await CompanyControlFrameworkLink.destroy({
+        where: { companyId },
+        transaction
+      });
+      // Create control framework associations 
+      await Promise.all(
+        controlFrameworkIds.map(async (frameworkId) => {
+          await CompanyControlFrameworkLink.create({
+            companyId: company.id,
+            controlFrameworkId: frameworkId,
+          }, { transaction });
+        })
+      );
+    }
     await transaction.commit();
 
     // Fetch updated company without logo
@@ -240,7 +295,16 @@ export const updateCompany = async (req, res, next) => {
         model: IndustrySector,
         as: 'industrySector',
         attributes: ['id', 'sectorName', 'sectorType'],
-      }],
+      },
+      {
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        through: {
+          attributes: []
+        },
+        attributes: ['id', 'frameworkType']
+      }
+      ],
     });
 
     res.status(200).json({
@@ -506,11 +570,11 @@ export const getUsersByCompanyId = async (req, res, next) => {
       subQuery: false,
     };
 
-    if (['admin', 'superadmin', 'departmentmanager'].includes(roleId)) {
+    if ([ROLE_IDS.ADMIN, ROLE_IDS.SUPER_ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(roleId)) {
       // These roles can see all users in the company
-    } else if (['assessor', 'reviewer'].includes(roleId)) {
+    } else if ([ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(roleId)) {
       queryOptions.where[Op.or] = [
-        { roleId: 'admin' },
+        { roleId: ROLE_IDS.ADMIN },
         {
           [Op.and]: [
             { '$departments.id$': { [Op.in]: departmentIds } },
@@ -576,7 +640,8 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     // Validate all assessments are submitted
     const hasUnsubmittedAssessment = departments.some(dept =>
-      dept.assessments.some(assessment => !assessment.submitted)
+      dept.assessments.some(assessment => { !assessment.submitted })
+
     );
 
     if (hasUnsubmittedAssessment) {
@@ -641,7 +706,7 @@ export const getReportByCompanyId = async (req, res, next) => {
             return {
               stats: assessmentStats,
               ...assessment,
-              
+
             };
           })
         );
@@ -696,6 +761,76 @@ export const getCompanyLogo = async (req, res, next) => {
   }
 };
 
+export const companyProgressReport = async (req, res, next) => {
+  const { companyId } = req.params;
+
+  try {
+    // Validate company exists
+    const companyExists = await Company.findByPk(companyId);
+    if (!companyExists) {
+      throw new AppError('Company not found', 404);
+    }
+
+    const currentDate = new Date();
+
+    const [active, submitted, notStarted, deadlined, completed] = await Promise.all([
+      getCategorizedAssessments(companyId, {
+        assessmentStarted: true,
+        submitted: false,
+        // deadline: { [Op.gt]: currentDate }
+      }),
+      getCategorizedAssessments(companyId, {
+        submitted: true
+      }),
+      getCategorizedAssessments(companyId, {
+        assessmentStarted: false
+      }),
+      getCategorizedAssessments(companyId, {
+        deadline: { [Op.lt]: currentDate },
+        submitted: false
+      }),
+      getCategorizedAssessments(companyId, {
+        assessmentStarted: true,
+        submitted: false,
+        deadline: { [Op.gt]: currentDate },
+        checkComplete: true
+      })
+    ]);
+
+    // Calculate total excluding overlapping categories
+    const total = active.length + submitted.length + notStarted.length;
+
+    res.status(200).json({
+      success: true,
+      companyProgressReport: {
+        assessments: {
+          metrics: {
+            total,
+            submitted: submitted.length,
+            notStarted: notStarted.length,
+            deadlined: deadlined.length,
+            completed: completed.length,
+            active: active.length
+          },
+          categorizedAssessments: {
+            active,
+            submitted,
+            notStarted,
+            deadlined,
+            completed
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in companyProgressReport:', {
+      message: error.message,
+      companyId,
+      stack: error.stack
+    });
+    next(error);
+  }
+};
 
 
 

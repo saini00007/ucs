@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import { ROLE_IDS } from '../utils/constants.js';
 
 // generating user id for users
 const generateUserId = async (username) => {
@@ -30,7 +31,7 @@ const User = sequelize.define('User', {
   email: {
     type: DataTypes.TEXT,
     allowNull: false,
-    unique: true, 
+    unique: true,
   },
   roleId: {
     type: DataTypes.STRING,
@@ -46,7 +47,7 @@ const User = sequelize.define('User', {
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
-        if (this.roleId !== 'superadmin' && !value) {
+        if (this.roleId !== ROLE_IDS.SUPER_ADMIN && !value) {
           throw new Error('Country code is required for non-superadmin users');
         }
       },
@@ -63,7 +64,7 @@ const User = sequelize.define('User', {
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
-        if (this.roleId !== 'superadmin' && !value) {
+        if (this.roleId !== ROLE_IDS.SUPER_ADMIN && !value) {
           throw new Error('Company ID is required for non-superadmin users');
         }
       },
@@ -75,7 +76,7 @@ const User = sequelize.define('User', {
     validate: {
       // allow null for superadmin only
       isRequiredIfNotSuperAdmin(value) {
-        if (this.roleId !== 'superadmin' && !value) {
+        if (this.roleId !== ROLE_IDS.SUPER_ADMIN && !value) {
           throw new Error('Phone number is required for non-superadmin users');
         }
       },
@@ -97,48 +98,48 @@ const User = sequelize.define('User', {
 
 User.associate = (models) => {
   // Company association
-  User.belongsTo(models.Company, { 
-    foreignKey: 'companyId', 
-    targetKey: 'id', 
-    as: 'company' 
+  User.belongsTo(models.Company, {
+    foreignKey: 'companyId',
+    targetKey: 'id',
+    as: 'company'
   });
-  
+
   // Department association (many-to-many)
-  User.belongsToMany(models.Department, { 
-    through: models.UserDepartmentLink, 
-    foreignKey: 'userId', 
-    as: 'departments' 
+  User.belongsToMany(models.Department, {
+    through: models.UserDepartmentLink,
+    foreignKey: 'userId',
+    as: 'departments'
   });
-  
+
   // Role association
-  User.belongsTo(models.Role, { 
-    foreignKey: 'roleId', 
-    targetKey: 'id', 
-    as: 'role' 
+  User.belongsTo(models.Role, {
+    foreignKey: 'roleId',
+    targetKey: 'id',
+    as: 'role'
   });
-  
+
   // Otp association
-  User.hasMany(models.Otp, { 
-    foreignKey: 'userId', 
-    as: 'otps' 
+  User.hasMany(models.Otp, {
+    foreignKey: 'userId',
+    as: 'otps'
   });
-  
+
   // Answer association
-  User.hasMany(models.Answer, { 
-    foreignKey: 'createdByUserId', 
-    as: 'createdAnswers' 
+  User.hasMany(models.Answer, {
+    foreignKey: 'createdByUserId',
+    as: 'createdAnswers'
   });
-  
+
   // Comment association
-  User.hasMany(models.Comment, { 
-    foreignKey: 'createdByUserId', 
-    as: 'createdComments' 
+  User.hasMany(models.Comment, {
+    foreignKey: 'createdByUserId',
+    as: 'createdComments'
   });
-  
+
   // EvidenceFile association
-  User.hasMany(models.EvidenceFile, { 
-    foreignKey: 'createdByUserId', 
-    as: 'createdEvidenceFiles' 
+  User.hasMany(models.EvidenceFile, {
+    foreignKey: 'createdByUserId',
+    as: 'createdEvidenceFiles'
   });
 };
 

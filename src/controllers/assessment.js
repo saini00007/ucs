@@ -2,6 +2,7 @@ import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, Maste
 import { checkAssessmentState } from '../utils/accessValidators.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
+import { ROLE_IDS } from '../utils/constants.js';
 
 export const startAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
@@ -232,7 +233,7 @@ export const getAssessmentQuestionsByAssessmentId = async (req, res, next) => {
     }
     if (!assessmentState.success) {
       throw new AppError(
-        req.user.roleId === 'superadmin'
+        req.user.roleId === ROLE_IDS.SUPER_ADMIN
           ? assessmentState.message || 'Access denied: Insufficient content permissions.'
           : 'Access denied: Insufficient content permissions.',
         assessmentState.status || 403

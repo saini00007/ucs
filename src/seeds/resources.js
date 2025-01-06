@@ -1,6 +1,6 @@
 import { Resource } from "../models/index.js";
 import sequelize from "../config/db.js";
-
+//have to change resourceName to camelcase
 const resources = [
     { id: 'company', resourceName: 'Company' },
     { id: 'department', resourceName: 'Department' },
@@ -15,7 +15,9 @@ const resources = [
     { id: 'role', resourceName: 'Role' },
     { id: 'userdepartmentlink', resourceName: 'UserDepartmentLink' },
     { id: 'report', resourceName: 'Report' },
-    { id: 'industrysector', resourceName: 'IndustrySector' }
+    { id: 'industrysector', resourceName: 'IndustrySector' },
+    { id: 'controlframework', resourceName: 'ControlFramework' },
+    { id: 'companyprogressreport', resourceName: 'CompanyProgressReport' },
 ];
 
 const seedResources = async () => {

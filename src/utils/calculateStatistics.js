@@ -1,12 +1,7 @@
 import { Answer, Assessment, AssessmentQuestion, Department, MasterQuestion } from '../models';
 import AppError from './AppError';
 import { literal, QueryTypes, Sequelize } from 'sequelize';
-
-const ANSWER_TYPES = {
-    YES: 'yes',
-    NO: 'no',
-    NOT_APPLICABLE: 'notApplicable'
-};
+import { ANSWER_TYPES } from './constants'
 
 const formatControlStats = (answerType, controlStats) => {
     const groupedCounts = {};
@@ -23,35 +18,44 @@ const formatControlStats = (answerType, controlStats) => {
     return groupedCounts;
 };
 
+export const baseAssessmentStatistics = async (assessmentId) => {
+    const stats = await Answer.findAll({
+        attributes: [
+            [literal('COUNT(*)'), 'totalAnswers'],
+            [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.YES}' THEN 1 ELSE 0 END)`), 'yesCount'],
+            [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NO}' THEN 1 ELSE 0 END)`), 'noCount'],
+            [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NOT_APPLICABLE}' THEN 1 ELSE 0 END)`), 'notApplicableCount']
+        ],
+        include: [{
+            model: AssessmentQuestion,
+            as: 'assessmentQuestion',
+            attributes: [],
+            where: { assessmentId },
+            required: true
+        }],
+        raw: true
+    });
+    return stats;
+}
+
+export const totalQuestionsOfAssessment = async (assessmentId) => {
+    const totalQuestions = await AssessmentQuestion.count({
+        where: { assessmentId }
+    });
+    return totalQuestions;
+}
+
 // Assessment level statistics
 export const calculateAssessmentStatistics = async (assessmentId) => {
     try {
         // Get total questions count
-        const totalQuestions = await AssessmentQuestion.count({
-            where: { assessmentId }
-        });
-
+        const totalQuestions = await totalQuestionsOfAssessment(assessmentId)
         // Get base answer statistics
-        const stats = await Answer.findAll({
-            attributes: [
-                [literal('COUNT(*)'), 'totalAnswers'],
-                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.YES}' THEN 1 ELSE 0 END)`), 'yesCount'],
-                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NO}' THEN 1 ELSE 0 END)`), 'noCount'],
-                [literal(`SUM(CASE WHEN answer_text = '${ANSWER_TYPES.NOT_APPLICABLE}' THEN 1 ELSE 0 END)`), 'notApplicableCount']
-            ],
-            include: [{
-                model: AssessmentQuestion,
-                as: 'assessmentQuestion',
-                attributes: [],
-                where: { assessmentId },
-                required: true
-            }],
-            raw: true
-        });
+        const stats = await baseAssessmentStatistics(assessmentId)
 
         // Get control numbers statistics using a raw query
         const controlStatsQuery = `
-            SELECT 
+            SELECT
                 a.answer_text,
                 mq.sp_800_53_control_number as "sp80053ControlNum",
                 COUNT(*) as count

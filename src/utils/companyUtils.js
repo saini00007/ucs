@@ -1,4 +1,4 @@
-import { Company, User } from '../models/index.js';
+import { Company, ControlFramework, User } from '../models/index.js';
 import { Op } from 'sequelize';
 import AppError from '../utils/AppError.js';
 
@@ -158,3 +158,18 @@ export const handleCompanyEmailUpdates = async (company, primaryEmail, secondary
 
     return emailUpdates;
 };
+
+export const validateControlFrameworkIds = async (controlFrameworkIds) => {
+
+    const existingFrameworks = await ControlFramework.findAll({
+        where: {
+            id: controlFrameworkIds
+        }
+    });
+
+
+    if (existingFrameworks.length !== controlFrameworkIds.length) {
+        throw new AppError('One or more control frameworks not found', 404);
+    }
+
+}

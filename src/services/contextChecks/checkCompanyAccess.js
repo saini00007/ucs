@@ -1,5 +1,6 @@
 import { Company } from "../../models/index.js";
 import AppError from "../../utils/AppError.js";
+import { ROLE_IDS } from "../../utils/constants.js";
 
 const checkCompanyAccess = async (user, resourceId) => {
     try {
@@ -10,7 +11,7 @@ const checkCompanyAccess = async (user, resourceId) => {
             throw new AppError('Company not found', 404);
         }
 
-        if (user.roleId === 'superadmin' || user.companyId === resourceId) {
+        if (user.roleId === ROLE_IDS.SUPER_ADMIN || user.companyId === resourceId) {
             return { success: true };
         } else {
             // If the user does not have permission, throw an error

@@ -6,6 +6,7 @@ import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 import AppError from '../utils/AppError.js';
 import { validateAdminAssignment, validateRoleAssignment, validateEmailForUser } from '../utils/userUtils.js'
+import { ROLE_IDS } from '../utils/constants.js';
 
 const createUser = async (userData, res, next) => {
     const transaction = await sequelize.transaction();
@@ -75,7 +76,7 @@ export const addUser = async (req, res, next) => {
         await validateEmailForUser(email, null, roleId, companyId);
         await validateRoleAssignment(currentUser, roleId);
 
-        if (roleId === 'admin') {
+        if (roleId === ROLE_IDS.ADMIN) {
             await validateAdminAssignment(companyId);
             // For admin role, create user with provided company
             await createUser({
@@ -185,9 +186,9 @@ export const deleteUser = async (req, res, next) => {
 
         // Check if the requesting user has the right to delete the target user
         const canDelete =
-            (requestingUserRoleId === 'superadmin') ||
-            (requestingUserRoleId === 'admin' && ['departmentmanager', 'assessor', 'reviewer'].includes(userToDeleteRoleId)) ||
-            (requestingUserRoleId === 'departmentmanager' && ['assessor', 'reviewer'].includes(userToDeleteRoleId));
+            (requestingUserRoleId === ROLE_IDS.SUPER_ADMIN) ||
+            (requestingUserRoleId === ROLE_IDS.ADMIN && [ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
+            (requestingUserRoleId === ROLE_IDS.DEPARTMENT_MANAGER && [ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId));
 
         if (!canDelete) {
             throw new AppError('Unauthorized to delete this user', 403);
@@ -267,7 +268,7 @@ export const addUserToDepartment = async (req, res, next) => {
             throw new AppError('User not found', 404);
         }
 
-        if (!['assessor', 'reviewer'].includes(user.roleId)) {
+        if (![ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(user.roleId)) {
             throw new AppError('User must have a role of assessor or reviewer', 400);
         }
 
@@ -349,7 +350,7 @@ export const removeUserFromDepartment = async (req, res, next) => {
         }
 
         // Check if the user has a valid role
-        if (!['assessor', 'reviewer'].includes(user.roleId)) {
+        if (![ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(user.roleId)) {
             throw new AppError('User must have a role of assessor or reviewer', 400);
         }
 
@@ -399,3 +400,5 @@ export const getDepartmentsByUserId = async (req, res, next) => {
         next(error);
     }
 };
+
+
