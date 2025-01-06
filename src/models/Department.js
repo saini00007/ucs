@@ -63,6 +63,12 @@ Department.associate = (models) => {
     foreignKey: 'departmentId', 
     as: 'assessments' 
   });
+
+    // // SubDepartment association
+    // Department.hasMany(models.SubDepartment, { 
+    //   foreignKey: 'departmentId', 
+    //   as: 'subDepartments' 
+    // });
   
   // MasterDepartment association
   Department.belongsTo(models.MasterDepartment, { 
