@@ -18,6 +18,11 @@ const formatControlStats = (answerType, controlStats) => {
     return groupedCounts;
 };
 
+const calculatePercentage = (count, total) => {
+    if (total === 0) return 0;
+    return parseFloat(((count / total) * 100).toFixed(2));
+};
+
 export const baseAssessmentStatistics = async (assessmentId) => {
     const stats = await Answer.findAll({
         attributes: [
@@ -50,12 +55,13 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
     try {
         // Get total questions count
         const totalQuestions = await totalQuestionsOfAssessment(assessmentId)
+        
         // Get base answer statistics
         const stats = await baseAssessmentStatistics(assessmentId)
-
+        
         // Get control numbers statistics using a raw query
         const controlStatsQuery = `
-            SELECT
+            SELECT 
                 a.answer_text,
                 mq.sp_800_53_control_number as "sp80053ControlNum",
                 COUNT(*) as count
@@ -65,7 +71,7 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
             WHERE aq.assessment_id = :assessmentId
             GROUP BY a.answer_text, mq.sp_800_53_control_number
         `;
-
+        
         const controlStats = await Answer.sequelize.query(
             controlStatsQuery,
             {
@@ -74,32 +80,43 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
             }
         );
 
-        // Format the response
+        // Calculate total answers and percentages
+        const totalAnswers = parseInt(stats[0]?.totalAnswers) || 0;
+
+        // Calculate individual counts
+        const yesCount = parseInt(stats[0]?.yesCount) || 0;
+        const noCount = parseInt(stats[0]?.noCount) || 0;
+        const notApplicableCount = parseInt(stats[0]?.notApplicableCount) || 0;
+
+        // Format the response with percentages
         const statistics = {
             totalQuestions,
-            totalAnswers: parseInt(stats[0]?.totalAnswers) || 0,
+            totalAnswers,
+            percentageCompleted: calculatePercentage(totalAnswers, totalQuestions),
             yesStats: {
-                count: parseInt(stats[0]?.yesCount) || 0,
+                count: yesCount,
+                percentage: calculatePercentage(yesCount, totalAnswers),
                 sp80053ControlNum: formatControlStats(ANSWER_TYPES.YES, controlStats)
             },
             noStats: {
-                count: parseInt(stats[0]?.noCount) || 0,
+                count: noCount,
+                percentage: calculatePercentage(noCount, totalAnswers),
                 sp80053ControlNum: formatControlStats(ANSWER_TYPES.NO, controlStats)
             },
             notApplicableStats: {
-                count: parseInt(stats[0]?.notApplicableCount) || 0,
+                count: notApplicableCount,
+                percentage: calculatePercentage(notApplicableCount, totalAnswers),
                 sp80053ControlNum: formatControlStats(ANSWER_TYPES.NOT_APPLICABLE, controlStats)
             }
         };
-
+        
         return statistics;
-
+        
     } catch (error) {
         console.error('Error calculating assessment statistics:', error);
         throw new AppError('Failed to calculate assessment statistics', 500);
     }
 };
-
 // Company level statistics
 export const calculateCompanyStatistics = async (companyId) => {
     try {

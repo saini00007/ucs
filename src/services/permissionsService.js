@@ -29,9 +29,6 @@ const permissionsService = {
   async hasRolePermission({ user, resourceId, actionId }) {
     try {
       // Find a matching permission in the RoleResourceActionLink table.
-      console.log(user.roleId);
-      console.log(resourceId);
-      console.log(actionId);
       const permission = await RoleResourceActionLink.findOne({
         where: {
           roleId: user.roleId,
