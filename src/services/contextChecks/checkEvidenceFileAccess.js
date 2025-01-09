@@ -57,7 +57,7 @@ const checkEvidenceFileAccess = async (user, resourceId) => {
         }
 
         // Check assessment state
-        const assessmentState = checkAssessmentState(evidenceFile.answer.assessmentQuestion.assessment);
+        const assessmentState = checkAssessmentState(evidenceFile.answer.assessmentQuestion.subAssessment.assessment);
         if (!assessmentState.success) {
             // If assessment state is not valid, throw an error
             throw new AppError(assessmentState.message || 'Invalid assessment state', assessmentState.status || 400);

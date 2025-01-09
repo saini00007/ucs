@@ -49,7 +49,7 @@ const checkAnswerAccess = async (user, resourceId) => {
         }
 
         // Check assessment state
-        const assessmentState = checkAssessmentState(answer.assessmentQuestion.assessment);
+        const assessmentState = checkAssessmentState(answer.assessmentQuestion.subAssessment.assessment);
         if (!assessmentState.success) {
             throw new AppError(assessmentState.message || 'Assessment state is not valid', assessmentState.status || 400);
         }

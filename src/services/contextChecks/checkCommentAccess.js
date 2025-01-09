@@ -45,14 +45,14 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
         const subDepartmentId = subDepartment.id;
 
         // Check access scope
-        const accessScope = checkAccessScope(user, companyId, departmentId,subDepartmentId);
+        const accessScope = checkAccessScope(user, companyId, departmentId, subDepartmentId);
         if (!accessScope.success) {
             // If the user does not have access to the department or company, return an error
             throw new AppError('Access denied: insufficient permissions', 403);
         }
 
         // Check assessment state
-        const assessmentState = checkAssessmentState(comment.assessmentQuestion.assessment);
+        const assessmentState = checkAssessmentState(comment.assessmentQuestion.subAssessment.assessment);
         if (!assessmentState.success) {
             // If the assessment state is not valid, return an error
             throw new AppError(assessmentState.message || 'Assessment state is not valid', assessmentState.status || 400);
