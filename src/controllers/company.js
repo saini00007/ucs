@@ -77,6 +77,7 @@ export const createCompany = async (req, res, next) => {
   }
 };
 
+
 export const getAllCompanies = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
   try {
@@ -767,131 +768,94 @@ export const getCompanyLogo = async (req, res, next) => {
   }
 };
 
-export const companyProgressReport = async (req, res, next) => {
+
+export const getDepartmentStatusReportAccordingToTime = async (req, res, next) => {
   const { companyId } = req.params;
+  const currentDate = new Date();
 
   try {
     const company = await Company.findOne({
       where: { id: companyId },
-      attributes: ['id', 'companyName'],
-      include: [
-        {
-          model: Department,
-          as: 'departments',
-          attributes: ['id', 'departmentName'],
-          include: [
-            {
-              model: SubDepartment,
-              as: 'subDepartments',
-              attributes: ['id', 'subDepartmentName'],
-              include: {
-                model: SubAssessment,
-                as: 'subAssessments',
-              }
-            },
-            {
-              model: Assessment,
-              as: 'assessments',
-              include: {
-                model: SubAssessment,
-                as: 'subAssessments',
-              }
-            }
-          ]
-        }
-      ]
+      include: [{
+        model: Department,
+        as: 'departments',
+        attributes: ['id', 'departmentName'],
+        include: [{
+          model: Assessment,
+          as: 'assessments',
+          attributes: [
+            'id', 
+            'assessmentName',
+            'assessmentStarted',
+            'submitted',
+            'startedAt',
+            'submittedAt',
+            'deadline'
+          ],
+          where: {
+            assessmentName: 'default' 
+          },
+          required: false,
+          paranoid: true 
+        }]
+      }]
     });
 
-    const AllcompletedAssessments = await getFilteredAssessments(companyId, {
-      checkComplete: true,
-      assessmentStarted: true,
-      submitted: false,
-      deadline: { [Op.gt]: currentDate }
-    });
+    const getDepartmentStatus = (assessments) => {
+      if (!assessments || assessments.length === 0) return 'green';
+      
+      const missedDeadlines = assessments.filter(assessment => {
+        return assessment.deadline && 
+               new Date(assessment.deadline) < currentDate && 
+               (!assessment.submitted || !assessment.assessmentStarted);
+      });
 
-    // Process all assessments at company level with statistics
-    const allAssessmentsOfCompany = await Promise.all(
-      company.departments
-        .flatMap(department => department.assessments)
-        .map(async assessment => {
-          const { subAssessments, ...assessmentWithoutSubAssessments } = assessment.toJSON();
-          const statistics = await calculateAssessmentStatistics(assessment.id);
-          return {
-            ...assessmentWithoutSubAssessments,
-            statistics
-          };
-        })
-    );
+      const upcomingDeadlines = assessments.filter(assessment => {
+        if (!assessment.deadline || assessment.submitted) return false;
+        
+        const deadline = new Date(assessment.deadline);
+        const threeDaysFromNow = new Date(currentDate.getTime() + (3 * 24 * 60 * 60 * 1000));
+        return deadline <= threeDaysFromNow && 
+               deadline > currentDate && 
+               (!assessment.submitted || !assessment.assessmentStarted);
+      });
 
-    const categorizedAssessments = getCategorizedAssessments(allAssessmentsOfCompany);
-    const metricsOfAssessment = getMetricsOfAssessments(categorizedAssessments);
+      if (missedDeadlines.length > 0) return 'red';
+      if (upcomingDeadlines.length > 0) return 'yellow';
+      return 'green';
+    };
 
-    // Process departments
-    const departments = await Promise.all(company.departments.map(async department => {
-      // Get all subassessments with statistics
-      const departmentSubAssessments = await Promise.all([
-        ...department.subDepartments.flatMap(subDept => subDept.subAssessments || []),
-        ...department.assessments.flatMap(assessment => assessment.subAssessments || [])
-      ].map(async subAssessment => {
-        const subAssessmentData = subAssessment.toJSON();
-        const statistics = await calculateAssessmentStatistics(subAssessment.id);
-        return {
-          ...subAssessmentData,
-          statistics
-        };
-      }));
+    // Categorize departments
+    const categorizedDepartments = {
+      red: [],
+      yellow: [],
+      green: []
+    };
 
-      const categorizedSubAssessments = getCategorizedSubAssessments(departmentSubAssessments);
-      const metricsOfSubAssessment = getMetricsOfAssessments(categorizedSubAssessments);
-
-      // Process department assessments with statistics
-      const departmentAssessments = await Promise.all(
-        department.assessments.map(async assessment => {
-          const { subAssessments, ...assessmentWithoutSubAssessments } = assessment.toJSON();
-          const statistics = await calculateAssessmentStatistics(assessment.id);
-          return {
-            ...assessmentWithoutSubAssessments,
-            statistics
-          };
-        })
-      );
-
-      const departmentCategorizedAssessments = getCategorizedAssessments(departmentAssessments);
-      const departmentMetricsOfAssessment = getMetricsOfAssessments(departmentCategorizedAssessments);
-
-      return {
+    company.departments.forEach(department => {
+      const status = getDepartmentStatus(department.assessments);
+      categorizedDepartments[status].push({
         id: department.id,
-        departmentName: department.departmentName,
-        assessments: {
-          metrics: {
-            total: departmentAssessments.length,
-            ...departmentMetricsOfAssessment,
-            completed: AllcompletedAssessments.length
-          },
-          categorizedAssessments: departmentCategorizedAssessments
-        },
-        subAssessments: {
-          metrics: {
-            total: departmentSubAssessments.length,
-            ...metricsOfSubAssessment
-          },
-          categorizedSubAssessments: categorizedSubAssessments
-        }
-      };
-    }));
+        name: department.departmentName,
+      });
+    });
 
     res.status(200).json({
       success: true,
-      messages: ['Company progress report fetched successfully'],
-      progressReport: {
-        assessments: {
-          metrics: {
-            total: allAssessmentsOfCompany.length,
-            ...metricsOfAssessment
-          },
-          categorizedAssessments
+      messages: ['Progress report generated successfully'],
+      categorizedDepartments: {
+        red: {
+          count: categorizedDepartments.red.length,
+          departments: categorizedDepartments.red
         },
-        departments
+        yellow: {
+          count: categorizedDepartments.yellow.length,
+          departments: categorizedDepartments.yellow
+        },
+        green: {
+          count: categorizedDepartments.green.length,
+          departments: categorizedDepartments.green
+        }
       }
     });
   } catch (error) {
@@ -899,9 +863,137 @@ export const companyProgressReport = async (req, res, next) => {
   }
 };
 
+export const getDepartmentStatusReportAccordingToCompliance = async (req, res, next) => {
+  const { companyId } = req.params;
 
+  try {
+    const company = await Company.findOne({
+      where: { id: companyId },
+      include: [{
+        model: Department,
+        as: 'departments',
+        attributes: ['id', 'departmentName'],
+        include: [{
+          model: Assessment,
+          as: 'assessments',
+          where: {
+            assessmentName: 'default'
+          },
+          required: false,
+          paranoid: true,
+          include: [{
+            model: AssessmentQuestion,
+            as: 'questions',
+            include: [{
+              model: Answer,
+              as: 'answer',
+              attributes: ['answerText']
+            }, {
+              model: MasterQuestion,
+              as: 'masterQuestion',
+              attributes: ['questionText']
+            }]
+          }]
+        }]
+      }]
+    });
 
+    const calculateComplianceStatus = (assessment) => {
+      if (!assessment.questions || assessment.questions.length === 0) return 'green';
 
+      // Filter questions that have been answered
+      const answeredQuestions = assessment.questions.filter(question => 
+        question.answer && question.answer.answerText
+      );
+
+      // If no questions have been answered yet, return green
+      if (answeredQuestions.length === 0) return 'green';
+
+      const noAnswers = answeredQuestions.filter(question => 
+        question.answer.answerText.toLowerCase() === 'no'
+      ).length;
+
+      const noAnswerPercentage = (noAnswers / answeredQuestions.length) * 100;
+      const compliancePercentage = 100 - noAnswerPercentage;
+      
+      if (compliancePercentage >= 90) return 'green';  // High compliance (0-10% no answers)
+      if (compliancePercentage >= 70) return 'yellow'; // Medium compliance (10-30% no answers)
+      return 'red';                                    // Low compliance (>30% no answers)
+    };
+
+    // Categorize departments
+    const categorizedDepartments = {
+      red: [],
+      yellow: [],
+      green: []
+    };
+
+    company.departments.forEach(department => {
+      let departmentStatus = 'green';
+      
+      if (department.assessments && department.assessments.length > 0) {
+        const assessmentStatuses = department.assessments.map(assessment => 
+          calculateComplianceStatus(assessment)
+        );
+        
+        if (assessmentStatuses.includes('red')) {
+          departmentStatus = 'red';
+        } else if (assessmentStatuses.includes('yellow')) {
+          departmentStatus = 'yellow';
+        }
+      }
+
+      categorizedDepartments[departmentStatus].push({
+        id: department.id,
+        name: department.departmentName,
+        complianceDetails: department.assessments.map(assessment => {
+          const answeredQuestions = assessment.questions.filter(q => 
+            q.answer && q.answer.answerText
+          );
+
+          const totalAnswered = answeredQuestions.length;
+          const noAnswers = answeredQuestions.filter(q => 
+            q.answer.answerText.toLowerCase() === 'no'
+          ).length;
+          
+          return {
+            assessmentId: assessment.id,
+            totalQuestions: assessment.questions.length,
+            questionsAnswered: totalAnswered,
+            noAnswers: noAnswers,
+            compliancePercentage: totalAnswered ? 
+              ((totalAnswered - noAnswers) / totalAnswered * 100).toFixed(2) : 
+              "100.00"
+          };
+        })
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      messages: ['compliance report generated successfully'],
+      categorizedDepartments: {
+        red: {
+          count: categorizedDepartments.red.length,
+          description: 'Low Compliance (Below 70% compliant)',
+          departments: categorizedDepartments.red
+        },
+        yellow: {
+          count: categorizedDepartments.yellow.length,
+          description: 'Medium Compliance (70-90% compliant)',
+          departments: categorizedDepartments.yellow
+        },
+        green: {
+          count: categorizedDepartments.green.length,
+          description: 'High Compliance (Above 90% compliant)',
+          departments: categorizedDepartments.green
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 

@@ -507,3 +507,200 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
       next(error);
     }
   };
+
+  export const departmentProgressReport = async (req, res, next) => {
+    const { departmentId } = req.params;
+  
+    try {
+      const department = await Department.findOne({
+        where: { id: departmentId },
+        attributes: ['id', 'departmentName'],
+        include: [
+          {
+            model: Assessment,
+            as: 'assessments',
+            where: {
+              assessmentName: 'default'
+            },
+            required: false,
+            include: [{
+              model: AssessmentQuestion,
+              as: 'questions',
+              include: [{
+                model: Answer,
+                as: 'answer',
+                attributes: ['answerText']
+              }]
+            }]
+          },
+          {
+            model: SubDepartment,
+            as: 'subDepartments',
+            include: [{
+              model: SubAssessment,
+              as: 'subAssessments',
+              include: [{
+                model: AssessmentQuestion,
+                as: 'questions',
+                include: [{
+                  model: Answer,
+                  as: 'answer',
+                  attributes: ['answerText']
+                }]
+              }]
+            }]
+          }
+        ]
+      });
+  
+      if (!department) {
+        return res.status(404).json({
+          success: false,
+          messages: ['Department not found']
+        });
+      }
+  
+      // Calculate compliance percentage
+      const calculateCompliance = (questions) => {
+        const answeredQuestions = questions.filter(q => q.answer && q.answer.answerText);
+        if (answeredQuestions.length === 0) return 0;
+  
+        const noAnswers = answeredQuestions.filter(q => 
+          q.answer.answerText.toLowerCase() === 'no'
+        ).length;
+  
+        return ((answeredQuestions.length - noAnswers) / answeredQuestions.length) * 100;
+      };
+  
+      // Get status based on compliance percentage
+      const getComplianceStatus = (percentage) => {
+        if (percentage >= 90) return 'green';
+        if (percentage >= 70) return 'yellow';
+        return 'red';
+      };
+  
+      // Process subdepartments
+      const categorizedSubDepartments = {
+        red: [],
+        yellow: [],
+        green: []
+      };
+  
+      department.subDepartments.forEach(subDept => {
+        let totalCompliance = 0;
+  
+        // Calculate average compliance across all subassessments
+        subDept.subAssessments.forEach(subAssessment => {
+          totalCompliance += calculateCompliance(subAssessment.questions);
+        });
+  
+        const averageCompliance = subDept.subAssessments.length > 0 
+          ? totalCompliance / subDept.subAssessments.length 
+          : 0;
+  
+        const status = getComplianceStatus(averageCompliance);
+  
+        categorizedSubDepartments[status].push({
+          id: subDept.id,
+          name: subDept.subDepartmentName,
+          compliancePercentage: averageCompliance.toFixed(2)
+        });
+      });
+  
+      // Calculate default assessment compliance with detailed stats
+      const defaultAssessment = department.assessments.map(assessment => {
+        const questions = assessment.questions || [];
+        const answeredQuestions = questions.filter(q => q.answer && q.answer.answerText);
+        
+        const stats = {
+          total: questions.length,
+          answered: answeredQuestions.length,
+          unanswered: questions.length - answeredQuestions.length,
+          answers: {
+            yes: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'yes').length,
+            no: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'no').length,
+            notApplicable: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'not applicable').length,
+            partial: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'partial').length
+          }
+        };
+  
+        // Calculate percentages
+        const percentages = {
+          completion: stats.total ? ((stats.answered / stats.total) * 100).toFixed(2) : "0.00",
+          yes: stats.answered ? ((stats.answers.yes / stats.answered) * 100).toFixed(2) : "0.00",
+          no: stats.answered ? ((stats.answers.no / stats.answered) * 100).toFixed(2) : "0.00",
+          notApplicable: stats.answered ? ((stats.answers.notApplicable / stats.answered) * 100).toFixed(2) : "0.00",
+          partial: stats.answered ? ((stats.answers.partial / stats.answered) * 100).toFixed(2) : "0.00"
+        };
+  
+        const compliancePercentage = calculateCompliance(questions).toFixed(2);
+  
+        return {
+          compliancePercentage,
+          status: getComplianceStatus(parseFloat(compliancePercentage)),
+          stats,
+          percentages,
+          assessmentFields: {
+            id: assessment.id,
+            assessmentName: assessment.assessmentName,
+            assessmentStarted: assessment.assessmentStarted,
+            submitted: assessment.submitted,
+            startedAt: assessment.startedAt,
+            submittedAt: assessment.submittedAt,
+            deadline: assessment.deadline
+          }
+        };
+      })[0] || {
+        compliancePercentage: "0.00",
+        status: "red",
+        stats: {
+          total: 0,
+          answered: 0,
+          unanswered: 0,
+          answers: { yes: 0, no: 0, notApplicable: 0, partial: 0 }
+        },
+        percentages: {
+          completion: "0.00",
+          yes: "0.00",
+          no: "0.00",
+          notApplicable: "0.00",
+          partial: "0.00"
+        },
+        assessmentFields: {
+          id: null,
+          assessmentName: "default",
+          assessmentStarted: false,
+          submitted: false,
+          startedAt: null,
+          submittedAt: null,
+          deadline: null
+        }
+      };
+  
+      res.status(200).json({
+        success: true,
+        messages: ['Compliance report generated successfully'],
+        departmentName: department.departmentName,
+        subDepartments: {
+          red: {
+            count: categorizedSubDepartments.red.length,
+            description: 'Low Compliance (Below 70%)',
+            items: categorizedSubDepartments.red
+          },
+          yellow: {
+            count: categorizedSubDepartments.yellow.length,
+            description: 'Medium Compliance (70-90%)',
+            items: categorizedSubDepartments.yellow
+          },
+          green: {
+            count: categorizedSubDepartments.green.length,
+            description: 'High Compliance (Above 90%)',
+            items: categorizedSubDepartments.green
+          }
+        },
+        defaultAssessment
+      });
+    } catch (error) {
+      next(error);
+    }
+  };

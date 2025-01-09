@@ -9,6 +9,7 @@ import {
     getAssessmentByDepartmentId,
     getUsersByDepartmentId,
     getSubDepartmentsByDepartmentId,
+    departmentProgressReport,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
@@ -100,6 +101,10 @@ router.get('/:departmentId/sub-departments',
     ),
     checkAccess,
     getSubDepartmentsByDepartmentId
+)
+
+router.get('/:departmentId/progress-report',
+    departmentProgressReport
 )
 
 export default router;

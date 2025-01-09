@@ -9,7 +9,8 @@ import {
     getUsersByCompanyId,
     getReportByCompanyId,
     getCompanyLogo,
-    companyProgressReport
+    getDepartmentStatusReportAccordingToCompliance,
+    getDepartmentStatusReportAccordingToTime
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -134,13 +135,21 @@ router.get('/:companyId/logo',
     getCompanyLogo
 );
 
-router.get('/:companyId/progress-report',
+router.get('/:companyId/progress-report/time',
     attachResourceInfo(RESOURCE_TYPES.COMPANY_PROGRESS_REPORT,
         CONTENT_RESOURCE_TYPES.COMPANY,
         'companyId',
         ACTION_IDS.READ),
     checkAccess,
-    companyProgressReport
+    getDepartmentStatusReportAccordingToTime
+)
+router.get('/:companyId/progress-report/complicane',
+    attachResourceInfo(RESOURCE_TYPES.COMPANY_PROGRESS_REPORT,
+        CONTENT_RESOURCE_TYPES.COMPANY,
+        'companyId',
+        ACTION_IDS.READ),
+    checkAccess,
+    getDepartmentStatusReportAccordingToCompliance
 )
 
 export default router;
