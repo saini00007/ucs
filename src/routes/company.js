@@ -143,7 +143,7 @@ router.get('/:companyId/progress-report/time',
     checkAccess,
     getDepartmentStatusReportAccordingToTime
 )
-router.get('/:companyId/progress-report/complicane',
+router.get('/:companyId/progress-report/compliance',
     attachResourceInfo(RESOURCE_TYPES.COMPANY_PROGRESS_REPORT,
         CONTENT_RESOURCE_TYPES.COMPANY,
         'companyId',
