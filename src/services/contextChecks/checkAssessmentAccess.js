@@ -1,5 +1,5 @@
 import { Assessment, Department } from "../../models/index.js";
-import { checkAccessScope } from "../../utils/accessValidators.js";
+import { checkAccessScope, checkAccessScopeForDepartment } from "../../utils/accessValidators.js";
 import AppError from "../../utils/AppError.js";
 
 const checkAssessmentAccess = async (user, resourceId) => {
@@ -18,7 +18,7 @@ const checkAssessmentAccess = async (user, resourceId) => {
         const { companyId, id: departmentId } = assessment.department;
 
         // Check access scope
-        const accessScope = checkAccessScope(user, companyId, departmentId);
+        const accessScope = checkAccessScopeForDepartment(user, companyId, departmentId);
         if (!accessScope.success) {
             throw new AppError('Access denied: insufficient permissions', 403);
         }

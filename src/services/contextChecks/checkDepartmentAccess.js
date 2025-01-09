@@ -1,5 +1,5 @@
 import { Department } from "../../models/index.js";
-import { checkAccessScope } from "../../utils/accessValidators.js";
+import { checkAccessScope, checkAccessScopeForDepartment } from "../../utils/accessValidators.js";
 import AppError from "../../utils/AppError.js";
 
 const checkDepartmentAccess = async (user, resourceId) => {
@@ -11,7 +11,7 @@ const checkDepartmentAccess = async (user, resourceId) => {
             throw new AppError('Department not found', 404);
         }
 
-        const accessScope = checkAccessScope(user, department.companyId, department.id);
+        const accessScope = checkAccessScopeForDepartment(user, department.companyId, department.id);
         if (!accessScope.success) {
             // If access scope is not granted, throw an error
             throw new AppError('Access denied: insufficient access scope', 403);

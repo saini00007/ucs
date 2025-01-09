@@ -6,6 +6,9 @@ import checkAnswerAccess from './checkAnswerAccess.js';
 import checkEvidenceFileAccess from './checkEvidenceFileAccess.js';
 import checkCommentAccess from './checkCommentAccess.js';
 import checkUserAccess from './checkUserAccess.js';
+import checkSubAssessmentAccess from './checkSubAssessmentAccess.js';
+import checkSubDepartmentAccess from './checkSubDepartmentAccess.js';
+
 export {
   checkAssessmentAccess,
   checkDepartmentAccess,
@@ -14,5 +17,7 @@ export {
   checkAnswerAccess,
   checkEvidenceFileAccess,
   checkCommentAccess,
-  checkUserAccess
+  checkUserAccess,
+  checkSubAssessmentAccess,
+  checkSubDepartmentAccess
 };

@@ -118,7 +118,7 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
     }
 };
 // Company level statistics
-export const calculateCompanyStatistics = async (companyId) => {
+export const calculateAssessmentStatisticsForCompany = async (companyId) => {
     try {
         // Get total questions count using subquery
         const totalQuestionsQuery = `

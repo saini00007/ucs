@@ -10,12 +10,17 @@ import {
     EvidenceFile,
     UserDepartmentLink,
     Comment,
-    User
+    User,
+    MasterSubDepartment,
+    SubDepartment,
+    SubAssessment
 } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
+import { createDepartmentAssessment } from '../utils/departmentUtils.js';
+import { ROLE_IDS } from '../utils/constants.js';
 
 
 export const getDepartmentById = async (req, res, next) => {
@@ -78,29 +83,12 @@ export const createDepartment = async (req, res, next) => {
             createdByUserId: req.user.id,
         }, { transaction });
 
-        // Create a new assessment for the new department
-        const newAssessment = await Assessment.create({
+        const { assessment, subDepartments } = await createDepartmentAssessment({
             departmentId: newDepartment.id,
-            deadline: deadline
-        }, { transaction });
-
-        // Find questions linked to the master department
-        const questions = await QuestionDepartmentLink.findAll({
-            where: { masterDepartmentId },
-            transaction,
+            masterDepartmentId,
+            deadline,
+            transaction
         });
-
-        if (questions.length === 0) {
-            console.warn('No questions found for the master department');
-        }
-
-        // Create assessment questions for each linked question
-        await Promise.all(questions.map(async (qdl) => {
-            await AssessmentQuestion.create({
-                assessmentId: newAssessment.id,
-                masterQuestionId: qdl.masterQuestionId,
-            }, { transaction });
-        }));
 
         // Commit the transaction
         await transaction.commit();
@@ -109,7 +97,12 @@ export const createDepartment = async (req, res, next) => {
         const departmentWithAssociations = await Department.findByPk(newDepartment.id, {
             include: [
                 { model: Company, as: 'company', attributes: ['companyName'] },
-                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
+                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] },
+                {
+                    model: SubDepartment,
+                    as: 'subDepartments',
+                    attributes: ['id', 'subDepartmentName']
+                }
             ]
         });
 
@@ -117,7 +110,7 @@ export const createDepartment = async (req, res, next) => {
         res.status(201).json({
             success: true,
             department: departmentWithAssociations,
-            assessment: newAssessment,
+            assessment: assessment,
         });
     } catch (error) {
         console.error('Error creating department:', error);
@@ -128,27 +121,30 @@ export const createDepartment = async (req, res, next) => {
 
 export const updateDepartment = async (req, res, next) => {
     const { departmentId } = req.params;
-    const { departmentName, masterDepartmentId,deadline } = req.body;
+    const { departmentName, masterDepartmentId, deadline } = req.body;
 
     const transaction = await sequelize.transaction();
 
     try {
+        // Find department
         const department = await Department.findByPk(departmentId, { transaction });
         if (!department) {
             throw new AppError('Department not found', 404);
         }
 
+        // Update department name if provided
         if (departmentName) {
             department.departmentName = departmentName;
         }
 
+        // Handle master department update if provided
         if (masterDepartmentId) {
             const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
             if (!masterDepartment) {
                 throw new AppError('Invalid master department ID', 400);
             }
 
-            // Check if master department is changing
+            // Check if master department is actually changing
             if (department.masterDepartmentId !== masterDepartmentId) {
                 // Check for started assessments
                 const startedAssessments = await Assessment.findAll({
@@ -163,15 +159,21 @@ export const updateDepartment = async (req, res, next) => {
                     throw new AppError('Could not update department because some assessments are in progress', 400);
                 }
 
+                // Get existing assessment IDs
                 const assessments = await Assessment.findAll({
                     where: { departmentId },
                     attributes: ['id'],
                     transaction
                 });
-
                 const assessmentIds = assessments.map(assessment => assessment.id);
 
-                // Delete associated assessment questions
+                // Delete existing sub-departments
+                await SubDepartment.destroy({
+                    where: { departmentId },
+                    transaction
+                });
+
+                // Delete existing assessment questions, sub-assessments, and assessments
                 await AssessmentQuestion.destroy({
                     where: {
                         assessmentId: {
@@ -181,42 +183,47 @@ export const updateDepartment = async (req, res, next) => {
                     transaction
                 });
 
-                // Delete old assessment
+                // Delete sub-assessments
+                await SubAssessment.destroy({
+                    where: {
+                        assessmentId: {
+                            [Op.in]: assessmentIds
+                        }
+                    },
+                    transaction
+                });
+
+                // Delete main assessments
                 await Assessment.destroy({
                     where: { departmentId },
                     transaction
                 });
 
-                // Create new assessment
-                const newAssessment = await Assessment.create({
+                // Create new assessment structure using the modular function
+                await createDepartmentAssessment({
                     departmentId,
-                    deadline: deadline
-                }, { transaction });
-
-                // Get questions for new master department
-                const questions = await QuestionDepartmentLink.findAll({
-                    where: { masterDepartmentId },
+                    masterDepartmentId,
+                    deadline,
                     transaction
                 });
-
-                // Create new assessment questions
-                await Promise.all(questions.map(async (qdl) => {
-                    await AssessmentQuestion.create({
-                        assessmentId: newAssessment.id,
-                        masterQuestionId: qdl.masterQuestionId
-                    }, { transaction });
-                }));
 
                 department.masterDepartmentId = masterDepartmentId;
             }
         }
 
+        // Save department changes
         await department.save({ transaction });
 
+        // Fetch updated department with associations
         const updatedDepartment = await Department.findByPk(department.id, {
             include: [
                 { model: Company, as: 'company', attributes: ['companyName'] },
-                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] }
+                { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] },
+                {
+                    model: SubDepartment,
+                    as: 'subDepartments',
+                    attributes: ['id', 'subDepartmentName']
+                }
             ],
             transaction
         });
@@ -228,7 +235,6 @@ export const updateDepartment = async (req, res, next) => {
             messages: ['Department updated successfully'],
             department: updatedDepartment
         });
-
     } catch (error) {
         await transaction.rollback();
         console.error('Error updating department:', error);
@@ -387,13 +393,14 @@ export const getAssessmentByDepartmentId = async (req, res, next) => {
 export const getUsersByDepartmentId = async (req, res, next) => {
     const { departmentId } = req.params;
     const { page = 1, limit = 10 } = req.query;
+    const { user: requestingUser } = req;
 
     try {
-
         const department = await Department.findByPk(departmentId);
         if (!department) {
             throw new AppError('Department not found', 404);
         }
+
         // Parse and validate pagination params
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
@@ -401,19 +408,38 @@ export const getUsersByDepartmentId = async (req, res, next) => {
             throw new AppError('Invalid pagination parameters', 400);
         }
 
-        // Fetch users associated with the given department ID
-        const { count, rows: users } = await User.findAndCountAll({
+        // Base query options
+        let queryOptions = {
+            attributes: { exclude: ['password', 'deletedAt'] },
+            limit: limitNum,
+            offset: (pageNum - 1) * limitNum,
             include: [{
                 model: Department,
                 as: 'departments',
                 attributes: ['id'],
                 through: { attributes: [] },
                 where: departmentId ? { id: departmentId } : {},
-            }],
-            attributes: { exclude: ['password', 'deletedAt'] },
-            limit: limitNum,
-            offset: (pageNum - 1) * limitNum,
-        });
+            }]
+        };
+
+        // Add subdepartment filter for non-admin users
+        if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(requestingUser.roleId)) {
+            // Get the requesting user's subdepartment IDs
+            const subdepartmentIds = requestingUser.subDepartments.map(subdept => subdept.id);
+            
+            queryOptions.include.push({
+                model: SubDepartment,
+                as: 'subDepartments',
+                attributes: ['id'],
+                through: { attributes: [] },
+                where: {
+                    id: subdepartmentIds
+                }
+            });
+        }
+
+        // Fetch users with the constructed query
+        const { count, rows: users } = await User.findAndCountAll(queryOptions);
 
         // Calculate pagination info
         const totalPages = Math.ceil(count / limitNum);
@@ -441,3 +467,43 @@ export const getUsersByDepartmentId = async (req, res, next) => {
         next(error);
     }
 };
+
+export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
+    try {
+      const { departmentId } = req.params;
+      const roleId = req.user.roleId;
+  
+      // Base query configuration
+      const queryConfig = {
+        where: { departmentId },
+        attributes: ['id', 'subDepartmentName'],
+        order: [['createdAt', 'DESC']],
+      };
+  
+      // Add user association filter for non-admin roles
+      if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(roleId)) {
+        queryConfig.include = [{
+          model: User,
+          as: 'users',
+          attributes: [],
+          where: { id: req.user.id },
+          required: true
+        }];
+      }
+  
+      // Fetch subdepartments with configured filters
+      const subDepartments = await SubDepartment.findAll(queryConfig);
+  
+      return res.status(200).json({
+        success: true,
+        messages: subDepartments.length === 0 
+          ? ['No sub departments found'] 
+          : ['Sub departments retrieved successfully'],
+        subDepartments,
+      });
+  
+    } catch (error) {
+      console.error('Error fetching subdepartments:', error);
+      next(error);
+    }
+  };

@@ -17,6 +17,15 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
     onDelete: 'CASCADE',
     allowNull: false,
   },
+  subAssessmentId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'sub_assessments',
+      key: 'id',
+    },
+    onDelete: 'CASCADE',
+    allowNull: false,
+  },
   masterQuestionId: {
     type: DataTypes.UUID,
     references: {
@@ -34,29 +43,36 @@ const AssessmentQuestion = sequelize.define('AssessmentQuestion', {
 
 AssessmentQuestion.associate = (models) => {
   // Assessment association
-  AssessmentQuestion.belongsTo(models.Assessment, { 
-    foreignKey: 'assessmentId', 
-    targetKey: 'id', 
-    as: 'assessment' 
+  AssessmentQuestion.belongsTo(models.Assessment, {
+    foreignKey: 'assessmentId',
+    targetKey: 'id',
+    as: 'assessment'
   });
-  
+
+  // SubAssessment association
+  AssessmentQuestion.belongsTo(models.SubAssessment, {
+    foreignKey: 'subAssessmentId',
+    targetKey: 'id',
+    as: 'subAssessment'
+  });
+
   // MasterQuestion association
-  AssessmentQuestion.belongsTo(models.MasterQuestion, { 
-    foreignKey: 'masterQuestionId', 
-    targetKey: 'id', 
-    as: 'masterQuestion' 
+  AssessmentQuestion.belongsTo(models.MasterQuestion, {
+    foreignKey: 'masterQuestionId',
+    targetKey: 'id',
+    as: 'masterQuestion'
   });
-  
+
   // Answer association
-  AssessmentQuestion.hasOne(models.Answer, { 
-    foreignKey: 'assessmentQuestionId', 
-    as: 'answer' 
+  AssessmentQuestion.hasOne(models.Answer, {
+    foreignKey: 'assessmentQuestionId',
+    as: 'answer'
   });
-  
+
   // Comment association
-  AssessmentQuestion.hasMany(models.Comment, { 
-    foreignKey: 'assessmentQuestionId', 
-    as: 'comments' 
+  AssessmentQuestion.hasMany(models.Comment, {
+    foreignKey: 'assessmentQuestionId',
+    as: 'comments'
   });
 };
 

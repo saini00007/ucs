@@ -1,4 +1,4 @@
-import { User, Department, Company, UserDepartmentLink } from '../models/index.js';
+import { User, Department, Company, UserDepartmentLink, SubDepartment, UserSubDepartmentLink } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import sendEmail from '../utils/mailer.js';
@@ -397,6 +397,151 @@ export const getDepartmentsByUserId = async (req, res, next) => {
 
     } catch (error) {
         console.error('Error fetching departments for user:', error);
+        next(error);
+    }
+};
+
+export const addUserToSubDepartment = async (req, res, next) => {
+    try {
+        const { userId, subDepartmentId } = req.params;
+        console.log(subDepartmentId);
+        // Find the subdepartment and its parent department
+        const subDepartment = await SubDepartment.findByPk(subDepartmentId, {
+            include: [{
+                model: Department,
+                as: 'department',
+                attributes: ['companyId']
+            }]
+        });
+
+        if (!subDepartment) {
+            throw new AppError('SubDepartment not found', 404);
+        }
+
+        // Find user with company check
+        const user = await User.findOne({
+            where: {
+                id: userId,
+                companyId: subDepartment.department.companyId
+            }
+        });
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        if (![ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(user.roleId)) {
+            throw new AppError('User must have a role of assessor or reviewer', 400);
+        }
+
+        // Check for existing link (including soft-deleted)
+        const existingLink = await UserSubDepartmentLink.findOne({
+            where: { userId, subDepartmentId },
+            paranoid: false
+        });
+
+        if (existingLink) {
+            // If link exists and not soft-deleted
+            if (existingLink.deletedAt === null) {
+                throw new AppError('User is already associated with this subdepartment', 409);
+            }
+
+            // Restore soft-deleted link
+            await existingLink.restore();
+
+            const updatedUser = await User.findByPk(userId, {
+                attributes: { exclude: ['password', 'deletedAt'] },
+                include: [ {
+                    model: Department,
+                    as: 'departments',
+                    through: { attributes: [] },
+                    attributes: ['id'],
+                    include:[{
+                        model: SubDepartment,
+                        as: 'subDepartments',
+                        attributes: ['id'],
+                        include: [{
+                            model: User,
+                            as: 'users',
+                            attributes: [],
+                            where: { id: userId }
+                          }]
+                    },]
+                }]
+            });
+
+            return res.status(200).json({
+                success: true,
+                messages: ['User re-associated with subdepartment successfully'],
+                user: updatedUser
+            });
+        }
+
+        // Create new association
+        await UserSubDepartmentLink.create({ userId, subDepartmentId });
+
+        // Fetch updated user data
+        const updatedUser = await User.findByPk(userId, {
+            attributes: { exclude: ['password', 'deletedAt'] },
+            include: [{
+                model: SubDepartment,
+                as: 'subDepartments',
+                through: { attributes: [] },
+                attributes: ['id'],
+            },
+            {
+                model: Department,
+                as: 'departments',
+                through: { attributes: [] },
+                attributes: ['id'],
+            }
+            ]
+        });
+        res.status(200).json({
+            success: true,
+            messages: ['User added to subdepartment successfully'],
+            user: updatedUser
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const removeUserFromSubDepartment = async (req, res, next) => {
+    try {
+        const { userId, subDepartmentId } = req.params;
+
+        // Check if there is an existing link between the user and subdepartment
+        const userSubDepartmentLink = await UserSubDepartmentLink.findOne({
+            where: { userId, subDepartmentId }
+        });
+
+        if (!userSubDepartmentLink) {
+            throw new AppError('User is not associated with this subdepartment', 404);
+        }
+
+        // Fetch the user to check their role
+        const user = await User.findByPk(userId);
+
+        if (!user) {
+            throw new AppError('User not found', 404);
+        }
+
+        // Check if the user has a valid role
+        if (![ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(user.roleId)) {
+            throw new AppError('User must have a role of assessor or reviewer', 400);
+        }
+
+        // Remove the user from the subdepartment
+        await userSubDepartmentLink.destroy();
+
+
+
+        res.status(200).json({
+            success: true,
+            messages: ['User removed from subdepartment successfully']
+        });
+    } catch (error) {
         next(error);
     }
 };

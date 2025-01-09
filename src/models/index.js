@@ -18,6 +18,10 @@ import UserDepartmentLink from './UserDepartmentLink.js';
 import IndustrySector from './IndustrySector.js';
 import ControlFramework from './ControlFramework.js';
 import CompanyControlFrameworkLink from './CompanyControlFrameworkLink.js';
+import SubAssessment from './subAssessment.js';
+import SubDepartment from './SubDepartment.js';
+import MasterSubDepartment from './MasterSubDepartment.js';
+import UserSubDepartmentLink from './UserSubDepartmentLink.js';
 
 const models = {
   User,
@@ -37,9 +41,13 @@ const models = {
   Action,
   Resource,
   UserDepartmentLink,
+  UserSubDepartmentLink,
   IndustrySector,
   ControlFramework,
-  CompanyControlFrameworkLink
+  CompanyControlFrameworkLink,
+  SubDepartment,
+  SubAssessment,
+  MasterSubDepartment
 };
 
 Object.values(models)
@@ -64,7 +72,11 @@ export {
   Action,
   Resource,
   UserDepartmentLink,
+  UserSubDepartmentLink,
   IndustrySector,
   ControlFramework,
-  CompanyControlFrameworkLink
+  CompanyControlFrameworkLink,
+  SubAssessment,
+  SubDepartment,
+  MasterSubDepartment
 };

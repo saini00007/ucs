@@ -20,6 +20,7 @@ const checkAccess = async (req, res, next) => {
       resourceId: roleResourceId,
       actionId,
     });
+    
 
     // Explicitly check if the role permission was successful
     if (!rolePermission.success) {
@@ -47,6 +48,7 @@ const checkAccess = async (req, res, next) => {
     return next();
   } catch (error) {
     // For superadmins, propagate the error with its message and status
+    console.log(error)
     if (req.user.roleId === ROLE_IDS.SUPER_ADMIN) {
       return next(error);
     }

@@ -5,6 +5,7 @@ import {
     submitAssessment,
     reopenAssessment,
     getAssessmentQuestionsByAssessmentId,
+    getSubAssessmentByAssessmentId,
 } from '../controllers/assessment.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -72,5 +73,19 @@ router.get('/:assessmentId/questions',
     checkAccess,
     getAssessmentQuestionsByAssessmentId
 );
+
+// Route to get sub assessments for a specific assessment
+router.get('/:assessmentId/sub-assessments',
+    attachResourceInfo(
+        RESOURCE_TYPES.SUB_ASSESSMENT,
+        CONTENT_RESOURCE_TYPES.ASSESSMENT,
+        'assessmentId',
+        ACTION_IDS.LIST
+    ),
+    checkAccess,
+    getSubAssessmentByAssessmentId
+);
+
+
 
 export default router;

@@ -51,7 +51,7 @@ const updateDepartmentSchema = Joi.object({
   deadline: Joi.date()
     .iso() // 2025-01-10T10:00:00Z
     .greater('now')
-    .required()
+    .optional()
     .messages({
       'date.base': 'Deadline must be a valid date.',
       'date.greater': 'Deadline must be in the future.',

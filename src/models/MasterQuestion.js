@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import MasterDepartment from './MasterDepartment.js';
 
 const MasterQuestion = sequelize.define('MasterQuestion', {
   id: {
@@ -131,6 +132,24 @@ const MasterQuestion = sequelize.define('MasterQuestion', {
   },
   department: {
     type: DataTypes.TEXT,
+  },
+  masterDepartmentId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'master_departments',
+      key: 'id'
+    },
+    allowNull: false,
+    onDelete: 'CASCADE',
+  },
+  masterSubDepartmentId: {
+    type: DataTypes.UUID,
+    references: {
+      model: 'master_sub_departments',
+      key: 'id'
+    },
+    allowNull: false,
+    onDelete: 'CASCADE',
   }
 }, {
   tableName: 'master_questions',
@@ -178,6 +197,18 @@ MasterQuestion.associate = (models) => {
     otherKey: 'masterDepartmentId',
     as: 'masterDepartments'
   });
+
+  MasterQuestion.belongsTo(models.MasterDepartment, {
+    foreignKey: 'masterDepartmentId',
+    targetKey: 'id',
+    as: 'masterDepartment'
+  })
+
+  MasterQuestion.belongsTo(models.MasterSubDepartment, {
+    foreignKey: 'masterSubDepartmentId',
+    targetKey: 'id',
+    as: 'masterSubDepartment'
+  })
 };
 
 export default MasterQuestion;

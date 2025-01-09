@@ -8,6 +8,7 @@ import {
     deleteDepartment,
     getAssessmentByDepartmentId,
     getUsersByDepartmentId,
+    getSubDepartmentsByDepartmentId,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
@@ -88,5 +89,17 @@ router.get('/:departmentId/users',
     checkAccess,
     getUsersByDepartmentId
 );
+
+// Route to get subdepartments
+router.get('/:departmentId/sub-departments',
+    attachResourceInfo(
+        RESOURCE_TYPES.SUB_DEPARTMENT,
+        CONTENT_RESOURCE_TYPES.DEPARTMENT,
+        'departmentId',
+        ACTION_IDS.LIST
+    ),
+    checkAccess,
+    getSubDepartmentsByDepartmentId
+)
 
 export default router;

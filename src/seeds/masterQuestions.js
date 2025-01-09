@@ -1,5 +1,6 @@
 import MasterQuestion from '../models/MasterQuestion.js';
 import MasterDepartment from '../models/MasterDepartment.js';
+import MasterSubDepartment from '../models/MasterSubDepartment.js';
 import QuestionDepartmentLink from '../models/QuestionDepartmentLink.js';
 import * as xlsx from 'xlsx';
 import path from 'path';
@@ -11,14 +12,29 @@ const __dirname = path.dirname(__filename);
 
 const DEFAULT_EXCEL_PATH = path.join(__dirname, 'masterQuestions.xlsx');
 
-// Helper function to convert string to float
 const parseFloatSafe = (value) => {
   if (value === undefined || value === null || value === '') return null;
   const parsed = parseFloat(value);
   return isNaN(parsed) ? null : parsed;
 };
 
-const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH) => {
+const subDepartments = [
+  'Recruitment',
+  'Training & Development',
+  'Employee Relations',
+  'Network Operations',
+  'System Administration',
+  'Technical Support',
+  'Security Operations',
+  'Incident Response',
+  'Security Compliance',
+  'Disaster Recovery',
+  'Crisis Management',
+  'Access Control',
+  'Surveillance'
+];
+
+const seedMasterQuestions = async (customFilePath = DEFAULT_EXCEL_PATH) => {
   try {
     const filePath = customFilePath || DEFAULT_EXCEL_PATH;
 
@@ -41,6 +57,9 @@ const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH)
 
     for (const [index, row] of rows.entries()) {
       try {
+        // Generate a random subdepartment
+        const randomSubDepartment = subDepartments[Math.floor(Math.random() * subDepartments.length)];
+
         const questionData = {
           srno: parseInt(row['SRNO']) || null,
           sp80053ControlNum: row['SP 800-53 Control Number'] || null,
@@ -81,35 +100,46 @@ const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH)
           revRiskLikelihoodRating: parseFloatSafe(row['Revised Risk Likelihood Rating']),
           revRiskImpactRating: parseFloatSafe(row['Revised Risk Impact Rating']),
           targetRiskRating: row['Taget Risk Risk Rating'] || null,
-          department: row['Department'] || null
+          department: row['Department'] || null,
+          subDepartment: randomSubDepartment 
         };
 
         console.log(`Processing Question ${index + 1}/${rows.length}: "${questionData.questionText?.substring(0, 50)}..."`);
 
-        // Create the question first
-        const question = await MasterQuestion.create(questionData);
+        if (!questionData.department) {
+          console.warn(`No department specified for question ${index + 1}`);
+          continue;
+        }
+
+        // Find the department
+        const department = await MasterDepartment.findOne({
+          where: { departmentName: questionData.department.trim() }
+        });
+
+        if (!department) {
+          console.warn(`Department "${questionData.department}" not found for question ${index + 1}`);
+          continue;
+        }
+
+        // Find or create the subdepartment
+        const [subDepartment] = await MasterSubDepartment.findOrCreate({
+          where: { subDepartmentName: questionData.subDepartment }
+        });
+
+        // Create the question with department and subdepartment IDs
+        const question = await MasterQuestion.create({
+          ...questionData,
+          masterDepartmentId: department.id,
+          masterSubDepartmentId: subDepartment.id
+        });
+
         console.log(`Question inserted with ID: ${question.id}`);
 
-        // If department is specified, create the link
-        if (questionData.department) {
-          const departmentName = questionData.department.trim();
-
-          // Find the department
-          const department = await MasterDepartment.findOne({
-            where: { departmentName: departmentName }
-          });
-
-          if (department) {
-            // Create the link
-            await QuestionDepartmentLink.create({
-              masterQuestionId: question.id,
-              masterDepartmentId: department.id
-            });
-            console.log(`Created department link for question ${question.id} with department ${department.id} (${departmentName})`);
-          } else {
-            console.warn(`Department "${departmentName}" not found for question ${question.id}`);
-          }
-        }
+        // Create department link
+        await QuestionDepartmentLink.create({
+          masterQuestionId: question.id,
+          masterDepartmentId: department.id
+        });
 
       } catch (innerError) {
         console.error(`Error processing row ${index + 1}:`, innerError.message);
@@ -124,17 +154,4 @@ const seedMasterQuestionsFromExcel = async (customFilePath = DEFAULT_EXCEL_PATH)
   }
 };
 
-export default seedMasterQuestionsFromExcel;
-
-// Only run directly if this is the main module
-if (import.meta.url === fileURLToPath(import.meta.url)) {
-  seedMasterQuestionsFromExcel()
-    .then(() => {
-      console.log('Seeding completed successfully');
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('Seeding failed:', error);
-      process.exit(1);
-    });
-}
+export default seedMasterQuestions;

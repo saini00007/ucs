@@ -11,6 +11,7 @@ import seedRoleResourceActionLinks from './roleResourceActionLinks.js';
 import seedControlFrameworks from './controlFrameworks.js';
 import initializeDatabase from '../initializeDatabase.js';
 import seedIndustrySectors from './industrySectors.js';
+import seedMasterSubDepartments from './masterSubDepartment.js';
 
 dotenv.config();
 
@@ -21,14 +22,19 @@ const runSeeds = async () => {
     const transaction = await sequelize.transaction();
     try {
         await seedRoles({ transaction });
-        await seedResources({ transaction });
+         await seedResources({ transaction });
         await seedActions({ transaction });
         await seedRoleResourceActionLinks({ transaction });
-        // await seedSuperAdmins({ transaction });
-        // await seedMasterDepartments({ transaction });
-        // await seedIndustrySectors({ transaction });
-        // await seedControlFrameworks({ transaction });
-        // await seedMasterQuestions();
+
+        await seedSuperAdmins({ transaction });
+        await seedMasterSubDepartments({ transaction });
+        await seedMasterDepartments({ transaction });
+
+        await seedIndustrySectors({ transaction });
+
+        await seedControlFrameworks({ transaction });
+
+        await seedMasterQuestions();
 
         await transaction.commit();
         console.log('Seeding completed successfully!');

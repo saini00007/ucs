@@ -111,6 +111,13 @@ User.associate = (models) => {
     as: 'departments'
   });
 
+  // Department association (many-to-many)
+  User.belongsToMany(models.SubDepartment, {
+    through: models.UserSubDepartmentLink,
+    foreignKey: 'userId',
+    as: 'subDepartments'
+  });
+
   // Role association
   User.belongsTo(models.Role, {
     foreignKey: 'roleId',

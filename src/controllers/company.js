@@ -1,12 +1,15 @@
-import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector, ControlFramework, CompanyControlFrameworkLink } from '../models/index.js';
+import { Company, Department, Assessment, AssessmentQuestion, Answer, Comment, EvidenceFile, User, MasterDepartment, UserDepartmentLink, MasterQuestion, IndustrySector, ControlFramework, CompanyControlFrameworkLink, SubDepartment, SubAssessment } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
-import { calculateAssessmentStatistics, calculateCompanyStatistics } from '../utils/calculateStatistics.js';
+import { calculateAssessmentStatistics, calculateAssessmentStatisticsForCompany } from '../utils/calculateStatistics.js';
 
 import { handleCompanyEmailUpdates, validateControlFrameworkIds, validateEmailForCompany } from '../utils/companyUtils.js'
 import { ROLE_IDS } from '../utils/constants.js';
-import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
+// import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
+import { getCategorizedAssessments, getCategorizedSubAssessments, getMetricsOfAssessments } from '../utils/progressStatistics.js';
+import { getFilteredAssessments } from '../utils/assessmentUtils.js';
+import { required } from 'joi';
 
 export const createCompany = async (req, res, next) => {
   const {
@@ -422,6 +425,7 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
+    // Check if company exists
     const company = await Company.findByPk(companyId);
     if (!company) {
       throw new AppError('Company not found', 404);
@@ -434,8 +438,8 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
       throw new AppError('Invalid pagination parameters', 400);
     }
 
-    // Fetch departments for the given companyId with pagination
-    const { count, rows: departments } = await Department.findAndCountAll({
+    // Base query config
+    const queryConfig = {
       where: { companyId },
       limit: limitNum,
       offset: (pageNum - 1) * limitNum,
@@ -449,9 +453,24 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
           model: MasterDepartment,
           as: 'masterDepartment',
           attributes: ['departmentName'],
-        },
-      ],
-    });
+        }
+      ]
+    };
+
+    // Add role-based filtering
+    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN].includes(req.user.roleId)) {
+      // For non-admin users, only show departments they're associated with
+      queryConfig.include.push({
+        model: User,
+        as: 'users',
+        attributes: [],
+        where: { id: req.user.id },
+        required: true // This ensures only departments with matching users are returned
+      });
+    }
+
+    // Fetch departments
+    const { count, rows: departments } = await Department.findAndCountAll(queryConfig);
 
     // Calculate pagination info
     const totalPages = Math.ceil(count / limitNum);
@@ -461,8 +480,7 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
       throw new AppError('Page not found', 404);
     }
 
-    // Return response with pagination
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       messages: count === 0 ? ['No departments found'] : ['Departments retrieved successfully'],
       departments,
@@ -483,10 +501,9 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
 export const getUsersByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
-  const { roleId, departments } = req.user;
+  const { roleId, departments, subDepartments } = req.user;
 
   try {
-
     const company = await Company.findByPk(companyId);
     if (!company) {
       throw new AppError('Company not found', 404);
@@ -502,7 +519,7 @@ export const getUsersByCompanyId = async (req, res, next) => {
     // Get department IDs from the user's departments
     const departmentIds = departments.map(department => department.id);
 
-    // Rest of the code remains the same...
+    // Base query options
     let queryOptions = {
       where: {
         companyId,
@@ -514,9 +531,7 @@ export const getUsersByCompanyId = async (req, res, next) => {
         {
           model: Department,
           as: 'departments',
-          through: {
-            attributes: [],
-          },
+          through: { attributes: [] },
           required: false,
           attributes: ['id'],
         }
@@ -527,25 +542,59 @@ export const getUsersByCompanyId = async (req, res, next) => {
       subQuery: false,
     };
 
-    if ([ROLE_IDS.ADMIN, ROLE_IDS.SUPER_ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(roleId)) {
+    if ([ROLE_IDS.ADMIN, ROLE_IDS.SUPER_ADMIN].includes(roleId)) {
       // These roles can see all users in the company
-    } else if ([ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(roleId)) {
+    } else if (roleId === ROLE_IDS.DEPARTMENT_MANAGER) {
       queryOptions.where[Op.or] = [
-        { roleId: ROLE_IDS.ADMIN },
+        { roleId: ROLE_IDS.ADMIN, companyId }, // Company admins
         {
           [Op.and]: [
-            { '$departments.id$': { [Op.in]: departmentIds } },
+            { roleId: ROLE_IDS.DEPARTMENT_MANAGER },
+            { '$departments.id$': { [Op.in]: departmentIds } }
           ]
         }
       ];
     } else {
-      throw new AppError('Unauthorized access', 403);
+      // For regular users
+      const subdepartmentIds = subDepartments.map(subdept => subdept.id);
+
+      queryOptions.include.push({
+        model: SubDepartment,
+        as: 'subDepartments',
+        through: { attributes: [] },
+        required: false,
+        attributes: ['id']
+      });
+
+      queryOptions.where[Op.or] = [
+        { roleId: ROLE_IDS.ADMIN, companyId }, // Company admins
+        {
+          [Op.and]: [
+            { roleId: ROLE_IDS.DEPARTMENT_MANAGER },
+            { '$departments.id$': { [Op.in]: departmentIds } }
+          ]
+        },
+        {
+          [Op.and]: [
+            { '$subDepartments.id$': { [Op.in]: subdepartmentIds } }
+          ]
+        }
+      ];
     }
 
-    const { count, rows: users } = await User.findAndCountAll(queryOptions);
+    // SELECT * FROM Users 
+    // WHERE companyId = X
+    // AND(
+    //   (roleId = 'ADMIN' AND companyId = X)
+    // OR
+    //   (roleId = 'DEPARTMENT_MANAGER' AND departmentId IN(user's department ids))
+    // OR
+    //       (subdepartmentId IN(user's subdepartment ids))
+    //       )
+
+      const { count, rows: users } = await User.findAndCountAll(queryOptions);
 
     const totalPages = Math.ceil(count / limitNum);
-
     if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
@@ -722,74 +771,133 @@ export const companyProgressReport = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
-    // Validate company exists
-    const companyExists = await Company.findByPk(companyId);
-    if (!companyExists) {
-      throw new AppError('Company not found', 404);
-    }
+    const company = await Company.findOne({
+      where: { id: companyId },
+      attributes: ['id', 'companyName'],
+      include: [
+        {
+          model: Department,
+          as: 'departments',
+          attributes: ['id', 'departmentName'],
+          include: [
+            {
+              model: SubDepartment,
+              as: 'subDepartments',
+              attributes: ['id', 'subDepartmentName'],
+              include: {
+                model: SubAssessment,
+                as: 'subAssessments',
+              }
+            },
+            {
+              model: Assessment,
+              as: 'assessments',
+              include: {
+                model: SubAssessment,
+                as: 'subAssessments',
+              }
+            }
+          ]
+        }
+      ]
+    });
 
-    const currentDate = new Date();
+    const AllcompletedAssessments = await getFilteredAssessments(companyId, {
+      checkComplete: true,
+      assessmentStarted: true,
+      submitted: false,
+      deadline: { [Op.gt]: currentDate }
+    });
 
-    const [active, submitted, notStarted, deadlined, completed] = await Promise.all([
-      getCategorizedAssessments(companyId, {
-        assessmentStarted: true,
-        submitted: false,
-        // deadline: { [Op.gt]: currentDate }
-      }),
-      getCategorizedAssessments(companyId, {
-        submitted: true
-      }),
-      getCategorizedAssessments(companyId, {
-        assessmentStarted: false
-      }),
-      getCategorizedAssessments(companyId, {
-        deadline: { [Op.lt]: currentDate },
-        submitted: false
-      }),
-      getCategorizedAssessments(companyId, {
-        assessmentStarted: true,
-        submitted: false,
-        deadline: { [Op.gt]: currentDate },
-        checkComplete: true
-      })
-    ]);
+    // Process all assessments at company level with statistics
+    const allAssessmentsOfCompany = await Promise.all(
+      company.departments
+        .flatMap(department => department.assessments)
+        .map(async assessment => {
+          const { subAssessments, ...assessmentWithoutSubAssessments } = assessment.toJSON();
+          const statistics = await calculateAssessmentStatistics(assessment.id);
+          return {
+            ...assessmentWithoutSubAssessments,
+            statistics
+          };
+        })
+    );
 
-    // Calculate total excluding overlapping categories
-    const total = active.length + submitted.length + notStarted.length;
+    const categorizedAssessments = getCategorizedAssessments(allAssessmentsOfCompany);
+    const metricsOfAssessment = getMetricsOfAssessments(categorizedAssessments);
+
+    // Process departments
+    const departments = await Promise.all(company.departments.map(async department => {
+      // Get all subassessments with statistics
+      const departmentSubAssessments = await Promise.all([
+        ...department.subDepartments.flatMap(subDept => subDept.subAssessments || []),
+        ...department.assessments.flatMap(assessment => assessment.subAssessments || [])
+      ].map(async subAssessment => {
+        const subAssessmentData = subAssessment.toJSON();
+        const statistics = await calculateAssessmentStatistics(subAssessment.id);
+        return {
+          ...subAssessmentData,
+          statistics
+        };
+      }));
+
+      const categorizedSubAssessments = getCategorizedSubAssessments(departmentSubAssessments);
+      const metricsOfSubAssessment = getMetricsOfAssessments(categorizedSubAssessments);
+
+      // Process department assessments with statistics
+      const departmentAssessments = await Promise.all(
+        department.assessments.map(async assessment => {
+          const { subAssessments, ...assessmentWithoutSubAssessments } = assessment.toJSON();
+          const statistics = await calculateAssessmentStatistics(assessment.id);
+          return {
+            ...assessmentWithoutSubAssessments,
+            statistics
+          };
+        })
+      );
+
+      const departmentCategorizedAssessments = getCategorizedAssessments(departmentAssessments);
+      const departmentMetricsOfAssessment = getMetricsOfAssessments(departmentCategorizedAssessments);
+
+      return {
+        id: department.id,
+        departmentName: department.departmentName,
+        assessments: {
+          metrics: {
+            total: departmentAssessments.length,
+            ...departmentMetricsOfAssessment,
+            completed: AllcompletedAssessments.length
+          },
+          categorizedAssessments: departmentCategorizedAssessments
+        },
+        subAssessments: {
+          metrics: {
+            total: departmentSubAssessments.length,
+            ...metricsOfSubAssessment
+          },
+          categorizedSubAssessments: categorizedSubAssessments
+        }
+      };
+    }));
 
     res.status(200).json({
       success: true,
-      companyProgressReport: {
+      messages: ['Company progress report fetched successfully'],
+      progressReport: {
         assessments: {
           metrics: {
-            total,
-            submitted: submitted.length,
-            notStarted: notStarted.length,
-            deadlined: deadlined.length,
-            completed: completed.length,
-            active: active.length
+            total: allAssessmentsOfCompany.length,
+            ...metricsOfAssessment
           },
-          categorizedAssessments: {
-            active,
-            submitted,
-            notStarted,
-            deadlined,
-            completed
-          }
-        }
+          categorizedAssessments
+        },
+        departments
       }
     });
   } catch (error) {
-    console.error('Error in companyProgressReport:', {
-      message: error.message,
-      companyId,
-      stack: error.stack
-    });
     next(error);
   }
 };
-
-
 
 
 

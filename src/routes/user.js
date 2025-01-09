@@ -6,13 +6,16 @@ import {
   getUserById,
   removeUserFromDepartment,
   getDepartmentsByUserId,
-  addUserToDepartment
+  addUserToDepartment,
+  removeUserFromSubDepartment,
+  addUserToSubDepartment,
 } from '../controllers/user.js';
 import validate from '../middleware/validate.js';
 import { createUserSchema, updateUserSchema } from '../joi/user.js';
 import checkAccess from '../middleware/authorize.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import { RESOURCE_TYPES, ACTION_IDS, ROLE_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
+import { getSubDepartmentsByDepartmentId } from '../controllers/department.js';
 
 const router = express.Router();
 
@@ -88,6 +91,8 @@ router.get('/:userId/departments',
   getDepartmentsByUserId
 );
 
+
+
 // Route to remove a user from a department
 router.delete('/:userId/departments/:departmentId',
   attachResourceInfo(
@@ -110,6 +115,30 @@ router.post('/:userId/departments/:departmentId',
   ),
   checkAccess,
   addUserToDepartment
+);
+
+// Route to remove a user from a department
+router.delete('/:userId/sub-departments/:subDepartmentId',
+  attachResourceInfo(
+    RESOURCE_TYPES.USER_SUB_DEPARTMENT_LINK,
+    CONTENT_RESOURCE_TYPES.SUB_DEPARTMENT,
+    'subDepartmentId',
+    ACTION_IDS.REMOVE
+  ),
+  checkAccess,
+  removeUserFromSubDepartment
+);
+
+// Route to add a user to a department
+router.post('/:userId/sub-departments/:subDepartmentId',
+  attachResourceInfo(
+    RESOURCE_TYPES.USER_SUB_DEPARTMENT_LINK,
+    CONTENT_RESOURCE_TYPES.SUB_DEPARTMENT,
+    'subDepartmentId',
+    ACTION_IDS.CREATE
+  ),
+  checkAccess,
+  addUserToSubDepartment
 );
 
 export default router;

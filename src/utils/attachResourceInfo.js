@@ -14,12 +14,11 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
                     req.contentResourceId = req.body[contentResourceId];
                 }
             }
-
             // Set additional information on the request object for use in later middleware or route handlers.
             req.roleResourceType = roleResourceType;
             req.contentResourceType = contentResourceType;
             req.actionId = actionId.toLowerCase();
-            req.user.roleId='superadmin';
+            //req.user.roleId = 'superadmin'
             return next();
 
         } catch (error) {

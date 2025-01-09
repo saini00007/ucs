@@ -24,6 +24,8 @@ import assessmentQuestionRoutes from './routes/assessmentQuestion.js';
 import answerRoutes from './routes/answer.js';
 import masterRoutes from './routes/master.js';
 import commentRoutes from './routes/comment.js';
+import SubDepartmentRoutes from './routes/subDepartment.js';
+import SubAssessmentRoutes from './routes/subAssessment.js';
 
 app.use(cors({
   origin: '*' // Allows all origins
@@ -39,8 +41,10 @@ app.use(authenticate);
 
 app.use('/companies', companyRoutes);
 app.use('/departments', departmentRoutes);
+app.use('/sub-departments',SubDepartmentRoutes)
 app.use('/users', userRoutes);
 app.use('/assessments', assessmentRoutes);
+app.use('/sub-assessments', SubAssessmentRoutes);
 app.use('/questions', assessmentQuestionRoutes);
 app.use('/', answerRoutes);
 app.use('/', commentRoutes);

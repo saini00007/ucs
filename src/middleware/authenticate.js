@@ -1,12 +1,11 @@
 import jwt from 'jsonwebtoken';
-import { User, Department } from '../models/index.js';
+import { User, Department, SubDepartment } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 
 const authenticate = async (req, res, next) => {
     try {
         // Retrieve token from the headers or cookies
         const token = req.header("Authorization")?.replace("Bearer ", "");
-
         // If no token is provided
         if (!token) {
             throw new AppError('No token provided', 401);
@@ -24,12 +23,20 @@ const authenticate = async (req, res, next) => {
         const user = await User.findOne({
             where: { id: decoded.userId },
             attributes: ['id', 'username', 'email', 'roleId', 'companyId'],
-            include: [{
-                model: Department,
-                as: 'departments',
-                attributes: ['id', 'departmentName'],
-                through: { attributes: [] }
-            }]
+            include: [
+                {
+                    model: Department,
+                    as: 'departments',
+                    attributes: ['id', 'departmentName'],
+                    through: { attributes: [] }
+                },
+                {
+                    model: SubDepartment,
+                    as: 'subDepartments',
+                    attributes: ['id', 'subDepartmentName'],
+                    through: { attributes: [] }
+                }
+            ]
         });
 
         if (!user) {

@@ -7,7 +7,9 @@ import {
   checkAnswerAccess,
   checkEvidenceFileAccess,
   checkCommentAccess,
-  checkUserAccess
+  checkUserAccess,
+  checkSubAssessmentAccess,
+  checkSubDepartmentAccess
 } from "./contextChecks/index.js";
 import AppError from "../utils/AppError.js";
 import { CONTENT_RESOURCE_TYPES } from "../utils/constants.js";
@@ -21,7 +23,9 @@ const resourceAccessCheckMap = {
   [CONTENT_RESOURCE_TYPES.ANSWER]: checkAnswerAccess,
   [CONTENT_RESOURCE_TYPES.EVIDENCE_FILE]: checkEvidenceFileAccess,
   [CONTENT_RESOURCE_TYPES.COMMENT]: checkCommentAccess,
-  [CONTENT_RESOURCE_TYPES.USER]: checkUserAccess
+  [CONTENT_RESOURCE_TYPES.USER]: checkUserAccess,
+  [CONTENT_RESOURCE_TYPES.SUB_ASSESSMENT]:checkSubAssessmentAccess,
+  [CONTENT_RESOURCE_TYPES.SUB_DEPARTMENT]:checkSubDepartmentAccess
 };
 
 const permissionsService = {
@@ -29,6 +33,7 @@ const permissionsService = {
   async hasRolePermission({ user, resourceId, actionId }) {
     try {
       // Find a matching permission in the RoleResourceActionLink table.
+      console.log(resourceId);
       const permission = await RoleResourceActionLink.findOne({
         where: {
           roleId: user.roleId,
@@ -43,6 +48,7 @@ const permissionsService = {
 
       return { success: true };
     } catch (error) {
+      console.log(error)
       throw error;
     }
   },

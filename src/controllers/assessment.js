@@ -1,8 +1,10 @@
-import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment } from '../models/index.js';
+import { where } from 'sequelize';
+import { Answer, Assessment, AssessmentQuestion, Department, EvidenceFile, MasterQuestion, User, Comment, SubAssessment } from '../models/index.js';
 import { checkAssessmentState } from '../utils/accessValidators.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
 import { ROLE_IDS } from '../utils/constants.js';
+import Op from 'sequelize';
 
 export const startAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
@@ -30,6 +32,15 @@ export const startAssessment = async (req, res, next) => {
       {
         where: { id: assessmentId },
         returning: true, // Return the updated assessment
+      }
+    );
+    await SubAssessment.update(
+      {
+        subAssessmentStarted: true,
+        startedAt: new Date()
+      },
+      {
+        where: { assessmentId },
       }
     );
 
@@ -92,6 +103,16 @@ export const submitAssessment = async (req, res, next) => {
       {
         where: { id: assessmentId },
         returning: true, // Return the updated assessment
+      }
+    );
+
+    await SubAssessment.update(
+      {
+        submitted: true,
+        submittedAt: new Date(),
+      },
+      {
+        where: { assessmentId },
       }
     );
 
@@ -182,6 +203,16 @@ export const reopenAssessment = async (req, res, next) => {
         returning: true,
       }
     );
+    await SubAssessment.update(
+      {
+        submitted: false,
+        submittedAt: null,
+      },
+      {
+        where: { assessmentId },
+
+      }
+    );
 
     // If no assessments were updated, return a 404 error
     if (updatedCount === 0) {
@@ -204,6 +235,47 @@ export const reopenAssessment = async (req, res, next) => {
   } catch (error) {
     // Log the error and return a 500 error response in case of any issues
     console.error('Error reopening assessment:', error);
+    next(error);
+  }
+};
+
+export const getSubAssessmentByAssessmentId = async (req, res, next) => {
+  const { assessmentId } = req.params;
+  const { user } = req;
+
+  try {
+    const assessment = await Assessment.findByPk(assessmentId);
+    if (!assessment) {
+      throw new AppError('Assessment not found', 404);
+    }
+
+    let queryOptions = {
+      where: { assessmentId },
+      include: [{
+        model: Assessment,
+        as: 'assessment',
+        attributes: ['id', 'assessmentName']
+      }]
+    };
+
+    // Add subdepartment filter for non-admin users
+    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(user.roleId)) {
+      queryOptions.where = {
+        ...queryOptions.where,
+        subDepartmentId: user.subDepartments.map(subdept => subdept.id)
+      };
+    }
+
+    const subAssessments = await SubAssessment.findAll(queryOptions);
+
+    res.status(200).json({
+      success: true,
+      messages: subAssessments.length === 0 ? ['No sub assessments found'] : ['Sub Assessments retrieved successfully'],
+      subAssessments
+    });
+
+  } catch (error) {
+    console.error('Error fetching sub assessments for assessment:', error);
     next(error);
   }
 };

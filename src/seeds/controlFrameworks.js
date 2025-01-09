@@ -7,7 +7,8 @@ const frameworks = [
     { frameworkType: 'NIST80082' },
     { frameworkType: 'MITREDEFEND' },
     { frameworkType: 'NISTCSF' },
-    { frameworkType: 'ISO27001' }
+    { frameworkType: 'ISO27001' },
+    
 ];
 
 const seedControlFrameworks = async () => {
