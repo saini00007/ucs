@@ -560,26 +560,37 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
         });
       }
   
-      // Calculate compliance percentage
+      // Calculate compliance percentage based on 'no' answers out of total answers
       const calculateCompliance = (questions) => {
         const answeredQuestions = questions.filter(q => q.answer && q.answer.answerText);
-        if (answeredQuestions.length === 0) return 0;
+        
+        // If there are no answers at all, return { percentage: 100, status: 'green' }
+        if (answeredQuestions.length === 0) {
+          return { percentage: 100, status: 'green' };
+        }
   
+        const totalAnswered = answeredQuestions.length;
         const noAnswers = answeredQuestions.filter(q => 
           q.answer.answerText.toLowerCase() === 'no'
         ).length;
   
-        return ((answeredQuestions.length - noAnswers) / answeredQuestions.length) * 100;
+        const compliancePercentage = ((totalAnswered - noAnswers) / totalAnswered * 100);
+        
+        // Determine status based on compliance percentage
+        let status;
+        if (compliancePercentage >= 90) status = 'green';
+        else if (compliancePercentage >= 70) status = 'yellow';
+        else status = 'red';
+  
+        return { percentage: compliancePercentage, status };
       };
   
-      // Get status based on compliance percentage
       const getComplianceStatus = (percentage) => {
         if (percentage >= 90) return 'green';
         if (percentage >= 70) return 'yellow';
         return 'red';
       };
   
-      // Process subdepartments
       const categorizedSubDepartments = {
         red: [],
         yellow: [],
@@ -588,21 +599,21 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
   
       department.subDepartments.forEach(subDept => {
         let totalCompliance = 0;
+        const totalAssessments = subDept.subAssessments.length;
   
         // Calculate average compliance across all subassessments
         subDept.subAssessments.forEach(subAssessment => {
-          totalCompliance += calculateCompliance(subAssessment.questions);
+          const complianceResult = calculateCompliance(subAssessment.questions);
+          totalCompliance += complianceResult.percentage;
         });
   
-        const averageCompliance = subDept.subAssessments.length > 0 
-          ? totalCompliance / subDept.subAssessments.length 
-          : 0;
-  
-        const status = getComplianceStatus(averageCompliance);
+        const averageCompliance = totalAssessments > 0 ? totalCompliance / totalAssessments : 100;
+        // If no assessments or no answers, it should be green
+        const status = totalAssessments === 0 ? 'green' : getComplianceStatus(averageCompliance);
   
         categorizedSubDepartments[status].push({
           id: subDept.id,
-          name: subDept.subDepartmentName,
+          subDepartmentName: subDept.subDepartmentName,
           compliancePercentage: averageCompliance.toFixed(2)
         });
       });
@@ -611,6 +622,9 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
       const defaultAssessment = department.assessments.map(assessment => {
         const questions = assessment.questions || [];
         const answeredQuestions = questions.filter(q => q.answer && q.answer.answerText);
+        const noAnswers = answeredQuestions.filter(q => 
+          q.answer.answerText.toLowerCase() === 'no'
+        ).length;
         
         const stats = {
           total: questions.length,
@@ -618,13 +632,12 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
           unanswered: questions.length - answeredQuestions.length,
           answers: {
             yes: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'yes').length,
-            no: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'no').length,
+            no: noAnswers,
             notApplicable: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'not applicable').length,
             partial: answeredQuestions.filter(q => q.answer.answerText.toLowerCase() === 'partial').length
           }
         };
   
-        // Calculate percentages
         const percentages = {
           completion: stats.total ? ((stats.answered / stats.total) * 100).toFixed(2) : "0.00",
           yes: stats.answered ? ((stats.answers.yes / stats.answered) * 100).toFixed(2) : "0.00",
@@ -633,7 +646,10 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
           partial: stats.answered ? ((stats.answers.partial / stats.answered) * 100).toFixed(2) : "0.00"
         };
   
-        const compliancePercentage = calculateCompliance(questions).toFixed(2);
+        // Calculate compliance exactly like the example
+        const compliancePercentage = stats.answered ? 
+          ((stats.answered - stats.answers.no) / stats.answered * 100).toFixed(2) : 
+          "0.00";
   
         return {
           compliancePercentage,
@@ -685,17 +701,17 @@ export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
           red: {
             count: categorizedSubDepartments.red.length,
             description: 'Low Compliance (Below 70%)',
-            items: categorizedSubDepartments.red
+            subDepartments: categorizedSubDepartments.red
           },
           yellow: {
             count: categorizedSubDepartments.yellow.length,
             description: 'Medium Compliance (70-90%)',
-            items: categorizedSubDepartments.yellow
+            subDepartments: categorizedSubDepartments.yellow
           },
           green: {
             count: categorizedSubDepartments.green.length,
             description: 'High Compliance (Above 90%)',
-            items: categorizedSubDepartments.green
+            subDepartments: categorizedSubDepartments.green
           }
         },
         defaultAssessment
