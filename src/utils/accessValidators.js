@@ -7,7 +7,7 @@ export const checkAccessScopeForDepartment = (user, companyId, departmentId) => 
 };
 export const checkAccessScope = (user, companyId, departmentId, subDepartmentId) => {
     if (user.roleId === ROLE_IDS.SUPER_ADMIN) return { success: true };
-    if (user.roleId === ROLE_IDS.ADMIN || user.ROLE_IDS.LEADERSHIP) return { success: user.companyId === companyId };
+    if (user.roleId === ROLE_IDS.ADMIN || user.roleId===ROLE_IDS.LEADERSHIP) return { success: user.companyId === companyId };
     if (user.roleId === ROLE_IDS.DEPARTMENT_MANAGER) return { success: user.departments.some(department => department.id === departmentId) };
     return {
         success: user.subDepartments.some(subdept => subdept.id === subDepartmentId)
