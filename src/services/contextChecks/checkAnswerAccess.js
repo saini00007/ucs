@@ -18,7 +18,7 @@ const checkAnswerAccess = async (user, resourceId) => {
                             as: 'subDepartment',
                             attributes: ['id'],
                             include: [{
-                                mode: Department,
+                                model: Department,
                                 as: 'department',
                                 attributes: ['id', 'companyId']
                             }]
@@ -53,7 +53,6 @@ const checkAnswerAccess = async (user, resourceId) => {
         if (!assessmentState.success) {
             throw new AppError(assessmentState.message || 'Assessment state is not valid', assessmentState.status || 400);
         }
-
         return { success: true };
 
     } catch (error) {

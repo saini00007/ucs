@@ -22,7 +22,7 @@ const router = express.Router();
 // Route to add a new user
 router.post('/',
   (req, res, next) => {
-    if (req.body.roleId === ROLE_IDS.ADMIN) {
+    if (req.body.roleId === ROLE_IDS.ADMIN || ROLE_IDS.LEADERSHIP) {
       return attachResourceInfo(
         RESOURCE_TYPES.USER,
         CONTENT_RESOURCE_TYPES.COMPANY,

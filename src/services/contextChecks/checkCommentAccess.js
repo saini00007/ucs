@@ -60,7 +60,7 @@ const checkCommentAccess = async (user, resourceId, actionId) => {
 
         // Check owner permissions for update/delete
         if ((actionId === 'remove' || actionId === 'update') &&
-            user.roleId !== ROLE_IDS.SUPER_ADMIN &&
+            user.roleId !== ROLE_IDS.SUPER_ADMIN && user.roleId!==ROLE_IDS.LEADERSHIP,
             comment.createdByUserId !== user.id) {
             // If the user is not a superadmin and does not own the comment, deny access
             throw new AppError('You do not have permission to modify this comment', 403);

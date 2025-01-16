@@ -5,6 +5,7 @@ import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics } from '../utils/calculateStatistics.js';
 import { ROLE_IDS } from '../utils/constants.js';
 import Op from 'sequelize';
+import { getCategorizedAssessments } from '../utils/progressStatistics.js';
 
 export const startAssessment = async (req, res, next) => {
   const { assessmentId } = req.params;
@@ -259,7 +260,7 @@ export const getSubAssessmentByAssessmentId = async (req, res, next) => {
     };
 
     // Add subdepartment filter for non-admin users
-    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(user.roleId)) {
+    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER,ROLE_IDS.LEADERSHIP].includes(user.roleId)) {
       queryOptions.where = {
         ...queryOptions.where,
         subDepartmentId: user.subDepartments.map(subdept => subdept.id)

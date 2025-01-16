@@ -61,8 +61,8 @@ export const validateRoleAssignment = async (currentUser, targetRoleId, existing
 
     // Department manager validations
     if (currentUser.roleId === ROLE_IDS.DEPARTMENT_MANAGER &&
-        [ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(targetRoleId)) {
-        throw new AppError('Department Manager cannot add admin or department manager', 403);
+        [ROLE_IDS.ADMIN,ROLE_IDS.LEADERSHIP, ROLE_IDS.DEPARTMENT_MANAGER].includes(targetRoleId)) {
+        throw new AppError('Department Manager cannot add admin ,leadersip or department manager', 403);
     }
 
     // Role change validations
@@ -73,6 +73,14 @@ export const validateRoleAssignment = async (currentUser, targetRoleId, existing
 
         if (targetRoleId === ROLE_IDS.ADMIN && existingRoleId !== ROLE_IDS.ADMIN) {
             throw new AppError('Cannot assign admin role', 403);
+        }
+
+        if(existingRoleId===ROLE_IDS.LEADERSHIP &&existingRoleId !==ROLE_IDS.LEADERSHIP){
+            throw new AppError('Cannot change leadership role', 403);
+        }
+
+        if (targetRoleId === ROLE_IDS.LEADERSHIP && existingRoleId !== ROLE_IDS.LEADERSHIP) {
+            throw new AppError('Cannot assign leadership role', 403);
         }
 
         if (existingRoleId === ROLE_IDS.DEPARTMENT_MANAGER && targetRoleId !== ROLE_IDS.DEPARTMENT_MANAGER) {

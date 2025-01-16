@@ -1,7 +1,7 @@
-import { AssessmentQuestion, EvidenceFile, Answer, User } from '../models/index.js';
+import { AssessmentQuestion, EvidenceFile, Answer, User, SubAssessment } from '../models/index.js';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
-import { ANSWER_TYPES } from '../utils/constants.js';
+import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS } from '../utils/constants.js';
 
 export const createAnswer = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
@@ -46,11 +46,12 @@ export const createAnswer = async (req, res, next) => {
     if (!isAnswerYes && req.files['files'] && req.files?.['files'].length > 0) {
       throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
     }
-
+    const isAutoApproved = answerText === ANSWER_TYPES.NO || answerText === ANSWER_TYPES.NOT_APPLICABLE;
     // Create the answer
     const answer = await Answer.create({
       assessmentQuestionId,
       createdByUserId: userId,
+      reviewStatus: isAutoApproved ? ANSWER_REVIEW_STATUS.APPROVED : ANSWER_REVIEW_STATUS.PENDING,
       answerText,
     }, { transaction });
 
@@ -109,106 +110,139 @@ export const updateAnswer = async (req, res, next) => {
   const { answerText } = req.body;
   const userId = req.user.id;
 
-  // Start a new transaction for atomic operations
   const transaction = await sequelize.transaction();
 
   try {
-    // Find the existing answer along with associated evidence files
+    // Find the answer with its relationships
     const answer = await Answer.findOne({
       where: { id: answerId },
       include: [{
-        model: EvidenceFile,
-        as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'createdAt', 'updatedAt'],
+        model: AssessmentQuestion,
+        as: 'assessmentQuestion',
+        include: [{
+          model: SubAssessment,
+          as: 'subAssessment'
+        }]
       }],
-      transaction,
+      transaction
     });
 
     if (!answer) {
-      throw new AppError('Answer not found.', 404);
+      throw new AppError('Answer not found', 404);
     }
 
-    // Check if the answer is being updated to "yes" or "no"
+    // Check if subAssessment is in proper state
+    const validStates = [SUB_ASSESSMENT_REVIEW_STATUS.DRAFT, SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION];
+    if (!validStates.includes(answer.assessmentQuestion.subAssessment.reviewStatus)) {
+      throw new AppError('Cannot update answer in current assessment state', 400);
+    }
+
     const isUpdatingToYes = answerText === ANSWER_TYPES.YES;
     const isUpdatingToNo = answerText === ANSWER_TYPES.NO || answerText === ANSWER_TYPES.NOT_APPLICABLE;
-    const hasExistingEvidenceFiles = answer.evidenceFiles.length > 0;
 
-    // Validation: No evidence files should be uploaded when updating to "no" or "not applicable"
-    if (isUpdatingToNo && req.files?.['files'] && req.files['files'].length > 0) {
-      throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
+    // Handle evidence files
+    if (isUpdatingToNo) {
+      await EvidenceFile.destroy({
+        where: { answerId: answer.id },
+        transaction
+      });
+    } else if (isUpdatingToYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
+      throw new AppError('Evidence files are required for YES answers', 400);
     }
 
-    // Remove existing evidence files if updating to "no"
-    if (isUpdatingToNo && hasExistingEvidenceFiles) {
-      await Promise.all(answer.evidenceFiles.map(async (file) => {
-        await EvidenceFile.destroy({ where: { id: file.id }, transaction });
-      }));
+    // Prepare update data
+    const updateData = {
+      answerText,
+      createdByUserId: userId
+    };
+
+    // If updating to NO or NOT_APPLICABLE, auto-approve the answer
+    if (isUpdatingToNo) {
+      updateData.reviewStatus = ANSWER_REVIEW_STATUS.APPROVED;
+      updateData.reviewedAt = new Date();
+    }
+    // If this was a rejected answer being updated to YES, set to IMPROVED
+    else if (answer.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED && isUpdatingToYes) {
+      updateData.reviewStatus = ANSWER_REVIEW_STATUS.IMPROVED;
+      updateData.reviewedAt = null;
+      updateData.reviewedByUserId = null;
     }
 
-    // Validation: Ensure evidence files are uploaded when updating to "yes"
-    if (isUpdatingToYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
-      throw new AppError('Evidence files are required when the answer is "yes".', 400);
-    }
+    // Update answer
+    await answer.update(updateData, { transaction });
 
-    // Update the answer text if it's different from the existing text
-    if (answerText !== answer.answerText) {
-      answer.answerText = answerText;
-    }
-
-    // Ensure the creator of the answer is set to the current user
-    if (answer.createdByUserId !== userId) {
-      answer.createdByUserId = userId;
-    }
-
-    // Save the updated answer
-    await answer.save({ transaction });
-
-    // Create new evidence files if the answer is "yes" and files are uploaded
-    if (isUpdatingToYes) {
-      await Promise.all(req.files['files'].map(async (file) => {
-        await EvidenceFile.create({
+    // Handle new evidence files for YES answers
+    if (isUpdatingToYes && req.files?.['files']) {
+      await Promise.all(req.files['files'].map(file =>
+        EvidenceFile.create({
           fileName: file.originalname,
           filePath: file.originalname,
           pdfData: file.buffer,
           createdByUserId: userId,
-          answerId: answer.id,
-        }, { transaction });
-      }));
+          answerId: answer.id
+        }, { transaction })
+      ));
     }
 
-    // Refetch the updated answer with associated evidence files and user info
-    const refetchedAnswer = await Answer.findOne({
-      where: { id: answer.id },
-      include: [{
-        model: EvidenceFile,
-        as: 'evidenceFiles',
-        attributes: ['id', 'filePath', 'fileName', 'createdAt', 'updatedAt'],
-        order: [['createdAt', 'ASC']],
+    // If this was a rejected answer update OR changing to auto-approved status, 
+    // check if all rejected answers are now updated
+    if (answer.reviewStatus === ANSWER_REVIEW_STATUS.IMPROVED ||
+      (isUpdatingToNo && answer.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED)) {
+      const remainingRejected = await Answer.count({
         include: [{
+          model: AssessmentQuestion,
+          as: 'assessmentQuestion',
+          where: { subAssessmentId: answer.assessmentQuestion.subAssessmentId }
+        }],
+        where: {
+          reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
+        },
+        transaction
+      });
+
+      // If all rejected answers are updated, change status back to SUBMITTED_FOR_REVIEW
+      if (remainingRejected === 0) {
+        await answer.assessmentQuestion.subAssessment.update({
+          reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
+          submittedForReviewAt: new Date(),
+          submittedForReviewBy: userId
+        }, { transaction });
+      }
+    }
+
+    // Fetch updated answer with associations
+    const updatedAnswer = await Answer.findOne({
+      where: { id: answer.id },
+      include: [
+        {
+          model: EvidenceFile,
+          as: 'evidenceFiles',
+          attributes: ['id', 'filePath', 'fileName', 'createdAt'],
+          include: [{
+            model: User,
+            as: 'creator',
+            attributes: ['id', 'username']
+          }]
+        },
+        {
           model: User,
           as: 'creator',
           attributes: ['id', 'username']
-        }]
-      }, {
-        model: User,
-        as: 'creator',
-        attributes: ['id', 'username']
-      }],
-      transaction,
+        }
+      ],
+      transaction
     });
 
-    // Commit the transaction
     await transaction.commit();
 
-    // Return the updated answer with evidence files
     res.status(200).json({
       success: true,
       messages: ['Answer updated successfully'],
-      answer: refetchedAnswer,
+      answer: updatedAnswer
     });
+
   } catch (error) {
-    console.error('Error updating answer:', error);
-    await transaction.rollback(); // Rollback transaction on error
+    await transaction.rollback();
     next(error);
   }
 };
@@ -243,19 +277,85 @@ export const serveFile = async (req, res, next) => {
   }
 };
 
-// export const deleteAnswer = async (req, res) => {
-//   const { answerId } = req.params;
+export const submitReviewDecision = async (req, res, next) => {
+  const { answerId } = req.params;
+  const { decision } = req.body;
+  console.log(decision)
+  const userId = req.user.id;
 
-//   try {
-//     const result = await Answer.destroy({ where: { id: answerId } });
+  const transaction = await sequelize.transaction();
 
-//     if (result === 0) {
-//       return res.status(404).json({ success: false, messages: ['Answer not found.'] });
-//     }
+  try {
+    const answer = await Answer.findOne({
+      where: { id: answerId },
+      include: [{
+        model: AssessmentQuestion,
+        as: 'assessmentQuestion',
+        include: [{
+          model: SubAssessment,
+          as: 'subAssessment'
+        }]
+      }],
+      transaction
+    });
 
-//     res.status(200).json({ success: true, messages: ['Answer deleted successfully.'] });
-//   } catch (error) {
-//     console.error('Error deleting answer:', error);
-//     res.status(500).json({ success: false, messages: ['Error deleting answer.'] });
-//   }
-// };
+    if (!answer) {
+      throw new AppError('Answer not found', 404);
+    }
+
+    // Update answer review status
+    await answer.update({
+      reviewStatus: decision === ANSWER_REVIEW_STATUS.APPROVED ? ANSWER_REVIEW_STATUS.APPROVED : ANSWER_REVIEW_STATUS.REJECTED,
+      reviewedByUserId: userId,
+      reviewedAt: new Date()
+    }, { transaction });
+
+    // Check if all answers are reviewed
+    const subAssessmentId = answer.assessmentQuestion.subAssessmentId;
+    const pendingAnswers = await Answer.count({
+      include: [{
+        model: AssessmentQuestion,
+        as: 'assessmentQuestion',
+        where: { subAssessmentId }
+      }],
+      where: {
+        reviewStatus: ANSWER_REVIEW_STATUS.PENDING
+      },
+      transaction
+    });
+
+    // Update subAssessment status based on review results
+    if (pendingAnswers === 0) {
+      const rejectedAnswers = await Answer.count({
+        include: [{
+          model: AssessmentQuestion,
+          as: 'assessmentQuestion',
+          where: { subAssessmentId }
+        }],
+        where: {
+          reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
+        },
+        transaction
+      });
+
+      const newStatus = rejectedAnswers > 0 ?
+        SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION :
+        SUB_ASSESSMENT_REVIEW_STATUS.COMPLETED;
+
+      await answer.assessmentQuestion.subAssessment.update({
+        reviewStatus: newStatus,
+        completedAt: newStatus === SUB_ASSESSMENT_REVIEW_STATUS.COMPLETED ? new Date() : null
+      }, { transaction });
+    }
+
+    await transaction.commit();
+    res.status(200).json({
+      success: true,
+      messages: [`Review decision ${decision} submitted successfully`]
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};

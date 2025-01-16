@@ -2,8 +2,10 @@ import { Answer, Assessment, AssessmentQuestion, EvidenceFile, MasterQuestion, S
 import { checkSubAssessmentAccess } from "../services/contextChecks";
 import { checkAssessmentState, checkSubAssessmentState } from "../utils/accessValidators";
 import AppError from "../utils/AppError";
-import { ROLE_IDS } from "../utils/constants";
+import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS, ROLE_IDS } from "../utils/constants";
 import { checkSubAssessmentCompletion } from "../utils/subAssessmentUtils";
+import sequelize from "../config/db";
+import { Op } from "sequelize";
 
 export const getSubAssessmentById = async (req, res, next) => {
     const { subAssessmentId } = req.params;
@@ -72,7 +74,6 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
 
 
         // Fetch the questions for the assessment with pagination
-
 
         const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
             where: { subAssessmentId },
@@ -149,6 +150,141 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
     }
 };
 
+export const submitForReview = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const userId = req.user.id;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: {
+                id: subAssessmentId,
+                reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.DRAFT
+            },
+            include: [{
+                model: AssessmentQuestion,
+                as: 'questions',
+                include: ['answer']
+            }],
+            transaction
+        });
+
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not in draft status', 404);
+        }
+
+        // Check if all questions are answered
+         const unansweredQuestions = subAssessment.questions.filter(q => !q.answer);
+         if (unansweredQuestions.length > 0) {
+             throw new AppError('All questions must be answered before submission', 400);
+         }
+
+        // Update subAssessment status
+        await subAssessment.update({
+            reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
+            submittedForReviewAt: new Date(),
+            submittedForReviewBy: userId
+        }, { transaction });
+
+        await transaction.commit();
+
+        res.status(200).json({
+            success: true,
+            messages: ['Assessment submitted for review successfully']
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        next(error);
+    }
+};
+
+export const getQuestionsForReview = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: { 
+                id: subAssessmentId,
+                reviewStatus: {
+                    [Op.in]: [SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW, SUB_ASSESSMENT_REVIEW_STATUS.UNDER_REVIEW]
+                }
+            }
+        });
+
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not submitted for review', 404);
+        }
+
+        // Update status to UNDER_REVIEW
+        await subAssessment.update({
+            reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.UNDER_REVIEW
+        });
+
+        const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
+            where: { subAssessmentId },
+            include: [
+                {
+                    model: MasterQuestion,
+                    as: 'masterQuestion',
+                    attributes: ['questionText'],
+                },
+                {
+                    model: Answer,
+                    as: 'answer',
+                    required: true,
+                    where: {
+                        [Op.or]: [
+                            // Case 1: YES answers with PENDING or REJECTED status
+                            {
+                                [Op.and]: [
+                                    { answerText: ANSWER_TYPES.YES },
+                                    { 
+                                        reviewStatus: {
+                                            [Op.in]: [ANSWER_REVIEW_STATUS.PENDING, ANSWER_REVIEW_STATUS.REJECTED]
+                                        }
+                                    }
+                                ]
+                            },
+                            // Case 2: Any answer type with IMPROVED status
+                            { reviewStatus: ANSWER_REVIEW_STATUS.IMPROVED }
+                        ]
+                    },
+                    include: [
+                        {
+                            model: EvidenceFile,
+                            as: 'evidenceFiles',
+                            attributes: ['id', 'filePath', 'fileName'],
+                        },
+                        {
+                            model: User,
+                            as: 'creator',
+                            attributes: ['id', 'username']
+                        }
+                    ]
+                }
+            ],
+            limit: parseInt(limit),
+            offset: (parseInt(page) - 1) * parseInt(limit)
+        });
+
+        res.status(200).json({
+            success: true,
+            questions,
+            pagination: {
+                totalItems: count,
+                totalPages: Math.ceil(count / parseInt(limit)),
+                currentPage: parseInt(page)
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const submitSubAssessment = async (req, res, next) => {
 
     const { subAssessmentId } = req.params;
@@ -213,3 +349,62 @@ export const reopenSubAssessment = async (req, res, next) => {
         return next(error);
     }
 }
+
+export const getRejectedQuestions = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: {
+                id: subAssessmentId,
+                reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION
+            }
+        });
+
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not in revision status', 404);
+        }
+
+        const { count, rows: questions } = await AssessmentQuestion.findAndCountAll({
+            where: { subAssessmentId },
+            include: [
+                {
+                    model: MasterQuestion,
+                    as: 'masterQuestion',
+                    attributes: ['questionText'],
+                },
+                {
+                    model: Answer,
+                    as: 'answer',
+                    required: true,
+                    where: {
+                        reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
+                    },
+                    include: [
+                        {
+                            model: EvidenceFile,
+                            as: 'evidenceFiles',
+                            attributes: ['id', 'filePath', 'fileName'],
+                        }
+                    ]
+                }
+            ],
+            limit: parseInt(limit),
+            offset: (parseInt(page) - 1) * parseInt(limit)
+        });
+
+        res.status(200).json({
+            success: true,
+            questions,
+            pagination: {
+                totalItems: count,
+                totalPages: Math.ceil(count / parseInt(limit)),
+                currentPage: parseInt(page)
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

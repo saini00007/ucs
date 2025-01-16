@@ -10,7 +10,11 @@ import {
     getReportByCompanyId,
     getCompanyLogo,
     getDepartmentStatusReportAccordingToCompliance,
-    getDepartmentStatusReportAccordingToTime
+    getDepartmentStatusReportAccordingToTime,
+    getDepartmentsDashboard,
+    getAssessmentsCategoryWise,
+    getRiskMetricsForCompany,
+    getCompanyOverview
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -144,12 +148,26 @@ router.get('/:companyId/progress-report/time',
     getDepartmentStatusReportAccordingToTime
 )
 router.get('/:companyId/progress-report/compliance',
-    attachResourceInfo(RESOURCE_TYPES.COMPANY_PROGRESS_REPORT,
-        CONTENT_RESOURCE_TYPES.COMPANY,
-        'companyId',
-        ACTION_IDS.READ),
-    checkAccess,
+    // attachResourceInfo(RESOURCE_TYPES.COMPANY_PROGRESS_REPORT,
+    //     CONTENT_RESOURCE_TYPES.COMPANY,
+    //     'companyId',
+    //     ACTION_IDS.READ),
+    // checkAccess,
     getDepartmentStatusReportAccordingToCompliance
+    // getDepartmentsDashboard
+)
+
+router.get('/:companyId/assessments/categorized',
+    // getAssessmentsCategoryWise
+    getAssessmentsCategoryWise
+)
+
+router.get('/:companyId/risk-metrics',
+    getRiskMetricsForCompany
+)
+
+router.get('/:companyId/overview',
+    getCompanyOverview
 )
 
 export default router;

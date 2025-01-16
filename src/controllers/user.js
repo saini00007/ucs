@@ -88,7 +88,18 @@ export const addUser = async (req, res, next) => {
                 phoneNumber,
                 countryCode
             }, res, next);
-        } else {
+        } else if (roleId === ROLE_IDS.LEADERSHIP) {
+            await createUser({
+                username,
+                password,
+                email,
+                roleId,
+                companyId,
+                phoneNumber,
+                countryCode
+            }, res, next);
+        }
+        else {
             // For non-admin roles, check department exists
             const department = await Department.findOne({ where: { id: departmentId } });
             if (!department) {
@@ -187,7 +198,8 @@ export const deleteUser = async (req, res, next) => {
         // Check if the requesting user has the right to delete the target user
         const canDelete =
             (requestingUserRoleId === ROLE_IDS.SUPER_ADMIN) ||
-            (requestingUserRoleId === ROLE_IDS.ADMIN && [ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
+            (requestingUserRoleId === ROLE_IDS.ADMIN && [ROLE_IDS.DEPARTMENT_MANAGER,ROLE_IDS.LEADERSHIP, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
+            (requestingUserRoleId === ROLE_IDS.LEADERSHIP && [ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
             (requestingUserRoleId === ROLE_IDS.DEPARTMENT_MANAGER && [ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId));
 
         if (!canDelete) {
@@ -451,12 +463,12 @@ export const addUserToSubDepartment = async (req, res, next) => {
 
             const updatedUser = await User.findByPk(userId, {
                 attributes: { exclude: ['password', 'deletedAt'] },
-                include: [ {
+                include: [{
                     model: Department,
                     as: 'departments',
                     through: { attributes: [] },
                     attributes: ['id'],
-                    include:[{
+                    include: [{
                         model: SubDepartment,
                         as: 'subDepartments',
                         attributes: ['id'],
@@ -465,7 +477,7 @@ export const addUserToSubDepartment = async (req, res, next) => {
                             as: 'users',
                             attributes: [],
                             where: { id: userId }
-                          }]
+                        }]
                     },]
                 }]
             });

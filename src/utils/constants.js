@@ -13,7 +13,23 @@ export const ROLE_IDS = {
     ASSESSOR: 'assessor',
     DEPARTMENT_MANAGER: 'departmentmanager',
     REVIEWER: 'reviewer',
-    SUPER_ADMIN: 'superadmin'
+    SUPER_ADMIN: 'superadmin',
+    LEADERSHIP: 'leadership'
+};
+
+export const ANSWER_REVIEW_STATUS = {
+    PENDING: 'pending',
+    APPROVED: 'approved',
+    REJECTED: 'rejected',
+    IMPROVED: 'improved'
+};
+
+export const SUB_ASSESSMENT_REVIEW_STATUS = {
+    DRAFT: 'draft',           // Initial state
+    SUBMITTED_FOR_REVIEW: 'submittedForReview',  // Submitted to reviewer
+    UNDER_REVIEW: 'underReview',    // Reviewer is working on it
+    NEED_REVISION: 'needRevision',  // Some answers rejected, back to assessor
+    COMPLETED: 'completed'          // All approved
 };
 
 // For action IDs
@@ -73,11 +89,11 @@ export const CONTENT_RESOURCE_TYPES = {
 export const resourceTypeToId = {
     [RESOURCE_TYPES.COMPANY]: 'company',
     [RESOURCE_TYPES.DEPARTMENT]: 'department',
-    [RESOURCE_TYPES.SUB_DEPARTMENT]:'subdepartment',
+    [RESOURCE_TYPES.SUB_DEPARTMENT]: 'subdepartment',
     [RESOURCE_TYPES.ASSESSMENT]: 'assessment',
-    [RESOURCE_TYPES.SUB_ASSESSMENT]:'subassessment',
+    [RESOURCE_TYPES.SUB_ASSESSMENT]: 'subassessment',
     [RESOURCE_TYPES.ASSESSMENT_QUESTION]: 'assessmentquestion',
-    [RESOURCE_TYPES.SUB_ASSESSMENT_QUESTION]:'subassessmentquestion',
+    [RESOURCE_TYPES.SUB_ASSESSMENT_QUESTION]: 'subassessmentquestion',
     [RESOURCE_TYPES.ANSWER]: 'answer',
     [RESOURCE_TYPES.USER]: 'user',
     [RESOURCE_TYPES.EVIDENCE_FILE]: 'evidencefile',
@@ -86,7 +102,7 @@ export const resourceTypeToId = {
     [RESOURCE_TYPES.MASTER_DEPARTMENT]: 'masterdepartment',
     [RESOURCE_TYPES.ROLE]: 'role',
     [RESOURCE_TYPES.USER_DEPARTMENT_LINK]: 'userdepartmentlink',
-    [RESOURCE_TYPES.USER_SUB_DEPARTMENT_LINK]:'usersubdepartmentlink',
+    [RESOURCE_TYPES.USER_SUB_DEPARTMENT_LINK]: 'usersubdepartmentlink',
     [RESOURCE_TYPES.REPORT]: 'report',
     [RESOURCE_TYPES.INDUSTRY_SECTOR]: 'industrysector',
     [RESOURCE_TYPES.COMPANY_PROGRESS_REPORT]: 'companyprogressreport',

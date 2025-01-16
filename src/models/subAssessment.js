@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import { SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
 
 const SubAssessment = sequelize.define('SubAssessment', {
     id: {
@@ -31,18 +32,27 @@ const SubAssessment = sequelize.define('SubAssessment', {
         defaultValue: 'default',
     },
     subAssessmentStarted: {
-        type: DataTypes.BOOLEAN, 
+        type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
+    reviewStatus: {
+        type: DataTypes.ENUM(Object.values(SUB_ASSESSMENT_REVIEW_STATUS)),
+        defaultValue: SUB_ASSESSMENT_REVIEW_STATUS.DRAFT,
+        allowNull: false
+    },
     submitted: {
-        type: DataTypes.BOOLEAN, //assessor
+        type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
     startedAt: {
-        type: DataTypes.DATE, 
+        type: DataTypes.DATE,
         allowNull: true,
     },
     submittedAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
+    completedAt: {
         type: DataTypes.DATE,
         allowNull: true,
     },

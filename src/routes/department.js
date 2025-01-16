@@ -10,10 +10,14 @@ import {
     getUsersByDepartmentId,
     getSubDepartmentsByDepartmentId,
     departmentProgressReport,
+    getSubAssessmentsCategoryWise,
+    tempDPR,
+    getRiskMetricsForDepartment,
+    getDepartmentOverview,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
-import { RESOURCE_TYPES, ACTION_IDS ,CONTENT_RESOURCE_TYPES} from '../utils/constants.js';
+import { RESOURCE_TYPES, ACTION_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
 
 const router = express.Router();
 
@@ -106,5 +110,19 @@ router.get('/:departmentId/sub-departments',
 router.get('/:departmentId/progress-report',
     departmentProgressReport
 )
+
+router.get('/:departmentId/sub-assessments/categorized',
+    getSubAssessmentsCategoryWise
+)
+
+router.get('/:departmentId/risk-metrics',
+    getRiskMetricsForDepartment
+)
+
+router.get('/:departmentId/overview',
+    getDepartmentOverview
+)
+
+
 
 export default router;

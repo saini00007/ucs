@@ -6,7 +6,7 @@ import {
 } from '../controllers/assessmentQuestion.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
-import { RESOURCE_TYPES, ACTION_IDS,CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
+import { RESOURCE_TYPES, ACTION_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
 
 const router = express.Router();
 
@@ -36,7 +36,7 @@ router.get('/:assessmentQuestionId/answers',
 
 // Route to get comments for a specific assessment question by its ID
 router.get('/:assessmentQuestionId/comments',
-  
+
   attachResourceInfo(
     RESOURCE_TYPES.COMMENT,
     CONTENT_RESOURCE_TYPES.ASSESSMENT_QUESTION,
@@ -46,5 +46,7 @@ router.get('/:assessmentQuestionId/comments',
   checkAccess,
   getCommentsByAssessmentQuestionId
 );
+
+
 
 export default router;

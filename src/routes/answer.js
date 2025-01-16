@@ -11,6 +11,7 @@ import attachResourceInfo from '../utils/attachResourceInfo.js';
 import { RESOURCE_TYPES, ACTION_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
 
 import uploadMiddleware from '../middleware/fileUpload.js';
+import { submitReviewDecision } from '../controllers/answer.js';
 const uploadFiles = uploadMiddleware.evidenceFiles(100, 10);
 
 const router = express.Router();
@@ -53,6 +54,11 @@ router.get('/evidence-files/:fileId',
   ),
   checkAccess,
   serveFile
+);
+
+router.put(
+  '/answers/:answerId/review',
+  submitReviewDecision
 );
 
 export default router;

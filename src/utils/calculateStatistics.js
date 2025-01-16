@@ -51,14 +51,12 @@ export const totalQuestionsOfAssessment = async (assessmentId) => {
 }
 
 // Assessment level statistics
-export const calculateAssessmentStatistics = async (assessmentId) => {
+export const calculateAssessmentStatistics = async (assessmentId, sp80053ControlNumRequired = true) => {
     try {
         // Get total questions count
         const totalQuestions = await totalQuestionsOfAssessment(assessmentId)
-        
         // Get base answer statistics
         const stats = await baseAssessmentStatistics(assessmentId)
-        
         // Get control numbers statistics using a raw query
         const controlStatsQuery = `
             SELECT 
@@ -71,7 +69,7 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
             WHERE aq.assessment_id = :assessmentId
             GROUP BY a.answer_text, mq.sp_800_53_control_number
         `;
-        
+
         const controlStats = await Answer.sequelize.query(
             controlStatsQuery,
             {
@@ -109,14 +107,15 @@ export const calculateAssessmentStatistics = async (assessmentId) => {
                 sp80053ControlNum: formatControlStats(ANSWER_TYPES.NOT_APPLICABLE, controlStats)
             }
         };
-        
+
         return statistics;
-        
+
     } catch (error) {
         console.error('Error calculating assessment statistics:', error);
         throw new AppError('Failed to calculate assessment statistics', 500);
     }
 };
+
 // Company level statistics
 export const calculateAssessmentStatisticsForCompany = async (companyId) => {
     try {
@@ -209,3 +208,56 @@ export const calculateAssessmentStatisticsForCompany = async (companyId) => {
         throw new AppError('Failed to calculate company statistics', 500);
     }
 };
+
+export const getAssessmentStatus = (assessment, statistics) => {
+    const now = new Date();
+    if (!assessment.submitted && assessment.deadline && new Date(assessment.deadline) < now) {
+        return 'deadlined';
+    }
+    if (assessment.submitted) {
+        return 'submitted';
+    }
+
+    if (!assessment.assessmentStarted) {
+        return 'notStarted';
+    }
+
+    // If assessment is started but not all questions are answered
+    if (statistics.totalAnswers < statistics.totalQuestions) {
+        return 'active';
+    }
+
+    // If all questions are answered but not submitted
+    if (statistics.totalAnswers === statistics.totalQuestions && !assessment.submitted) {
+        return 'completed';
+    }
+
+    return 'active';
+};
+
+export const getSubAssessmentStatus = (subAssessment, statistics) => {
+    const now = new Date();
+    
+    if (!subAssessment.submitted && subAssessment.deadline && new Date(subAssessment.deadline) < now) {
+      return 'deadlined';
+    }
+  
+    if (subAssessment.submitted) {
+      return 'submitted';
+    }
+    
+    if (!subAssessment.subAssessmentStarted) {
+      return 'notStarted';
+    }
+  
+    if (statistics.totalAnswers < statistics.totalQuestions) {
+      return 'active';
+    }
+  
+    if (statistics.totalAnswers === statistics.totalQuestions && !subAssessment.submitted) {
+      return 'completed';
+    }
+  
+    return 'active';
+  };
+

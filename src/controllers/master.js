@@ -24,7 +24,7 @@ export const getRoles = async (req, res, next) => {
 
             case ROLE_IDS.DEPARTMENT_MANAGER:
                 filteredRoles = roles.filter(role =>
-                    ![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER].includes(role.id)
+                    ![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.LEADERSHIP, ROLE_IDS.DEPARTMENT_MANAGER].includes(role.id)
                 );
                 break;
 
@@ -86,7 +86,7 @@ export const getControlFrameworks = async (req, res, next) => {
 
         const controlFrameworks = await ControlFramework.findAll({
             order: [['framework_type', 'ASC']],
-            attributes:['id','frameworkType']
+            attributes: ['id', 'frameworkType']
         });
 
 

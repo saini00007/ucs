@@ -23,7 +23,7 @@ const checkUserAccess = async (user, resourceId) => {
             return { success: true };
         }
 
-        if (user.roleId === ROLE_IDS.ADMIN) {
+        if (user.roleId === ROLE_IDS.ADMIN||user.roleId===ROLE_IDS.LEADERSHIP) {
             // Admin can access only if they belong to the same company
             if (user.companyId !== userDb.companyId) {
                 throw new AppError('Access denied: user does not belong to the same company', 403);

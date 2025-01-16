@@ -49,6 +49,27 @@ const seedRoleResourceActionLinks = async () => {
       ]
     },
     {
+      roleId: 'leadership',
+      resourceActions: [
+        { resourceId: 'company', actionIds: ['read'] },
+        { resourceId: 'department', actionIds: ['list', 'read'] },
+        { resourceId: 'subdepartment', actionIds: ['list', 'read'] },
+        { resourceId: 'assessment', actionIds: ['start', 'submit', 'read', 'reopen', 'list'] },
+        { resourceId: 'subassessment', actionIds: ['read', 'list'] },
+        { resourceId: 'assessmentquestion', actionIds: ['list', 'read'] },
+        { resourceId: 'subassessmentquestion', actionIds: ['list', 'read'] },
+        { resourceId: 'answer', actionIds: ['read', 'create', 'update'] },
+        { resourceId: 'evidencefile', actionIds: ['read'] },
+        { resourceId: 'comment', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
+        { resourceId: 'user', actionIds: ['list', 'read', 'create', 'update', 'remove'] },
+        { resourceId: 'role', actionIds: ['list'] },
+        { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
+        { resourceId: 'usersubdepartmentlink', actionIds: ['create', 'remove'] },
+        { resourceId: 'report', actionIds: ['read'] },
+        { resourceId: 'companyprogressreport', actionIds: ['read'] },
+      ]
+    },
+    {
       roleId: 'departmentmanager',
       resourceActions: [
         { resourceId: 'company', actionIds: ['read'] },

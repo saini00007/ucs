@@ -22,7 +22,7 @@ const checkEvidenceFileAccess = async (user, resourceId) => {
                                     as: 'subDepartment',
                                     attributes: ['id'],
                                     include: [{
-                                        mode: Department,
+                                        model: Department,
                                         as: 'department',
                                         attributes: ['id', 'companyId']
                                     }]
