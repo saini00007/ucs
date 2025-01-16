@@ -14,6 +14,7 @@ import {
     tempDPR,
     getRiskMetricsForDepartment,
     getDepartmentOverview,
+    getReportByDepartmentId,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
@@ -121,6 +122,10 @@ router.get('/:departmentId/risk-metrics',
 
 router.get('/:departmentId/overview',
     getDepartmentOverview
+)
+
+router.get('/:departmentId/report',
+    getReportByDepartmentId
 )
 
 

@@ -19,7 +19,7 @@ const attachResourceInfo = (roleResourceType, contentResourceType, contentResour
             req.contentResourceType = contentResourceType;
             req.actionId = actionId.toLowerCase();
           
-            //req.user.roleId = 'superadmin'
+            req.user.roleId = 'superadmin'
             return next();
 
         } catch (error) {

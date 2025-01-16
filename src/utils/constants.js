@@ -108,3 +108,12 @@ export const resourceTypeToId = {
     [RESOURCE_TYPES.COMPANY_PROGRESS_REPORT]: 'companyprogressreport',
     [RESOURCE_TYPES.CONTROL_FRAMEWORK]: 'controlframework'
 };
+
+export const frameworkFieldMapping = {
+    'PCIDSS': 'pcidss',
+    'IEC62443': 'iec62443ControlId',
+    'NIST80082': 'nist80082ControlId',
+    'MITREDEFEND': 'mitreDefendControlId', 
+    'NISTCSF': 'nistCsfControlId',
+    'ISO27001': 'iso270012022CIdNum'
+  };

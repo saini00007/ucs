@@ -45,6 +45,8 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'userdepartmentlink', actionIds: ['create', 'remove'] },
         { resourceId: 'usersubdepartmentlink', actionIds: ['create', 'remove'] },
         { resourceId: 'report', actionIds: ['read'] },
+        { resourceId: 'industrysector', actionIds: ['list'] },
+        { resourceId: 'controlframework', actionIds: ['list'] },
         { resourceId: 'companyprogressreport', actionIds: ['read'] },
       ]
     },

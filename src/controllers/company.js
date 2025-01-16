@@ -5,7 +5,7 @@ import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateAssessmentStatisticsForCompany, getAssessmentStatus } from '../utils/calculateStatistics.js';
 
 import { handleCompanyEmailUpdates, validateControlFrameworkIds, validateEmailForCompany } from '../utils/companyUtils.js'
-import { ROLE_IDS } from '../utils/constants.js';
+import { frameworkFieldMapping, ROLE_IDS } from '../utils/constants.js';
 // import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
 import { getCategorizedAssessments, getCategorizedSubAssessments, getMetricsOfAssessments } from '../utils/progressStatistics.js';
 import { getFilteredAssessments } from '../utils/assessmentUtils.js';
@@ -628,10 +628,17 @@ export const getUsersByCompanyId = async (req, res, next) => {
   }
 };
 
+
 export const getReportByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
+  const { controlFrameworkIds = '' } = req.query;
 
   try {
+    // Validate controlFrameworkIds is provided
+    if (!controlFrameworkIds) {
+      throw new AppError('Control framework IDs are required', 400);
+    }
+
     // Get company basic info
     const company = await Company.findByPk(companyId, {
       attributes: ['id', 'companyName']
@@ -639,6 +646,53 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     if (!company) {
       throw new AppError(`Company not found with ID: ${companyId}`, 404);
+    }
+
+    // Parse and validate control framework IDs
+    const frameworkIds = controlFrameworkIds.split(',').filter(Boolean);
+    
+    if (frameworkIds.length === 0) {
+      throw new AppError('At least one valid control framework ID is required', 400);
+    }
+
+    // Get authorized frameworks for the company
+    const companyFrameworks = await CompanyControlFrameworkLink.findAll({
+      where: {
+        companyId,
+        controlFrameworkId: {
+          [Op.in]: frameworkIds
+        }
+      },
+      attributes: ['controlFrameworkId'],
+      raw: true
+    });
+
+    // Get the IDs that are actually associated with the company
+    const authorizedFrameworkIds = companyFrameworks.map(cf => cf.controlFrameworkId);
+
+    // Validate if any frameworks are unauthorized
+    const unauthorizedIds = frameworkIds.filter(id => !authorizedFrameworkIds.includes(id));
+    if (unauthorizedIds.length > 0) {
+      throw new AppError(`Invalid or unauthorized control framework IDs: ${unauthorizedIds.join(', ')}`, 400);
+    }
+    
+    // Get the full framework details
+    const controlFrameworks = await ControlFramework.findAll({
+      where: {
+        id: {
+          [Op.in]: authorizedFrameworkIds
+        }
+      },
+      attributes: ['id', 'frameworkType']
+    });
+
+    // Get framework types
+    const frameworks = controlFrameworks.map(cf => cf.frameworkType);
+
+    // Validate if framework types are supported
+    const invalidFrameworks = frameworks.filter(framework => !frameworkFieldMapping[framework]);
+    if (invalidFrameworks.length > 0) {
+      throw new AppError(`Unsupported framework types: ${invalidFrameworks.join(', ')}`, 400);
     }
 
     // Get departments and check submissions
@@ -658,15 +712,21 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     // Validate all assessments are submitted
     const hasUnsubmittedAssessment = departments.some(dept =>
-      dept.assessments.some(assessment => { !assessment.submitted })
-
+      dept.assessments.some(assessment => !assessment.submitted)
     );
 
     if (hasUnsubmittedAssessment) {
       throw new AppError('All assessments must be submitted before generating report', 400);
     }
 
-    // Get detailed department data with assessments using the risk report scope
+    // Build framework conditions for filtering - modified to check any framework
+    const frameworkConditions = frameworks.map(framework => ({
+      [frameworkFieldMapping[framework]]: {
+        [Op.not]: null  // Just check for not null to include any question with this framework
+      }
+    }));
+
+    // Get detailed department data with assessments
     const departmentReport = await Department.findAll({
       where: { companyId },
       attributes: ['id', 'departmentName'],
@@ -679,7 +739,15 @@ export const getReportByCompanyId = async (req, res, next) => {
         {
           model: Assessment,
           as: 'assessments',
-          attributes: ['id', 'assessmentName'],
+          attributes: [
+            'id', 
+            'assessmentName',
+            'assessmentStarted',
+            'submitted',
+            'startedAt',
+            'submittedAt',
+            'deadline'
+          ],
           include: [{
             model: AssessmentQuestion,
             as: 'questions',
@@ -687,7 +755,10 @@ export const getReportByCompanyId = async (req, res, next) => {
             include: [
               {
                 model: MasterQuestion.scope('riskReport'),
-                as: 'masterQuestion'
+                as: 'masterQuestion',
+                where: {
+                  [Op.or]: frameworkConditions  // Using OR to include questions with any of the frameworks
+                }
               },
               {
                 model: Answer,
@@ -722,9 +793,8 @@ export const getReportByCompanyId = async (req, res, next) => {
           departmentData.assessments.map(async (assessment) => {
             const assessmentStats = await calculateAssessmentStatistics(assessment.id);
             return {
-              stats: assessmentStats,
               ...assessment,
-
+              statistics: assessmentStats
             };
           })
         );
@@ -733,13 +803,18 @@ export const getReportByCompanyId = async (req, res, next) => {
       })
     );
 
-    // Combine all data in final response
+    // Prepare final response
     const finalReport = {
-
       ...company.toJSON(),
-      stats: companyStats
-      ,
-      departments: enhancedDepartmentReport
+      statistics: companyStats,
+      departments: enhancedDepartmentReport,
+      metadata: {
+        controlFrameworks: controlFrameworks.map(cf => ({
+          id: cf.id,
+          frameworkType: cf.frameworkType
+        })),
+        generatedAt: new Date().toISOString()
+      }
     };
 
     res.status(200).json({

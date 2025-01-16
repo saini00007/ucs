@@ -65,7 +65,7 @@ const Company = sequelize.define('Company', {
       model: 'industry_sectors',
       key: 'id',
     },
-    allowNull: false,
+    allowNull: true,
   },
 }, {
   tableName: 'companies',

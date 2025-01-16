@@ -13,14 +13,16 @@ import {
   User,
   MasterSubDepartment,
   SubDepartment,
-  SubAssessment
+  SubAssessment,
+  ControlFramework,
+  CompanyControlFrameworkLink
 } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
 import { createDepartmentAssessment } from '../utils/departmentUtils.js';
-import { ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
+import { ANSWER_TYPES, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 
 export const getDepartmentById = async (req, res, next) => {
@@ -1127,6 +1129,215 @@ export const getDepartmentOverview = async (req, res, next) => {
     });
 
   } catch (error) {
+    next(error);
+  }
+};
+
+export const getReportByDepartmentId = async (req, res, next) => {
+  const { departmentId } = req.params;
+  const { controlFrameworkIds = '' } = req.query;
+
+  try {
+    // Validate controlFrameworkIds is provided
+    if (!controlFrameworkIds) {
+      throw new AppError('Control framework IDs are required', 400);
+    }
+
+
+    // Get department with company info
+    const department = await Department.findByPk(departmentId, {
+      attributes: ['id', 'departmentName', 'companyId'],
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'companyName'],
+      }]
+    });
+
+    if (!department) {
+      throw new AppError(`Department not found with ID: ${departmentId}`, 404);
+    }
+
+    const companyId = department.companyId;
+
+    // Parse and validate control framework IDs
+    const frameworkIds = controlFrameworkIds.split(',').filter(Boolean);
+
+    if (frameworkIds.length === 0) {
+      throw new AppError('At least one valid control framework ID is required', 400);
+    }
+
+    // Get authorized frameworks for the company
+    const companyFrameworks = await CompanyControlFrameworkLink.findAll({
+      where: {
+        companyId,
+        controlFrameworkId: {
+          [Op.in]: frameworkIds
+        }
+      },
+      attributes: ['controlFrameworkId'],
+      raw: true
+    });
+
+    // Get the IDs that are actually associated with the company
+    const authorizedFrameworkIds = companyFrameworks.map(cf => cf.controlFrameworkId);
+
+    // Validate if any frameworks are unauthorized
+    const unauthorizedIds = frameworkIds.filter(id => !authorizedFrameworkIds.includes(id));
+    if (unauthorizedIds.length > 0) {
+      throw new AppError(`Invalid or unauthorized control framework IDs: ${unauthorizedIds.join(', ')}`, 400);
+    }
+
+    // Get the full framework details
+    const controlFrameworks = await ControlFramework.findAll({
+      where: {
+        id: {
+          [Op.in]: authorizedFrameworkIds
+        }
+      },
+      attributes: ['id', 'frameworkType']
+    });
+
+    // Get framework types
+    const frameworks = controlFrameworks.map(cf => cf.frameworkType);
+
+    // Validate if framework types are supported
+    const invalidFrameworks = frameworks.filter(framework => !frameworkFieldMapping[framework]);
+    if (invalidFrameworks.length > 0) {
+      throw new AppError(`Unsupported framework types: ${invalidFrameworks.join(', ')}`, 400);
+    }
+
+    // Get subdepartments and check submissions
+    const subDepartments = await SubDepartment.findAll({
+      where: { departmentId },
+      attributes: ['id'],
+      include: [{
+        model: SubAssessment,
+        as: 'subAssessments',
+        attributes: ['id', 'submitted']
+      }]
+    });
+
+    if (!subDepartments.length) {
+      throw new AppError(`No subdepartments found for department ID: ${departmentId}`, 404);
+    }
+
+    // Validate all subassessments are submitted
+    const hasUnsubmittedSubAssessment = subDepartments.some(subDept =>
+      subDept.subAssessments.some(subAssessment => !subAssessment.submitted)
+    );
+
+    if (hasUnsubmittedSubAssessment) {
+      throw new AppError('All subassessments must be submitted before generating report', 400);
+    }
+
+    // Build framework conditions for filtering - modified to check any framework
+    const frameworkConditions = frameworks.map(framework => ({
+      [frameworkFieldMapping[framework]]: {
+        [Op.not]: null  // Just check for not null to include any question with this framework
+      }
+    }));
+
+    // Get detailed subdepartment data with subassessments
+    const subDepartmentReport = await SubDepartment.findAll({
+      where: { departmentId },
+      attributes: ['id', 'subDepartmentName'],
+      include: [
+        {
+          model: MasterSubDepartment,
+          as: 'masterSubDepartment',
+          attributes: ['id', 'subDepartmentName'],
+        },
+        {
+          model: SubAssessment,
+          as: 'subAssessments',
+          attributes: [
+            'id',
+            'subAssessmentName',
+            'subAssessmentStarted',
+            'submitted',
+            'startedAt',
+            'submittedAt',
+            'deadline'
+          ],
+          include: [{
+            model: AssessmentQuestion,
+            as: 'questions',
+            attributes: ['id'],
+            include: [
+              {
+                model: MasterQuestion.scope('riskReport'),
+                as: 'masterQuestion',
+                where: {
+                  [Op.or]: frameworkConditions  // Using OR to include questions with any of the frameworks
+                }
+              },
+              {
+                model: Answer,
+                required: true,
+                as: 'answer',
+                where: {
+                  answerText: 'no'
+                },
+                attributes: ['answerText']
+              }
+            ]
+          }]
+        }
+      ],
+      order: [
+        ['subDepartmentName', 'ASC'],
+        [{ model: SubAssessment, as: 'subAssessments' }, 'subAssessmentName', 'ASC'],
+        [{ model: SubAssessment, as: 'subAssessments' }, { model: AssessmentQuestion, as: 'questions' }, 'id', 'ASC']
+      ]
+    });
+
+    // Enhance subdepartment report with statistics
+    const enhancedSubDepartmentReport = await Promise.all(
+      subDepartmentReport.map(async (subDepartment) => {
+        const subDepartmentData = subDepartment.toJSON();
+
+        // Add statistics to each subassessment
+        subDepartmentData.subAssessments = await Promise.all(
+          subDepartmentData.subAssessments.map(async (subAssessment) => {
+            const subAssessmentStats = await calculateSubAssessmentStatistics(subAssessment.id);
+            return {
+              ...subAssessment,
+              statistics: subAssessmentStats
+            };
+          })
+        );
+
+        return subDepartmentData;
+      })
+    );
+
+    // Prepare final response
+    const finalReport = {
+      id: department.id,
+      departmentName: department.departmentName,
+      company: {
+        id: department.company.id,
+        companyName: department.company.companyName
+      },
+      subDepartments: enhancedSubDepartmentReport,
+      metadata: {
+        controlFrameworks: controlFrameworks.map(cf => ({
+          id: cf.id,
+          frameworkType: cf.frameworkType
+        })),
+        generatedAt: new Date().toISOString()
+      }
+    };
+
+    return res.status(200).json({
+      success: true,
+      messages: ['Report data successfully fetched'],
+      reportData: finalReport
+    });
+
+  } catch (error) {
+    console.error('Error fetching department report data:', error);
     next(error);
   }
 };

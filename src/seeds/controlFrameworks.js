@@ -8,7 +8,6 @@ const frameworks = [
     { frameworkType: 'MITREDEFEND' },
     { frameworkType: 'NISTCSF' },
     { frameworkType: 'ISO27001' },
-    
 ];
 
 const seedControlFrameworks = async () => {

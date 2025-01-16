@@ -163,10 +163,13 @@ export const validateControlFrameworkIds = async (controlFrameworkIds) => {
 
     const existingFrameworks = await ControlFramework.findAll({
         where: {
-            id: controlFrameworkIds
+            id: {
+                [Op.in]: controlFrameworkIds
+            }
         }
     });
-
+  console.log(existingFrameworks);
+  console.log(controlFrameworkIds);
 
     if (existingFrameworks.length !== controlFrameworkIds.length) {
         throw new AppError('One or more control frameworks not found', 404);
