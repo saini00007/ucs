@@ -48,7 +48,7 @@ const baseUserSchema = Joi.object({
         }),
     departmentId: Joi.string()
         .when(Joi.ref('roleId'), {
-            is: 'admin',
+            is: Joi.string().valid('admin', 'leadership'),
             then: Joi.optional(),
             otherwise: Joi.required()
         })
@@ -57,9 +57,10 @@ const baseUserSchema = Joi.object({
             'string.empty': 'Department ID is required.',
             'any.required': 'Department ID is required.'
         }),
+
     companyId: Joi.string()
         .when(Joi.ref('roleId'), {
-            is: 'admin',
+            is: Joi.string().valid('admin', 'leadership'),
             then: Joi.required(),
             otherwise: Joi.optional()
         })
@@ -68,6 +69,7 @@ const baseUserSchema = Joi.object({
             'string.empty': 'Company ID is required.',
             'any.required': 'Company ID is required.'
         }),
+
     countryCode: Joi.string()
         .min(1)
         .max(5)
