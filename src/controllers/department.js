@@ -18,7 +18,7 @@ import {
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
-import { calculateAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
+import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
 import { createDepartmentAssessment } from '../utils/departmentUtils.js';
 import { ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
@@ -1056,26 +1056,74 @@ export const getDepartmentOverview = async (req, res, next) => {
       });
     }
 
+    // Calculate statistics and status for main assessments
+    const assessmentsWithStats = await Promise.all(
+      department.assessments.map(async (assessment) => {
+        try {
+          const stats = await calculateAssessmentStatistics(assessment.id);
+          return {
+            ...assessment.toJSON(),
+            statistics: stats,
+            status: getAssessmentStatus(assessment, stats)
+          };
+        } catch (error) {
+          console.error(`Error calculating statistics for assessment ${assessment.id}:`, error);
+          return {
+            ...assessment.toJSON(),
+            statistics: null,
+            status: null
+          };
+        }
+      })
+    );
+
+    // Calculate statistics and status for subassessments
+    const subDepartmentsWithStats = await Promise.all(
+      department.subDepartments.map(async (subDept) => {
+        const subAssessmentsWithStats = await Promise.all(
+          subDept.subAssessments.map(async (subAssessment) => {
+            try {
+              const stats = await calculateSubAssessmentStatistics(subAssessment.id);
+              return {
+                ...subAssessment.toJSON(),
+                statistics: stats,
+                status: getSubAssessmentStatus(subAssessment, stats)
+              };
+            } catch (error) {
+              console.error(`Error calculating statistics for subassessment ${subAssessment.id}:`, error);
+              return {
+                ...subAssessment.toJSON(),
+                statistics: null,
+                status: null
+              };
+            }
+          })
+        );
+
+        return {
+          id: subDept.id,
+          subDepartmentName: subDept.subDepartmentName,
+          createdAt: subDept.createdAt,
+          updatedAt: subDept.updatedAt,
+          subAssessments: subAssessmentsWithStats
+        };
+      })
+    );
+
     const data = {
       department: {
         id: department.id,
         departmentName: department.departmentName,
         createdAt: department.createdAt,
         updatedAt: department.updatedAt,
-        assessments: department.assessments,
-        subDepartments: department.subDepartments.map(subDept => ({
-          id: subDept.id,
-          subDepartmentName: subDept.subDepartmentName,
-          createdAt: subDept.createdAt,
-          updatedAt: subDept.updatedAt,
-          subAssessments: subDept.subAssessments
-        }))
+        assessments: assessmentsWithStats,
+        subDepartments: subDepartmentsWithStats
       }
     };
 
     return res.status(200).json({
       success: true,
-      department:data.department
+      department: data.department
     });
 
   } catch (error) {

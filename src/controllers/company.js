@@ -1300,6 +1300,8 @@ export const getRiskMetricsForCompany = async (req, res, next) => {
   }
 };
 
+
+
 export const getCompanyOverview = async (req, res, next) => {
   const { companyId } = req.params;
 
@@ -1324,26 +1326,6 @@ export const getCompanyOverview = async (req, res, next) => {
                 'submittedAt',
                 'deadline'
               ]
-            },
-            {
-              model: SubDepartment,
-              as: 'subDepartments',
-              attributes: ['id', 'subDepartmentName', 'createdAt', 'updatedAt'],
-              include: [
-                {
-                  model: SubAssessment,
-                  as: 'subAssessments',
-                  attributes: [
-                    'id',
-                    'subAssessmentName',
-                    'subAssessmentStarted',
-                    'submitted',
-                    'startedAt',
-                    'submittedAt',
-                    'deadline'
-                  ]
-                }
-              ]
             }
           ]
         }
@@ -1357,26 +1339,46 @@ export const getCompanyOverview = async (req, res, next) => {
       });
     }
 
+    // Calculate statistics and status for departments and their assessments
+    const departmentsWithStats = await Promise.all(
+      company.departments.map(async (dept) => {
+        const assessmentsWithStats = await Promise.all(
+          dept.assessments.map(async (assessment) => {
+            try {
+              const stats = await calculateAssessmentStatistics(assessment.id);
+              return {
+                ...assessment.toJSON(),
+                statistics: stats,
+                status: getAssessmentStatus(assessment, stats)
+              };
+            } catch (error) {
+              console.error(`Error calculating statistics for assessment ${assessment.id}:`, error);
+              return {
+                ...assessment.toJSON(),
+                statistics: null,
+                status: null
+              };
+            }
+          })
+        );
+
+        return {
+          id: dept.id,
+          departmentName: dept.departmentName,
+          createdAt: dept.createdAt,
+          updatedAt: dept.updatedAt,
+          assessments: assessmentsWithStats
+        };
+      })
+    );
+
     const data = {
       company: {
         id: company.id,
         companyName: company.companyName,
         createdAt: company.createdAt,
         updatedAt: company.updatedAt,
-        departments: company.departments.map(dept => ({
-          id: dept.id,
-          departmentName: dept.departmentName,
-          createdAt: dept.createdAt,
-          updatedAt: dept.updatedAt,
-          assessments: dept.assessments,
-          subDepartments: dept.subDepartments.map(subDept => ({
-            id: subDept.id,
-            subDepartmentName: subDept.subDepartmentName,
-            createdAt: subDept.createdAt,
-            updatedAt: subDept.updatedAt,
-            subAssessments: subDept.subAssessments
-          }))
-        }))
+        departments: departmentsWithStats
       }
     };
 

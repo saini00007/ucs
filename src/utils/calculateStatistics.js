@@ -23,7 +23,11 @@ const calculatePercentage = (count, total) => {
     return parseFloat(((count / total) * 100).toFixed(2));
 };
 
-export const baseAssessmentStatistics = async (assessmentId) => {
+const baseStatistics = async (id, type = 'assessment') => {
+    const whereClause = type === 'assessment' ? 
+        { assessmentId: id } : 
+        { subAssessmentId: id };
+
     const stats = await Answer.findAll({
         attributes: [
             [literal('COUNT(*)'), 'totalAnswers'],
@@ -35,7 +39,7 @@ export const baseAssessmentStatistics = async (assessmentId) => {
             model: AssessmentQuestion,
             as: 'assessmentQuestion',
             attributes: [],
-            where: { assessmentId },
+            where: whereClause,
             required: true
         }],
         raw: true
@@ -43,21 +47,22 @@ export const baseAssessmentStatistics = async (assessmentId) => {
     return stats;
 }
 
-export const totalQuestionsOfAssessment = async (assessmentId) => {
+const totalQuestionsCount = async (id, type = 'assessment') => {
+    const whereClause = type === 'assessment' ? 
+        { assessmentId: id } : 
+        { subAssessmentId: id };
+
     const totalQuestions = await AssessmentQuestion.count({
-        where: { assessmentId }
+        where: whereClause
     });
     return totalQuestions;
 }
 
-// Assessment level statistics
-export const calculateAssessmentStatistics = async (assessmentId, sp80053ControlNumRequired = true) => {
+export const calculateAssessmentStatistics = async (assessmentId) => {
     try {
-        // Get total questions count
-        const totalQuestions = await totalQuestionsOfAssessment(assessmentId)
-        // Get base answer statistics
-        const stats = await baseAssessmentStatistics(assessmentId)
-        // Get control numbers statistics using a raw query
+        const totalQuestions = await totalQuestionsCount(assessmentId, 'assessment')
+        const stats = await baseStatistics(assessmentId, 'assessment')
+        
         const controlStatsQuery = `
             SELECT 
                 a.answer_text,
@@ -78,16 +83,12 @@ export const calculateAssessmentStatistics = async (assessmentId, sp80053Control
             }
         );
 
-        // Calculate total answers and percentages
         const totalAnswers = parseInt(stats[0]?.totalAnswers) || 0;
-
-        // Calculate individual counts
         const yesCount = parseInt(stats[0]?.yesCount) || 0;
         const noCount = parseInt(stats[0]?.noCount) || 0;
         const notApplicableCount = parseInt(stats[0]?.notApplicableCount) || 0;
 
-        // Format the response with percentages
-        const statistics = {
+        return {
             totalQuestions,
             totalAnswers,
             percentageCompleted: calculatePercentage(totalAnswers, totalQuestions),
@@ -108,11 +109,66 @@ export const calculateAssessmentStatistics = async (assessmentId, sp80053Control
             }
         };
 
-        return statistics;
-
     } catch (error) {
         console.error('Error calculating assessment statistics:', error);
         throw new AppError('Failed to calculate assessment statistics', 500);
+    }
+};
+
+export const calculateSubAssessmentStatistics = async (subAssessmentId) => {
+    try {
+        const totalQuestions = await totalQuestionsCount(subAssessmentId, 'subassessment')
+        const stats = await baseStatistics(subAssessmentId, 'subassessment')
+        
+        const controlStatsQuery = `
+            SELECT 
+                a.answer_text,
+                mq.sp_800_53_control_number as "sp80053ControlNum",
+                COUNT(*) as count
+            FROM answers a
+            INNER JOIN assessment_questions aq ON a.assessment_question_id = aq.id
+            INNER JOIN master_questions mq ON aq.master_question_id = mq.id
+            WHERE aq.sub_assessment_id = :subAssessmentId
+            GROUP BY a.answer_text, mq.sp_800_53_control_number
+        `;
+
+        const controlStats = await Answer.sequelize.query(
+            controlStatsQuery,
+            {
+                replacements: { subAssessmentId },
+                type: QueryTypes.SELECT
+            }
+        );
+
+        const totalAnswers = parseInt(stats[0]?.totalAnswers) || 0;
+        const yesCount = parseInt(stats[0]?.yesCount) || 0;
+        const noCount = parseInt(stats[0]?.noCount) || 0;
+        const notApplicableCount = parseInt(stats[0]?.notApplicableCount) || 0;
+
+        return {
+            totalQuestions,
+            totalAnswers,
+            percentageCompleted: calculatePercentage(totalAnswers, totalQuestions),
+            yesStats: {
+                count: yesCount,
+                percentage: calculatePercentage(yesCount, totalAnswers),
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.YES, controlStats)
+            },
+            noStats: {
+                count: noCount,
+                percentage: calculatePercentage(noCount, totalAnswers),
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NO, controlStats)
+            },
+            notApplicableStats: {
+                count: notApplicableCount,
+                percentage: calculatePercentage(notApplicableCount, totalAnswers),
+                sp80053ControlNum: formatControlStats(ANSWER_TYPES.NOT_APPLICABLE, controlStats)
+            }
+        };
+
+    } catch (error) {
+        console.error('Error calculating subassessment statistics:', error);
+        throw new AppError('Failed to calculate subassessment statistics', 500);
     }
 };
 
@@ -237,27 +293,27 @@ export const getAssessmentStatus = (assessment, statistics) => {
 
 export const getSubAssessmentStatus = (subAssessment, statistics) => {
     const now = new Date();
-    
+
     if (!subAssessment.submitted && subAssessment.deadline && new Date(subAssessment.deadline) < now) {
-      return 'deadlined';
+        return 'deadlined';
     }
-  
+
     if (subAssessment.submitted) {
-      return 'submitted';
+        return 'submitted';
     }
-    
+
     if (!subAssessment.subAssessmentStarted) {
-      return 'notStarted';
+        return 'notStarted';
     }
-  
+
     if (statistics.totalAnswers < statistics.totalQuestions) {
-      return 'active';
+        return 'active';
     }
-  
+
     if (statistics.totalAnswers === statistics.totalQuestions && !subAssessment.submitted) {
-      return 'completed';
+        return 'completed';
     }
-  
+
     return 'active';
-  };
+};
 
