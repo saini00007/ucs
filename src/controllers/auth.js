@@ -86,6 +86,7 @@ export const resetPassword = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   const { identifier, password } = req.body;
+  
   console.log(req.body);
 
   // Validate if identifier and password are provided
