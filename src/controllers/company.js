@@ -710,7 +710,7 @@ export const getReportByCompanyId = async (req, res, next) => {
     });
 
     // Get company level statistics
-    const companyStats = await calculateCompanyStatistics(companyId);
+    const companyStats = await calculateAssessmentStatisticsForCompany(companyId);
 
     // Enhance department report with assessment statistics
     const enhancedDepartmentReport = await Promise.all(
@@ -1299,8 +1299,6 @@ export const getRiskMetricsForCompany = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 export const getCompanyOverview = async (req, res, next) => {
   const { companyId } = req.params;
