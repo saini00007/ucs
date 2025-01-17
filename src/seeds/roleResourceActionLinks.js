@@ -48,7 +48,9 @@ const seedRoleResourceActionLinks = async () => {
         { resourceId: 'industrysector', actionIds: ['list'] },
         { resourceId: 'controlframework', actionIds: ['list'] },
         { resourceId: 'companyprogressreport', actionIds: ['read'] },
+        { resourceId: 'masterdepartment', actionIds: ['list'] },
       ]
+
     },
     {
       roleId: 'leadership',
