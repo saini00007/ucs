@@ -136,18 +136,20 @@ export const updateDepartment = async (req, res, next) => {
 
   try {
 
-    // Check if the company exists
-    const company = await Company.findByPk(companyId, { transaction });
-
-    if (!company) {
-      throw new AppError('Invalid company ID', 400);
-    }
     // Find department
-    const department = await Department.findByPk(departmentId, { transaction });
+    const department = await Department.findByPk(departmentId, {
+      include: [{
+        model: Company,
+        as: 'company',
+        attributes: ['id', 'companyName','auditCompletionDeadline']
+      }
+      ], transaction
+    });
+    
     if (!department) {
       throw new AppError('Department not found', 404);
     }
-    const auditCompletionDeadline = company.auditCompletionDeadline;
+    const auditCompletionDeadline = department.company.auditCompletionDeadline;
 
     const companyAuditCompletionDeadline = auditCompletionDeadline ? new Date(auditCompletionDeadline) : null;
     const assessmentDeadline = new Date(deadline);
