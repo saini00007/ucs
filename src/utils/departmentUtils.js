@@ -1,4 +1,5 @@
 import { Assessment, AssessmentQuestion, MasterQuestion, MasterSubDepartment, SubAssessment, SubDepartment } from "../models";
+import AppError from "./AppError";
 
 export const createDepartmentAssessment = async ({
     departmentId,
@@ -40,10 +41,10 @@ export const createDepartmentAssessment = async ({
             departmentId,
             masterSubDepartmentId: masterSubDeptId
         }, { transaction });
-         console.log(deadline)
+        console.log(deadline)
         // Create sub-assessment
         const subAssessment = await SubAssessment.create({
-            subAssessmentName:`${newAssessment.assessmentName}_${subDepartment.subDepartmentName}`,
+            subAssessmentName: `${newAssessment.assessmentName}_${subDepartment.subDepartmentName}`,
             subDepartmentId: subDepartment.id,
             assessmentId: newAssessment.id,
             deadline
@@ -67,3 +68,17 @@ export const createDepartmentAssessment = async ({
         subDepartments
     };
 };
+
+export const validateAssessmentDeadline = async (companyAuditCompletionDeadline, assessmentDeadline) => {
+    if (companyAuditCompletionDeadline) {
+        if (assessmentDeadline > companyAuditCompletionDeadline) {
+            throw new AppError('Deadline must be less than audit completion deadline of company', 400);
+        }
+    }
+    else {
+        const maxAllowedDeadline = new Date(new Date().setMonth(new Date().getMonth() + 2));
+        if (assessmentDeadline > maxAllowedDeadline) {
+            throw new AppError('Deadline must be less than max allowed deadline', 400);
+        }
+    }
+}

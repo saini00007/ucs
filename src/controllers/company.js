@@ -78,7 +78,6 @@ export const createCompany = async (req, res, next) => {
   }
 };
 
-
 export const getAllCompanies = async (req, res, next) => {
   const { page = 1, limit = 10 } = req.query;
   try {
@@ -187,7 +186,8 @@ export const updateCompany = async (req, res, next) => {
     secondaryCountryCode,
     panNumber,
     industrySectorId,
-    controlFrameworkIds
+    controlFrameworkIds,
+    auditCompletionDeadline
   } = req.body;
 
   const transaction = await sequelize.transaction();
@@ -228,6 +228,7 @@ export const updateCompany = async (req, res, next) => {
     if (primaryCountryCode) company.primaryCountryCode = primaryCountryCode;
     if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
     if (panNumber) company.panNumber = panNumber;
+    if (auditCompletionDeadline) company.auditCompletionDeadline = auditCompletionDeadline;
     if (req.files?.['companyLogo']) company.companyLogo = req.files['companyLogo'][0].buffer;
 
     await company.save({ transaction });
@@ -628,7 +629,6 @@ export const getUsersByCompanyId = async (req, res, next) => {
   }
 };
 
-
 export const getReportByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
   const { controlFrameworkIds = '' } = req.query;
@@ -650,7 +650,7 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     // Parse and validate control framework IDs
     const frameworkIds = controlFrameworkIds.split(',').filter(Boolean);
-    
+
     if (frameworkIds.length === 0) {
       throw new AppError('At least one valid control framework ID is required', 400);
     }
@@ -675,7 +675,7 @@ export const getReportByCompanyId = async (req, res, next) => {
     if (unauthorizedIds.length > 0) {
       throw new AppError(`Invalid or unauthorized control framework IDs: ${unauthorizedIds.join(', ')}`, 400);
     }
-    
+
     // Get the full framework details
     const controlFrameworks = await ControlFramework.findAll({
       where: {
@@ -740,7 +740,7 @@ export const getReportByCompanyId = async (req, res, next) => {
           model: Assessment,
           as: 'assessments',
           attributes: [
-            'id', 
+            'id',
             'assessmentName',
             'assessmentStarted',
             'submitted',
@@ -1338,8 +1338,8 @@ export const getRiskMetricsForCompany = async (req, res, next) => {
             departmentRiskIndex: subMetrics.departmentRiskIndex,
             controlCoverageRatio: subMetrics.controlCoverageRatio,
             gapDensityRate: subMetrics.gapDensityRate,
-            departmentComplianceScore:subMetrics.departmentComplianceScore,
-            documentationCoverageRatio:subMetrics.documentationCoverageRatio
+            departmentComplianceScore: subMetrics.departmentComplianceScore,
+            documentationCoverageRatio: subMetrics.documentationCoverageRatio
           }
         };
       }).filter(Boolean);
@@ -1464,3 +1464,4 @@ export const getCompanyOverview = async (req, res, next) => {
     next(error);
   }
 };
+

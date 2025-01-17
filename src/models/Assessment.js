@@ -39,7 +39,12 @@ const Assessment = sequelize.define('Assessment', {
   deadline: {
     type: DataTypes.DATE,
     allowNull: true
-  }
+  },
+  // assessmentType: {
+  //   type: DataTypes.STRING,
+  //   defaultValue: 'default',
+  //   allowNull: true
+  // }
 }, {
   tableName: 'assessments',
   timestamps: true,
@@ -61,10 +66,11 @@ Assessment.associate = (models) => {
     as: 'questions'
   });
 
-  Assessment.hasMany(models.SubAssessment,{
-    foreignKey:'assessmentId',
-    as:'subAssessments'
+  Assessment.hasMany(models.SubAssessment, {
+    foreignKey: 'assessmentId',
+    as: 'subAssessments'
   })
+
 };
 
 export default Assessment;

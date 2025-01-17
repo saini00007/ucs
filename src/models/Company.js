@@ -51,6 +51,10 @@ const Company = sequelize.define('Company', {
     type: DataTypes.STRING(5),
     allowNull: true,
   },
+  auditCompletionDeadline: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   createdByUserId: {
     type: DataTypes.STRING(12),
     references: {
@@ -76,22 +80,22 @@ const Company = sequelize.define('Company', {
 
 Company.associate = (models) => {
   // User association
-  Company.hasMany(models.User, { 
-    foreignKey: 'companyId', 
-    as: 'users' 
+  Company.hasMany(models.User, {
+    foreignKey: 'companyId',
+    as: 'users'
   });
-  
+
   // Department association
-  Company.hasMany(models.Department, { 
-    foreignKey: 'companyId', 
-    as: 'departments' 
+  Company.hasMany(models.Department, {
+    foreignKey: 'companyId',
+    as: 'departments'
   });
-  
+
   // IndustrySector association
-  Company.belongsTo(models.IndustrySector, { 
-    foreignKey: 'industrySectorId', 
-    targetKey: 'id', 
-    as: 'industrySector' 
+  Company.belongsTo(models.IndustrySector, {
+    foreignKey: 'industrySectorId',
+    targetKey: 'id',
+    as: 'industrySector'
   });
 
   Company.belongsToMany(models.ControlFramework, {

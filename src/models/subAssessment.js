@@ -59,7 +59,12 @@ const SubAssessment = sequelize.define('SubAssessment', {
     deadline: {
         type: DataTypes.DATE,
         allowNull: true
-    }
+    },
+    // subAssessmentType: {
+    //     type: DataTypes.STRING,
+    //     defaultValue: 'default',
+    //     allowNull: true
+    // }
 }, {
     tableName: 'sub_assessments',
     timestamps: true,

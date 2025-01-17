@@ -21,7 +21,7 @@ import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
-import { createDepartmentAssessment } from '../utils/departmentUtils.js';
+import { createDepartmentAssessment, validateAssessmentDeadline } from '../utils/departmentUtils.js';
 import { ANSWER_TYPES, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 
@@ -67,6 +67,7 @@ export const createDepartment = async (req, res, next) => {
   try {
     // Check if the company exists
     const company = await Company.findByPk(companyId, { transaction });
+
     if (!company) {
       throw new AppError('Invalid company ID', 400);
     }
@@ -76,6 +77,12 @@ export const createDepartment = async (req, res, next) => {
     if (!masterDepartment) {
       throw new AppError('Invalid master department ID', 400);
     }
+    const auditCompletionDeadline = company.auditCompletionDeadline;
+
+    const companyAuditCompletionDeadline = auditCompletionDeadline ? new Date(auditCompletionDeadline) : null;
+    const assessmentDeadline = new Date(deadline);
+
+    await validateAssessmentDeadline(companyAuditCompletionDeadline, assessmentDeadline);
 
     // Create the new department
     const newDepartment = await Department.create({
@@ -128,11 +135,26 @@ export const updateDepartment = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
+
+    // Check if the company exists
+    const company = await Company.findByPk(companyId, { transaction });
+
+    if (!company) {
+      throw new AppError('Invalid company ID', 400);
+    }
     // Find department
     const department = await Department.findByPk(departmentId, { transaction });
     if (!department) {
       throw new AppError('Department not found', 404);
     }
+    const auditCompletionDeadline = company.auditCompletionDeadline;
+
+    const companyAuditCompletionDeadline = auditCompletionDeadline ? new Date(auditCompletionDeadline) : null;
+    const assessmentDeadline = new Date(deadline);
+
+
+
+    await validateAssessmentDeadline(companyAuditCompletionDeadline, assessmentDeadline);
 
     // Update department name if provided
     if (departmentName) {
@@ -522,7 +544,7 @@ export const departmentProgressReport = async (req, res, next) => {
           model: Assessment,
           as: 'assessments',
           where: {
-            assessmentName: 'default'
+            assessmentName: 'default'//assessmentType
           },
           required: false,
           include: [{
@@ -618,11 +640,11 @@ export const departmentProgressReport = async (req, res, next) => {
         subDepartmentName: subDept.subDepartmentName,
         compliancePercentage: averageCompliance.toFixed(2)
       });
-    });
-    const { questions, ...defaultAssessment } = department.assessments[0].toJSON();
+    }); //have to change this based on assessmentType=default
+
+    const { questions, ...defaultAssessment } = department.assessments[0].toJSON(); //assessmentType=default
     const sp80053ControlNumRequired = false;
     const stats = await calculateAssessmentStatistics(defaultAssessment.id, sp80053ControlNumRequired);
-    console.log(stats)
 
     res.status(200).json({
       success: true,
@@ -968,7 +990,7 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
       });
     }
 
-    const assessment = department.assessments?.[0];
+    const assessment = department.assessments?.[0];//assessmentType=default
     if (!assessment) {
       return res.status(404).json({
         success: false,
@@ -981,7 +1003,7 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
 
     // Calculate metrics for all subdepartments
     const subdepartmentsData = department.subDepartments.map(subdepartment => {
-      const subAssessment = subdepartment.subAssessments[0];
+      const subAssessment = subdepartment.subAssessments[0]; //assessmentType=default
       if (!subAssessment) return null;
 
       const subMetrics = calculateMetrics(subAssessment.questions);
@@ -1341,3 +1363,4 @@ export const getReportByDepartmentId = async (req, res, next) => {
     next(error);
   }
 };
+

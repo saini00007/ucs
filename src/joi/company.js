@@ -151,6 +151,15 @@ const updateCompanySchema = Joi.object({
             'string.max': 'Country code must be between 1 and 5 characters',
             'string.pattern.base': 'Country code must contain only digits and optionally a "+" at the beginning',
         }),
+    auditCompletionDeadline: Joi.date()
+        .iso()
+        .greater('now')
+        .optional()
+        .messages({
+            'date.base': 'auditCompletionDeadline must be a valid date.',
+            'date.greater': 'auditCompletionDeadline must be in the future.',
+            'any.required': 'auditCompletionDeadline is required.',
+        }),
 })
     .custom((value, helpers) => {
         if (value.primaryEmail && value.secondaryEmail && value.primaryEmail === value.secondaryEmail) {
