@@ -29,7 +29,16 @@ export const getDepartmentById = async (req, res, next) => {
   const { departmentId } = req.params;
 
   try {
-    // Fetch the department by its ID, including associated Company and MasterDepartment details
+    // First, fetch just the deadline from the default assessment
+    const defaultAssessment = await Assessment.findOne({
+      where: {
+        departmentId,
+        assessmentName: 'default'
+      },
+      attributes: ['deadline'],
+    });
+
+    // Then fetch the department with its basic associations
     const department = await Department.findByPk(departmentId, {
       include: [
         {
@@ -41,17 +50,23 @@ export const getDepartmentById = async (req, res, next) => {
           model: MasterDepartment,
           as: 'masterDepartment',
           attributes: ['departmentName']
-        },
+        }
       ],
     });
 
-    // If the department is not found, throw an error
     if (!department) {
       throw new AppError('Department not found', 404);
     }
 
-    // Return the department details in the response
-    res.status(200).json({ success: true, department: department });
+    // Return the department details with the deadline
+    res.status(200).json({ 
+      success: true, 
+      department: {
+        ...department.toJSON(),
+        deadline: defaultAssessment?.deadline || null
+      }
+    });
+
   } catch (error) {
     console.error('Error fetching department:', error);
     next(error);

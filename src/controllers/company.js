@@ -456,24 +456,42 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
           model: MasterDepartment,
           as: 'masterDepartment',
           attributes: ['departmentName'],
+        },
+        {
+          model: Assessment,
+          as: 'assessments',
+          attributes: ['deadline'],
+          where: {
+            assessmentName: 'default'
+          },
+          required: false
         }
       ]
     };
 
     // Add role-based filtering
     if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.LEADERSHIP].includes(req.user.roleId)) {
-      // For non-admin users, only show departments they're associated with
       queryConfig.include.push({
         model: User,
         as: 'users',
         attributes: [],
         where: { id: req.user.id },
-        required: true // This ensures only departments with matching users are returned
+        required: true
       });
     }
 
     // Fetch departments
-    const { count, rows: departments } = await Department.findAndCountAll(queryConfig);
+    const { count, rows: departmentsWithAssessments } = await Department.findAndCountAll(queryConfig);
+
+    // Transform the departments to include deadline but exclude assessment details
+    const departments = departmentsWithAssessments.map(dept => {
+      const deptJson = dept.toJSON();
+      return {
+        ...deptJson,
+        deadline: deptJson.assessments?.[0]?.deadline || null,
+        assessments: undefined // Remove the assessments array
+      };
+    });
 
     // Calculate pagination info
     const totalPages = Math.ceil(count / limitNum);
