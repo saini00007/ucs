@@ -1,66 +1,86 @@
-import { EvidenceFile, Answer, AssessmentQuestion, Assessment, Department, SubAssessment, SubDepartment } from "../../models/index.js";
+import { 
+    EvidenceFile, 
+    Answer, 
+    AssessmentQuestion, 
+    Assessment,
+    Department,
+    SubAssessment,
+    SubDepartment 
+} from "../../models/index.js";
 import { checkAccessScope, checkAssessmentState } from "../../utils/accessValidators.js";
 import AppError from "../../utils/AppError.js";
 
 const checkEvidenceFileAccess = async (user, resourceId) => {
     try {
+        // Step 1: Fetch evidence file and answer
         const evidenceFile = await EvidenceFile.findByPk(resourceId, {
-            include: [
-                {
-                    model: Answer,
-                    as: 'answer',
-                    include: [
-                        {
-                            model: AssessmentQuestion,
-                            as: 'assessmentQuestion',
-                            include: {
-                                model: SubAssessment,
-                                as: 'subAssessment',
-                                attributes: ['subAssessmentStarted', 'submitted', 'subDepartmentId'],
-                                include: [{
-                                    model: SubDepartment,
-                                    as: 'subDepartment',
-                                    attributes: ['id'],
-                                    include: [{
-                                        model: Department,
-                                        as: 'department',
-                                        attributes: ['id', 'companyId']
-                                    }]
-                                },
-                                {
-                                    model: Assessment,
-                                    as: 'assessment',
-                                    attributes: ['assessmentStarted', 'submitted', 'departmentId']
-                                }]
-                            }
-                        },
-                    ],
-                },
-            ],
+            include: [{
+                model: Answer,
+                as: 'answer',
+                attributes: ['id', 'assessmentQuestionId']
+            }]
         });
 
         if (!evidenceFile) {
-            // If the evidence file is not found, throw an error
             throw new AppError('EvidenceFile not found', 404);
         }
 
-        const subDepartment = evidenceFile.answer.assessmentQuestion.subAssessment.subDepartment;
+        // Step 2: Fetch assessment question and sub-assessment
+        const assessmentQuestion = await AssessmentQuestion.findByPk(
+            evidenceFile.answer.assessmentQuestionId,
+            {
+                include: [{
+                    model: SubAssessment,
+                    as: 'subAssessment',
+                    attributes: [
+                        'id',
+                        'subAssessmentStarted',
+                        'submitted',
+                        'subDepartmentId',
+                        'assessmentId'
+                    ]
+                }]
+            }
+        );
+
+        // Step 3: Fetch sub-department and department details
+        const subDepartment = await SubDepartment.findByPk(
+            assessmentQuestion.subAssessment.subDepartmentId,
+            {
+                include: [{
+                    model: Department,
+                    as: 'department',
+                    attributes: ['id', 'companyId']
+                }]
+            }
+        );
+
+        // Step 4: Fetch assessment details
+        const assessment = await Assessment.findByPk(
+            assessmentQuestion.subAssessment.assessmentId,
+            {
+                attributes: ['assessmentStarted', 'submitted', 'departmentId']
+            }
+        );
+
+        // Access validation
         const companyId = subDepartment.department.companyId;
         const departmentId = subDepartment.department.id;
         const subDepartmentId = subDepartment.id;
 
         // Check access scope
-        const accessScope = checkAccessScope(user, companyId, departmentId,subDepartmentId);
+        const accessScope = checkAccessScope(user, companyId, departmentId, subDepartmentId);
         if (!accessScope.success) {
-            // If access scope is denied, throw an error
             throw new AppError('Access denied: insufficient access scope', 403);
         }
 
         // Check assessment state
-        const assessmentState = checkAssessmentState(evidenceFile.answer.assessmentQuestion.subAssessment.assessment);
+        const assessmentState = checkAssessmentState(assessment);
         if (!assessmentState.success) {
-            // If assessment state is not valid, throw an error
-            throw new AppError(assessmentState.message || 'Invalid assessment state', assessmentState.status || 400);
+            throw new AppError(
+                assessmentState.message || 'Invalid assessment state',
+                assessmentState.status || 400
+            );
         }
 
         return { success: true };

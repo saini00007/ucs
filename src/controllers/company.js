@@ -5,7 +5,7 @@ import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateAssessmentStatisticsForCompany, getAssessmentStatus } from '../utils/calculateStatistics.js';
 
 import { handleCompanyEmailUpdates, validateControlFrameworkIds, validateEmailForCompany } from '../utils/companyUtils.js'
-import { frameworkFieldMapping, ROLE_IDS } from '../utils/constants.js';
+import { ASSESSMENT_TYPE, frameworkFieldMapping, ROLE_IDS } from '../utils/constants.js';
 // import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
 import { getCategorizedAssessments, getCategorizedSubAssessments, getMetricsOfAssessments } from '../utils/progressStatistics.js';
 import { getFilteredAssessments } from '../utils/assessmentUtils.js';
@@ -14,12 +14,13 @@ import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 
 export const createCompany = async (req, res, next) => {
   const {
-    companyName,
+    companyLegalName,
     primaryEmail,
     secondaryEmail,
-    industrySectorId
   } = req.body;
+
   const transaction = await sequelize.transaction();
+
   try {
     // Validate primary email
     const primaryEmailValidation = await validateEmailForCompany(primaryEmail);
@@ -33,23 +34,13 @@ export const createCompany = async (req, res, next) => {
       throw new AppError(`Secondary ${secondaryEmailValidation.message}`, 409);
     }
 
-    // Check if the industry sector ID is provided and valid
-    let industrySector = null;
-    if (industrySectorId) {
-      industrySector = await IndustrySector.findByPk(industrySectorId);
-      if (!industrySector) {
-        throw new AppError('Industry sector not found.', 404);
-      }
-    }
-
     // Create the company
     const newCompany = await Company.create(
       {
-        companyName,
+        companyLegalName,
         primaryEmail,
         secondaryEmail,
         createdByUserId: req.user.id,
-        industrySectorId
       },
       { transaction }
     );
@@ -57,14 +48,9 @@ export const createCompany = async (req, res, next) => {
     // Commit the transaction
     await transaction.commit();
 
-    // Refetch the company and include only desired attributes
+    // Refetch the company and include only desired attributes 
     const refetchedCompany = await Company.findByPk(newCompany.id, {
-      attributes: ['id', 'companyName', 'primaryEmail', 'secondaryEmail'],
-      include: [{
-        model: IndustrySector,
-        as: 'industrySector',
-        attributes: ['id', 'sectorName', 'sectorType'],
-      },],
+      attributes: ['id', 'companyLegalName', 'primaryEmail', 'secondaryEmail'],
     });
 
     res.status(201).json({
@@ -74,7 +60,545 @@ export const createCompany = async (req, res, next) => {
     });
   } catch (error) {
     await transaction.rollback();
-    next(error)
+    next(error);
+  }
+};
+
+export const createCompanyDetails = async (req, res, next) => {
+  const { companyId } = req.params;
+  const {
+    tradeName,
+    companyLegalName,
+    website,
+    incorporationDate,
+    companySize,
+    streetAddress,
+    city,
+    state,
+    country,
+    postalCode,
+    taxIdType,
+    taxIdNumber,
+    companyRegistrationNumber,
+    panReferenceNumber,
+    primaryPhone,
+    secondaryPhone,
+    primaryCountryCode,
+    secondaryCountryCode,
+    auditCompletionDeadline,
+    annualRevenueRange,
+    industrySectorId,
+  } = req.body;
+  console.log(companyId);
+
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const company = await Company.findByPk(companyId, { transaction });
+    if (!company) {
+      throw new AppError('Company not found.', 404);
+    }
+    console.log(company.id)
+
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        throw new AppError('Industry sector not found.', 404);
+      }
+    }
+
+    if (company.detailsStatus === 'complete') {
+      throw new AppError('Details already completed. ', 409)
+    }
+
+    await company.update({
+      tradeName,
+      companyLegalName,
+      website,
+      incorporationDate,
+      companySize,
+      streetAddress,
+      city,
+      state,
+      country,
+      postalCode,
+      taxIdType,
+      taxIdNumber,
+      companyRegistrationNumber,
+      panReferenceNumber,
+      primaryPhone,
+      secondaryPhone,
+      primaryCountryCode,
+      secondaryCountryCode,
+      auditCompletionDeadline,
+      annualRevenueRange,
+      industrySectorId,
+      companyLogo: req.files?.['companyLogo']?.[0]?.buffer,
+      detailsStatus: 'complete'
+    }, { transaction });
+
+    await transaction.commit();
+
+    const updatedCompany = await Company.findByPk(companyId, {
+      attributes: { exclude: ['companyLogo', 'createdByUserId', 'deletedAt', 'password'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType']
+      }]
+    });
+
+    res.status(201).json({
+      success: true,
+      messages: ['Company details created successfully'],
+      company: updatedCompany
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+export const updateCompanyDetails = async (req, res, next) => {
+  const { companyId } = req.params;
+  const {
+    tradeName,
+    companyLegalName,
+    website,
+    incorporationDate,
+    companySize,
+    streetAddress,
+    city,
+    state,
+    country,
+    postalCode,
+    taxIdType,
+    taxIdNumber,
+    companyRegistrationNumber,
+    panReferenceNumber,
+    primaryPhone,
+    secondaryPhone,
+    primaryCountryCode,
+    secondaryCountryCode,
+    auditCompletionDeadline,
+    annualRevenueRange,
+    industrySectorId,
+  } = req.body;
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const company = await Company.findByPk(companyId, { transaction });
+
+    if (!company) {
+      throw new AppError('Company not found.', 404);
+    }
+
+    if (company.detailsStatus === 'incomplete') {
+      throw new AppError('Complete company details creation first', 400);
+    }
+
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        throw new AppError('Industry sector not found.', 404);
+      }
+    }
+
+    // Check if any data is provided for update
+    if (Object.keys(req.body).length === 0 && !req.files) {
+      throw new AppError('No data provided for update.', 400);
+    }
+
+    const updateData = {
+      ...(tradeName && { tradeName }),
+      ...(companyLegalName && { companyLegalName }),
+      ...(website && { website }),
+      ...(incorporationDate && { incorporationDate }),
+      ...(companySize && { companySize }),
+      ...(streetAddress && { streetAddress }),
+      ...(city && { city }),
+      ...(state && { state }),
+      ...(country && { country }),
+      ...(postalCode && { postalCode }),
+      ...(taxIdType && { taxIdType }),
+      ...(taxIdNumber && { taxIdNumber }),
+      ...(companyRegistrationNumber && { companyRegistrationNumber }),
+      ...(panReferenceNumber && { panReferenceNumber }),
+      ...(primaryPhone && { primaryPhone }),
+      ...(secondaryPhone && { secondaryPhone }),
+      ...(primaryCountryCode && { primaryCountryCode }),
+      ...(secondaryCountryCode && { secondaryCountryCode }),
+      ...(auditCompletionDeadline && { auditCompletionDeadline }),
+      ...(annualRevenueRange && { annualRevenueRange }),
+      ...(industrySectorId && { industrySectorId }),
+    };
+
+    // Handle company logo update if provided
+    if (req.files?.['companyLogo']?.[0]?.buffer) {
+      updateData.companyLogo = req.files['companyLogo'][0].buffer;
+    }
+
+    await company.update(updateData, { transaction });
+
+    await transaction.commit();
+
+    const updatedCompany = await Company.findByPk(companyId, {
+      attributes: { exclude: ['companyLogo', 'createdByUserId', 'deletedAt', 'password'] },
+      include: [{
+        model: IndustrySector,
+        as: 'industrySector',
+        attributes: ['id', 'sectorName', 'sectorType']
+      }]
+    });
+
+    res.status(200).json({
+      success: true,
+      messages: ['Company details updated successfully'],
+      company: updatedCompany
+    });
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+export const addCompanyControlFrameworks = async (req, res, next) => {
+  const { companyId } = req.params;
+  const { controlFrameworkIds } = req.body;
+  const transaction = await sequelize.transaction();
+
+  try {
+    const company = await Company.findByPk(companyId, { transaction });
+
+    if (!company) {
+      throw new AppError('Company not found.', 404);
+    }
+
+    // Check if company details are completed first
+    if (company.detailsStatus !== 'complete') {
+      throw new AppError('Please complete company details first.', 400);
+    }
+
+    // Validate control framework IDs
+    await validateControlFrameworkIds(controlFrameworkIds);
+
+    // Check if controlFrameworkIds array is not empty
+    if (!controlFrameworkIds || controlFrameworkIds.length === 0) {
+      throw new AppError('At least one control framework must be selected.', 400);
+    }
+
+    // Set control frameworks and update status
+    await company.setControlFrameworks(controlFrameworkIds, { transaction });
+    await company.update({ controlFrameworksStatus: 'complete' }, { transaction });
+
+    await transaction.commit();
+
+    res.status(201).json({
+      success: true,
+      messages: [
+        'Control frameworks added successfully',
+      ]
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+export const updateCompanyControlFrameworks = async (req, res, next) => {
+  const { companyId } = req.params;
+  const { controlFrameworkIds } = req.body;
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const company = await Company.findByPk(companyId, {
+      include: [{
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        attributes: ['id'],
+        through: { attributes: [] }
+      }],
+      transaction
+    });
+
+    if (!company) {
+      throw new AppError('Company not found.', 404);
+    }
+
+    // Check if control frameworks section is completed first
+    if (company.controlFrameworksStatus !== 'complete') {
+      throw new AppError('Complete control frameworks creation first.', 400);
+    }
+
+    // Get existing framework IDs
+    const existingFrameworkIds = company.controlFrameworks.map(fw => fw.id);
+
+    // Find frameworks to add and remove
+    const frameworksToAdd = controlFrameworkIds.filter(
+      id => !existingFrameworkIds.includes(id)
+    );
+    const frameworksToRemove = existingFrameworkIds.filter(
+      id => !controlFrameworkIds.includes(id)
+    );
+
+    // Validate new frameworks exist in database
+    if (frameworksToAdd.length > 0) {
+      const validFrameworks = await ControlFramework.findAll({
+        where: {
+          id: frameworksToAdd
+        },
+        transaction
+      });
+
+      if (validFrameworks.length !== frameworksToAdd.length) {
+        const foundIds = validFrameworks.map(f => f.id);
+        const invalidIds = frameworksToAdd.filter(id => !foundIds.includes(id));
+        throw new AppError(`Invalid framework IDs: ${invalidIds.join(', ')}`, 400);
+      }
+    }
+
+    // Perform the additions
+    if (frameworksToAdd.length > 0) {
+      await company.addControlFrameworks(frameworksToAdd, { transaction });
+    }
+
+    // Perform the removals
+    if (frameworksToRemove.length > 0) {
+      await company.removeControlFrameworks(frameworksToRemove, { transaction });
+    }
+
+    // Get updated company with frameworks for response
+    const updatedCompany = await Company.findByPk(companyId, {
+      include: [{
+        model: ControlFramework,
+        as: 'controlFrameworks',
+        attributes: ['id', 'frameworkType', 'category'],
+        through: { attributes: [] }
+      }],
+      transaction
+    });
+
+    await transaction.commit();
+
+    res.status(200).json({
+      success: true,
+      messages: ['Control frameworks updated successfully'],
+      company: updatedCompany
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
+
+export const getCompanySetupStatus = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await Company.findByPk(companyId, {
+      attributes: ['detailsStatus', 'controlFrameworksStatus', 'departmentsStatus']
+    });
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: 'Company not found'
+      });
+    }
+
+    // Determine current stage based on status
+    let currentStage = 'details';
+    if (company.detailsStatus === 'complete') {
+      if (company.controlFrameworksStatus === 'complete') {
+        if (company.departmentsStatus === 'complete') {
+          currentStage = 'complete';
+        } else {
+          currentStage = 'departments';
+        }
+      } else {
+        currentStage = 'framework';
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        detailsStatus: company.detailsStatus,
+        controlFrameworksStatus: company.controlFrameworksStatus,
+        departmentsStatus: company.departmentsStatus,
+        currentStage
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in getCompanySetupStatus:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching company setup status',
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const updateCompany = async (req, res, next) => {
+  console.log(req.body);
+  const { companyId } = req.params;
+  const {
+    companyLegalName,
+    tradeName,
+    website,
+    incorporationDate,
+    companySize,
+    streetAddress,
+    city,
+    state,
+    country,
+    postalCode,
+    taxIdType,
+    taxIdNumber,
+    companyRegistrationNumber,
+    panReferenceNumber,
+    primaryEmail,
+    secondaryEmail,
+    primaryPhone,
+    secondaryPhone,
+    primaryCountryCode,
+    secondaryCountryCode,
+    auditCompletionDeadline,
+    annualRevenueRange,
+    industrySectorId,
+    controlFrameworkIds
+  } = req.body;
+
+  let transaction;
+
+  try {
+    transaction = await sequelize.transaction();
+
+    const company = await Company.findByPk(companyId, { transaction });
+
+    if (!company) {
+      throw new AppError('Company not found.', 404);
+    }
+
+    // Handle all email updates
+    let emailUpdates = [];
+    if (primaryEmail || secondaryEmail) {
+      emailUpdates = await handleCompanyEmailUpdates(company, primaryEmail, secondaryEmail, transaction);
+    }
+
+    // Check phone number duplication
+    if (
+      (primaryPhone && primaryPhone === company.secondaryPhone && !secondaryPhone) ||
+      (secondaryPhone && secondaryPhone === company.primaryPhone && !primaryPhone)
+    ) {
+      throw new AppError('Primary phone is same as secondary phone in database and vice versa.', 400);
+    }
+
+    // Validate industry sector
+    if (industrySectorId) {
+      const industrySector = await IndustrySector.findByPk(industrySectorId);
+      if (!industrySector) {
+        throw new AppError('Industry sector not found.', 404);
+      }
+      company.industrySectorId = industrySectorId;
+    }
+
+    // Update all fields
+    const updateFields = {
+      companyLegalName,
+      tradeName,
+      website,
+      incorporationDate,
+      companySize,
+      streetAddress,
+      city,
+      state,
+      country,
+      postalCode,
+      taxIdType,
+      taxIdNumber,
+      companyRegistrationNumber,
+      panReferenceNumber,
+      primaryPhone,
+      secondaryPhone,
+      primaryCountryCode,
+      secondaryCountryCode,
+      auditCompletionDeadline,
+      annualRevenueRange
+    };
+
+    // Filter out undefined values
+    const filteredUpdates = Object.fromEntries(
+      Object.entries(updateFields).filter(([_, value]) => value !== undefined)
+    );
+
+    Object.assign(company, filteredUpdates);
+
+    // Handle company logo if present
+    if (req.files?.['companyLogo']) {
+      company.companyLogo = req.files['companyLogo'][0].buffer;
+    }
+
+    await company.save({ transaction });
+
+    // Handle control frameworks
+    if (controlFrameworkIds) {
+      await validateControlFrameworkIds(controlFrameworkIds);
+      await company.setControlFrameworks(controlFrameworkIds, { transaction });
+    }
+
+    await transaction.commit();
+
+    // Fetch updated company
+    const updatedCompany = await Company.findByPk(companyId, {
+      attributes: { exclude: ['companyLogo'] },
+      include: [
+        {
+          model: IndustrySector,
+          as: 'industrySector',
+          attributes: ['id', 'sectorName', 'sectorType'],
+        },
+        {
+          model: ControlFramework,
+          as: 'controlFrameworks',
+          through: { attributes: [] },
+          attributes: ['id', 'frameworkType']
+        }
+      ],
+    });
+
+    res.status(200).json({
+      success: true,
+      messages: [
+        'Company updated successfully',
+        ...emailUpdates
+      ],
+      company: updatedCompany,
+    });
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    next(error);
   }
 };
 
@@ -168,118 +692,6 @@ export const getCompanyById = async (req, res, next) => {
       company,
     });
   } catch (error) {
-    next(error);
-  }
-};
-
-export const updateCompany = async (req, res, next) => {
-  const { companyId } = req.params;
-  const {
-    companyName,
-    postalAddress,
-    gstNumber,
-    primaryEmail,
-    secondaryEmail,
-    primaryPhone,
-    secondaryPhone,
-    primaryCountryCode,
-    secondaryCountryCode,
-    panNumber,
-    industrySectorId,
-    controlFrameworkIds,
-    auditCompletionDeadline
-  } = req.body;
-
-  const transaction = await sequelize.transaction();
-  try {
-    const company = await Company.findByPk(companyId, { transaction });
-
-    if (!company) {
-      throw new AppError('Company not found.', 404);
-    }
-
-    // Handle all email updates
-    let emailUpdates = [];
-    if (primaryEmail || secondaryEmail) {
-      emailUpdates = await handleCompanyEmailUpdates(company, primaryEmail, secondaryEmail, transaction);
-    }
-
-    if (
-      (primaryPhone && primaryPhone === company.secondaryPhone && !secondaryPhone) ||
-      (secondaryPhone && secondaryPhone === company.primaryPhone && !primaryPhone)
-    ) {
-      throw new AppError('Primary phone is same as secondary phone in database and vice versa.', 400);
-    }
-
-    if (industrySectorId) {
-      const industrySector = await IndustrySector.findByPk(industrySectorId);
-      if (!industrySector) {
-        throw new AppError('Industry sector not found.', 404);
-      }
-    }
-    company.industrySectorId = industrySectorId;
-
-    // Update other fields
-    if (companyName) company.companyName = companyName;
-    if (postalAddress) company.postalAddress = postalAddress;
-    if (gstNumber) company.gstNumber = gstNumber;
-    if (primaryPhone) company.primaryPhone = primaryPhone;
-    if (secondaryPhone) company.secondaryPhone = secondaryPhone;
-    if (primaryCountryCode) company.primaryCountryCode = primaryCountryCode;
-    if (secondaryCountryCode) company.secondaryCountryCode = secondaryCountryCode;
-    if (panNumber) company.panNumber = panNumber;
-    if (auditCompletionDeadline) company.auditCompletionDeadline = auditCompletionDeadline;
-    if (req.files?.['companyLogo']) company.companyLogo = req.files['companyLogo'][0].buffer;
-
-    await company.save({ transaction });
-
-    if (controlFrameworkIds) {
-      await validateControlFrameworkIds(controlFrameworkIds);
-      await CompanyControlFrameworkLink.destroy({
-        where: { companyId },
-        transaction
-      });
-      // Create control framework associations 
-      await Promise.all(
-        controlFrameworkIds.map(async (frameworkId) => {
-          await CompanyControlFrameworkLink.create({
-            companyId: company.id,
-            controlFrameworkId: frameworkId,
-          }, { transaction });
-        })
-      );
-    }
-    await transaction.commit();
-
-    // Fetch updated company without logo
-    const updatedCompany = await Company.findByPk(companyId, {
-      attributes: { exclude: ['companyLogo'] },
-      include: [{
-        model: IndustrySector,
-        as: 'industrySector',
-        attributes: ['id', 'sectorName', 'sectorType'],
-      },
-      {
-        model: ControlFramework,
-        as: 'controlFrameworks',
-        through: {
-          attributes: []
-        },
-        attributes: ['id', 'frameworkType']
-      }
-      ],
-    });
-
-    res.status(200).json({
-      success: true,
-      messages: [
-        'Company updated successfully',
-        ...emailUpdates
-      ],
-      company: updatedCompany,
-    });
-  } catch (error) {
-    await transaction.rollback();
     next(error);
   }
 };
@@ -423,98 +835,120 @@ export const deleteCompany = async (req, res, next) => {
   }
 };
 
-export const getDepartmentsByCompanyId = async (req, res, next) => {
+export const getDepartmentsWithSubDepartmentsByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   try {
-    // Check if company exists
     const company = await Company.findByPk(companyId);
     if (!company) {
       throw new AppError('Company not found', 404);
     }
 
-    // Validate pagination params
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
-    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
-      throw new AppError('Invalid pagination parameters', 400);
-    }
-
-    // Base query config
-    const queryConfig = {
-      where: { companyId },
-      limit: limitNum,
-      offset: (pageNum - 1) * limitNum,
+    const departments = await Department.findAll({
+      where: {
+        companyId
+      },
+      attributes: ['id', 'departmentName'],
       include: [
         {
-          model: Company,
-          as: 'company',
-          attributes: ['companyName'],
+          model: SubDepartment,
+          as: 'subDepartments',
+          attributes: ['id', 'subDepartmentName']
+
         },
-        {
-          model: MasterDepartment,
-          as: 'masterDepartment',
-          attributes: ['departmentName'],
-        },
-        {
-          model: Assessment,
-          as: 'assessments',
-          attributes: ['deadline'],
-          where: {
-            assessmentName: 'default'
-          },
-          required: false
-        }
+      ],
+      order: [
+        ['createdAt', 'DESC'],
+        [{ model: SubDepartment, as: 'subDepartments' }, 'createdAt', 'DESC']
       ]
-    };
-
-    // Add role-based filtering
-    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.LEADERSHIP].includes(req.user.roleId)) {
-      queryConfig.include.push({
-        model: User,
-        as: 'users',
-        attributes: [],
-        where: { id: req.user.id },
-        required: true
-      });
-    }
-
-    // Fetch departments
-    const { count, rows: departmentsWithAssessments } = await Department.findAndCountAll(queryConfig);
-
-    // Transform the departments to include deadline but exclude assessment details
-    const departments = departmentsWithAssessments.map(dept => {
-      const deptJson = dept.toJSON();
-      return {
-        ...deptJson,
-        deadline: deptJson.assessments?.[0]?.deadline || null,
-        assessments: undefined // Remove the assessments array
-      };
     });
-
-    // Calculate pagination info
-    const totalPages = Math.ceil(count / limitNum);
-
-    // Check if page exists
-    if (pageNum > totalPages && count > 0) {
-      throw new AppError('Page not found', 404);
-    }
 
     return res.status(200).json({
       success: true,
-      messages: count === 0 ? ['No departments found'] : ['Departments retrieved successfully'],
-      departments,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: pageNum,
-        itemsPerPage: limitNum
-      },
+      messages: departments.length === 0 ? ['No departments found'] : ['Departments retrieved successfully'],
+      departments
     });
 
   } catch (error) {
-    console.error('Error fetching departments for company:', error);
+    console.error('Error fetching departments:', error);
+    next(error);
+  }
+};
+
+export const getDepartmentsByCompanyId = async (req, res, next) => {
+  try {
+    const { companyId } = req.params;
+    const { user } = req;  // Current user from request
+
+    // First verify company exists
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      throw new AppError('Company not found', 404);
+    }
+
+    let departments = [];
+
+    // For admin and leadership, fetch all departments
+    if (user.roleId === ROLE_IDS.ADMIN || user.roleId === ROLE_IDS.LEADERSHIP) {
+      departments = await Department.findAll({
+        where: { companyId },
+        include: [
+          {
+            model: Assessment,
+            as: 'assessments',
+            attributes: ['id', 'deadline'],
+            where: { assessmentType: ASSESSMENT_TYPE.DEFAULT },
+            required: false
+          },
+          {
+            model: SubDepartment,
+            as: 'subDepartments',
+            attributes: ['id', 'subDepartmentName']
+          }
+        ],
+        attributes: ['id', 'departmentName', 'createdAt'],
+        order: [['createdAt', 'DESC']]
+      });
+    } 
+    // For department manager, fetch only assigned departments
+    else if (user.roleId === ROLE_IDS.DEPARTMENT_MANAGER) {
+      departments = await Department.findAll({
+        where: { companyId },
+        include: [
+          {
+            model: Assessment,
+            as: 'assessments',
+            attributes: ['id', 'deadline'],
+            where: { assessmentType: ASSESSMENT_TYPE.DEFAULT },
+            required: false
+          },
+          {
+            model: SubDepartment,
+            as: 'subDepartments',
+            attributes: ['id', 'subDepartmentName']
+          },
+          {
+            model: User,
+            as: 'users',
+            where: { id: user.id },
+            attributes: [],
+            required: true
+          }
+        ],
+        attributes: ['id', 'departmentName', 'createdAt'],
+        order: [['createdAt', 'DESC']]
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      messages: departments.length === 0 ?
+        ['No departments found'] :
+        ['Departments retrieved successfully'],
+      departments
+    });
+
+  } catch (error) {
     next(error);
   }
 };
@@ -522,29 +956,31 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
 export const getUsersByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
   const { page = 1, limit = 10 } = req.query;
-  const { roleId, departments, subDepartments } = req.user;
 
   try {
+    // 1. First validate the company exists
     const company = await Company.findByPk(companyId);
     if (!company) {
       throw new AppError('Company not found', 404);
     }
 
-    // Validate pagination params
+    // 2. Validate and parse pagination parameters
     const pageNum = parseInt(page, 10);
     const limitNum = parseInt(limit, 10);
     if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
       throw new AppError('Invalid pagination parameters', 400);
     }
 
-    // Get department IDs from the user's departments
-    const departmentIds = departments.map(department => department.id);
+    // 3. Get the total count of users WITHOUT includes
+    // This ensures accurate counting without JOIN complications
+    const count = await User.count({
+      where: { companyId }
+    });
 
-    // Base query options
-    let queryOptions = {
-      where: {
-        companyId,
-      },
+    // 4. Get the users WITH their associations
+    // This query focuses on getting the detailed data we need
+    const users = await User.findAll({
+      where: { companyId },
       attributes: {
         exclude: ['password', 'deletedAt']
       },
@@ -552,84 +988,30 @@ export const getUsersByCompanyId = async (req, res, next) => {
         {
           model: Department,
           as: 'departments',
+          through: { attributes: [] },  // Exclude junction table attributes
+          required: false,              // Use LEFT JOIN instead of INNER JOIN
+          attributes: ['id', 'departmentName'],
+        },
+        {
+          model: SubDepartment,
+          as: 'subDepartments',
           through: { attributes: [] },
           required: false,
-          attributes: ['id'],
+          attributes: ['id', 'subDepartmentName'],
         }
       ],
       limit: limitNum,
       offset: (pageNum - 1) * limitNum,
-      distinct: true,
-      subQuery: false,
-    };
+      order: [['id', 'ASC']], // Add consistent ordering
+    });
 
-    if ([ROLE_IDS.ADMIN, ROLE_IDS.SUPER_ADMIN, ROLE_IDS.LEADERSHIP].includes(roleId)) {
-      // These roles can see all users in the company
-    } else if (roleId === ROLE_IDS.DEPARTMENT_MANAGER) {
-      queryOptions.where[Op.or] = [
-        {
-          roleId: {
-            [Op.in]: [ROLE_IDS.ADMIN, ROLE_IDS.LEADERSHIP]
-          },
-          companyId
-        }, // Company admins and leadership
-        {
-          [Op.and]: [
-            { roleId: ROLE_IDS.DEPARTMENT_MANAGER },
-            { '$departments.id$': { [Op.in]: departmentIds } }
-          ]
-        }
-      ];
-    } else {
-      // For regular users
-      const subdepartmentIds = subDepartments.map(subdept => subdept.id);
-
-      queryOptions.include.push({
-        model: SubDepartment,
-        as: 'subDepartments',
-        through: { attributes: [] },
-        required: false,
-        attributes: ['id']
-      });
-
-      queryOptions.where[Op.or] = [
-        {
-          roleId: {
-            [Op.in]: [ROLE_IDS.ADMIN, ROLE_IDS.LEADERSHIP]
-          },
-          companyId
-        }, // Company admins and leadership
-        {
-          [Op.and]: [
-            { roleId: ROLE_IDS.DEPARTMENT_MANAGER },
-            { '$departments.id$': { [Op.in]: departmentIds } }
-          ]
-        },
-        {
-          [Op.and]: [
-            { '$subDepartments.id$': { [Op.in]: subdepartmentIds } }
-          ]
-        }
-      ];
-    }
-
-    // SELECT * FROM Users 
-    // WHERE companyId = X
-    // AND(
-    //   (roleId = 'ADMIN' AND companyId = X)
-    // OR
-    //   (roleId = 'DEPARTMENT_MANAGER' AND departmentId IN(user's department ids))
-    // OR
-    //       (subdepartmentId IN(user's subdepartment ids))
-    //       )
-
-    const { count, rows: users } = await User.findAndCountAll(queryOptions);
-
+    // 5. Calculate pagination details
     const totalPages = Math.ceil(count / limitNum);
     if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
+    // 6. Send the response
     res.status(200).json({
       success: true,
       messages: count === 0 ? ['No users found'] : ['Users retrieved successfully'],
@@ -1279,6 +1661,7 @@ export const getAssessmentsCategoryWise = async (req, res, next) => {
 
 export const getRiskMetricsForCompany = async (req, res, next) => {
   const { companyId } = req.params;
+  console.log('hey');
 
   try {
     const company = await Company.findByPk(companyId, {
@@ -1383,6 +1766,7 @@ export const getRiskMetricsForCompany = async (req, res, next) => {
         departmentsRiskMetrics: departmentsData
       }
     };
+    console.log(data);
 
     return res.status(200).json({
       success: true,

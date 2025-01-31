@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import { SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
+import { SUB_ASSESSMENT_REVIEW_STATUS, SUB_ASSESSMENT_TYPE } from '../utils/constants.js';
 
 const SubAssessment = sequelize.define('SubAssessment', {
     id: {
@@ -60,11 +60,11 @@ const SubAssessment = sequelize.define('SubAssessment', {
         type: DataTypes.DATE,
         allowNull: true
     },
-    // subAssessmentType: {
-    //     type: DataTypes.STRING,
-    //     defaultValue: 'default',
-    //     allowNull: true
-    // }
+     subAssessmentType: {
+         type: DataTypes.ENUM(Object.values(SUB_ASSESSMENT_TYPE)),
+         defaultValue: SUB_ASSESSMENT_TYPE.DEFAULT,
+         allowNull: true
+     }
 }, {
     tableName: 'sub_assessments',
     timestamps: true,

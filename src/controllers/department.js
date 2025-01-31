@@ -21,50 +21,103 @@ import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
-import { createDepartmentAssessment, validateAssessmentDeadline } from '../utils/departmentUtils.js';
+import { createDepartmentAssessment, validateAssessmentDeadline, validateDepartmentMappings } from '../utils/departmentUtils.js';
 import { ANSWER_TYPES, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
+
+export const createDepartments = async (req, res, next) => {
+  const { companyId, mappings } = req.body;
+  const transaction = await sequelize.transaction();
+
+  try {
+    await validateDepartmentMappings(mappings, companyId);
+
+    const { company } = await validateDepartmentMappings(mappings, companyId);
+
+    // Check if previous steps are completed
+    if (company.detailsStatus !== 'complete') {
+      throw new AppError('Complete company details first.', 400);
+    }
+
+    if (company.controlFrameworksStatus !== 'complete') {
+      throw new AppError('Complete control frameworks setup first.', 400);
+    }
+
+    const createdData = await Promise.all(mappings.map(async (dept) => {
+      const department = await Department.create({
+        departmentName: dept.mappedName,
+        companyId,
+        masterDepartmentId: dept.masterDepartmentId,
+        createdByUserId: req.user.id
+      }, { transaction });
+
+      const assessment = await Assessment.create({
+        departmentId: department.id,
+        deadline: dept.closureDate,
+        assessmentName: `${dept.mappedName}_Assessment`
+      }, { transaction });
+
+      const subdepartments = await Promise.all(dept.subdepartments.map(async (sub) => {
+        const subdepartment = await SubDepartment.create({
+          subDepartmentName: sub.mappedName,
+          departmentId: department.id,
+          masterSubDepartmentId: sub.masterSubDepartmentId,
+          createdByUserId: req.user.id
+        }, { transaction });
+
+        const subassessment = await SubAssessment.create({
+          subAssessmentName: `${sub.mappedName}_Assessment`,
+          subDepartmentId: subdepartment.id,
+          assessmentId: assessment.id,
+          deadline: dept.closureDate
+        }, { transaction });
+
+        const questions = await MasterQuestion.findAll({
+          where: {
+            masterDepartmentId: dept.masterDepartmentId,
+            masterSubDepartmentId: sub.masterSubDepartmentId
+          },
+          transaction
+        });
+
+        await Promise.all(questions.map(question =>
+          AssessmentQuestion.create({
+            assessmentId: assessment.id,
+            masterQuestionId: question.id,
+            subAssessmentId: subassessment.id
+          }, { transaction })
+        ));
+
+        return { subdepartment, subassessment };
+      }));
+
+      return { department, assessment, subdepartments };
+    }));
+    // Update department status to complete
+    await company.update({ departmentsStatus: 'complete' }, { transaction });
+
+    await transaction.commit();
+    res.status(201).json({ success: true, data: createdData });
+
+  } catch (error) {
+    await transaction.rollback();
+    next(error);
+  }
+};
 
 export const getDepartmentById = async (req, res, next) => {
   const { departmentId } = req.params;
 
   try {
-    // First, fetch just the deadline from the default assessment
-    const defaultAssessment = await Assessment.findOne({
-      where: {
-        departmentId,
-        assessmentName: 'default'
-      },
-      attributes: ['deadline'],
-    });
-
-    // Then fetch the department with its basic associations
-    const department = await Department.findByPk(departmentId, {
-      include: [
-        {
-          model: Company,
-          as: 'company',
-          attributes: ['companyName']
-        },
-        {
-          model: MasterDepartment,
-          as: 'masterDepartment',
-          attributes: ['departmentName']
-        }
-      ],
-    });
+    const department = await Department.findByPk(departmentId);
 
     if (!department) {
       throw new AppError('Department not found', 404);
     }
 
-    // Return the department details with the deadline
-    res.status(200).json({ 
-      success: true, 
-      department: {
-        ...department.toJSON(),
-        deadline: defaultAssessment?.deadline || null
-      }
+    res.status(200).json({
+      success: true,
+      department: department.toJSON()
     });
 
   } catch (error) {
@@ -73,212 +126,210 @@ export const getDepartmentById = async (req, res, next) => {
   }
 };
 
-export const createDepartment = async (req, res, next) => {
-  const { departmentName, masterDepartmentId, companyId, deadline } = req.body;
-
-  // Start a new transaction
-  const transaction = await sequelize.transaction();
+export const getAssessmentByDepartmentId = async (req, res, next) => {
+  const { departmentId } = req.params;
 
   try {
-    // Check if the company exists
-    const company = await Company.findByPk(companyId, { transaction });
-
-    if (!company) {
-      throw new AppError('Invalid company ID', 400);
+    const department = await Department.findByPk(departmentId);
+    if (!department) {
+      throw new AppError('Department not found', 404);
     }
 
-    // Check if the master department exists
-    const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
-    if (!masterDepartment) {
-      throw new AppError('Invalid master department ID', 400);
-    }
-    const auditCompletionDeadline = company.auditCompletionDeadline;
-
-    const companyAuditCompletionDeadline = auditCompletionDeadline ? new Date(auditCompletionDeadline) : null;
-    const assessmentDeadline = new Date(deadline);
-
-    await validateAssessmentDeadline(companyAuditCompletionDeadline, assessmentDeadline);
-
-    // Create the new department
-    const newDepartment = await Department.create({
-      departmentName,
-      companyId,
-      masterDepartmentId,
-      createdByUserId: req.user.id,
-    }, { transaction });
-
-    const { assessment, subDepartments } = await createDepartmentAssessment({
-      departmentId: newDepartment.id,
-      masterDepartmentId,
-      deadline,
-      transaction
+    // Find all assessments associated with the given department ID
+    const assessments = await Assessment.findAll({
+      where: { departmentId }
     });
 
-    // Commit the transaction
-    await transaction.commit();
+    // // Calculate answer statistics for each assessment
+    // const assessmentsWithStats = await Promise.all(
+    //   assessments.map(async (assessment) => {
+    //     const stats = await calculateAssessmentStatistics(assessment.id);
+    //     return {
+    //       ...assessment.toJSON(),
+    //       stats
+    //     };
+    //   })
+    // );
 
-    // Retrieve the newly created department with associated data
-    const departmentWithAssociations = await Department.findByPk(newDepartment.id, {
-      include: [
-        { model: Company, as: 'company', attributes: ['companyName'] },
-        { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] },
-        {
-          model: SubDepartment,
-          as: 'subDepartments',
-          attributes: ['id', 'subDepartmentName']
-        }
-      ]
-    });
-
-    // Send a successful response
-    res.status(201).json({
+    // Return response
+    res.status(200).json({
       success: true,
-      department: departmentWithAssociations,
-      assessment: assessment,
+      messages: assessments.length === 0 ? ['No assessments found'] : ['Assessments retrieved successfully'],
+      assessments: assessments
     });
+
   } catch (error) {
-    console.error('Error creating department:', error);
-    await transaction.rollback();
+    console.error('Error fetching assessments for department:', error);
+    next(error);
+  }
+};
+
+export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
+  try {
+    const { departmentId } = req.params;
+    const roleId = req.user.roleId;
+
+    // Base query configuration
+    const queryConfig = {
+      where: { departmentId },
+      attributes: ['id', 'subDepartmentName'],
+      order: [['createdAt', 'DESC']],
+    };
+
+    // Add user association filter for non-admin roles
+    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.LEADERSHIP].includes(roleId)) {
+      queryConfig.include = [{
+        model: User,
+        as: 'users',
+        attributes: [],
+        where: { id: req.user.id },
+        required: true
+      }];
+    }
+
+    // Fetch subdepartments with configured filters
+    const subDepartments = await SubDepartment.findAll(queryConfig);
+
+    return res.status(200).json({
+      success: true,
+      messages: subDepartments.length === 0
+        ? ['No sub departments found']
+        : ['Sub departments retrieved successfully'],
+      subDepartments,
+    });
+
+  } catch (error) {
+    console.error('Error fetching subdepartments:', error);
     next(error);
   }
 };
 
 export const updateDepartment = async (req, res, next) => {
   const { departmentId } = req.params;
-  const { departmentName, masterDepartmentId, deadline } = req.body;
-
+  const { departmentName, deadline } = req.body;
   const transaction = await sequelize.transaction();
 
   try {
+    const updateDepartment = async (req, res, next) => {
+      const { departmentId } = req.params;
+      const { departmentName, deadline } = req.body;
+      const transaction = await sequelize.transaction();
 
-    // Find department
-    const department = await Department.findByPk(departmentId, {
-      include: [{
-        model: Company,
-        as: 'company',
-        attributes: ['id', 'companyName','auditCompletionDeadline']
+      try {
+        const department = await Department.findByPk(departmentId, {
+          include: [{
+            model: Company,
+            as: 'company'
+          }],
+          transaction
+        });
+
+        if (!department) {
+          throw new Error('Department not found');
+        }
+
+        // Update department name if provided
+        if (departmentName) {
+          await department.update({
+            departmentName,
+            updatedByUserId: req.user.id
+          }, { transaction });
+        }
+        if (company.auditCompletionDeadline && new Date(dept.closureDate) > new Date(company.auditCompletionDeadline)) {
+          throw new AppError(`Department deadline cannot exceed company audit completion deadline`, 400);
+        }
+
+        // Update assessment deadline if provided
+        if (deadline) {
+          const assessment = await Assessment.findOne({
+            where: { departmentId },
+            transaction
+          });
+
+          if (assessment) {
+            await assessment.update({ deadline }, { transaction });
+
+            // Update all related sub-assessments deadlines
+            await SubAssessment.update(
+              { deadline },
+              {
+                where: { assessmentId: assessment.id },
+                transaction
+              }
+            );
+          }
+        }
+
+        await transaction.commit();
+
+        // Fetch updated data to return in response
+        const updatedDepartment = await Department.findOne({
+          where: { id: departmentId },
+        });
+
+        res.status(200).json({
+          success: true,
+          messages: ['Department updated successfully'],
+          department: updatedDepartment
+        });
+
+      } catch (error) {
+        await transaction.rollback();
+        next(error);
       }
-      ], transaction
-    });
-    
+    };
+
     if (!department) {
-      throw new AppError('Department not found', 404);
+      throw new Error('Department not found');
     }
-    const auditCompletionDeadline = department.company.auditCompletionDeadline;
-
-    const companyAuditCompletionDeadline = auditCompletionDeadline ? new Date(auditCompletionDeadline) : null;
-    const assessmentDeadline = new Date(deadline);
-
-
-
-    await validateAssessmentDeadline(companyAuditCompletionDeadline, assessmentDeadline);
 
     // Update department name if provided
     if (departmentName) {
-      department.departmentName = departmentName;
+      await department.update({
+        departmentName,
+        updatedByUserId: req.user.id
+      }, { transaction });
+    }
+    if (company.auditCompletionDeadline && new Date(dept.closureDate) > new Date(company.auditCompletionDeadline)) {
+      throw new AppError(`Department deadline cannot exceed company audit completion deadline`, 400);
     }
 
-    // Handle master department update if provided
-    if (masterDepartmentId) {
-      const masterDepartment = await MasterDepartment.findByPk(masterDepartmentId, { transaction });
-      if (!masterDepartment) {
-        throw new AppError('Invalid master department ID', 400);
-      }
+    // Update assessment deadline if provided
+    if (deadline) {
+      const assessment = await Assessment.findOne({
+        where: { departmentId },
+        transaction
+      });
 
-      // Check if master department is actually changing
-      if (department.masterDepartmentId !== masterDepartmentId) {
-        // Check for started assessments
-        const startedAssessments = await Assessment.findAll({
-          where: {
-            departmentId,
-            assessmentStarted: true
-          },
-          transaction
-        });
+      if (assessment) {
+        await assessment.update({ deadline }, { transaction });
 
-        if (startedAssessments.length > 0) {
-          throw new AppError('Could not update department because some assessments are in progress', 400);
-        }
-
-        // Get existing assessment IDs
-        const assessments = await Assessment.findAll({
-          where: { departmentId },
-          attributes: ['id'],
-          transaction
-        });
-        const assessmentIds = assessments.map(assessment => assessment.id);
-
-        // Delete existing sub-departments
-        await SubDepartment.destroy({
-          where: { departmentId },
-          transaction
-        });
-
-        // Delete existing assessment questions, sub-assessments, and assessments
-        await AssessmentQuestion.destroy({
-          where: {
-            assessmentId: {
-              [Op.in]: assessmentIds
-            }
-          },
-          transaction
-        });
-
-        // Delete sub-assessments
-        await SubAssessment.destroy({
-          where: {
-            assessmentId: {
-              [Op.in]: assessmentIds
-            }
-          },
-          transaction
-        });
-
-        // Delete main assessments
-        await Assessment.destroy({
-          where: { departmentId },
-          transaction
-        });
-
-        // Create new assessment structure using the modular function
-        await createDepartmentAssessment({
-          departmentId,
-          masterDepartmentId,
-          deadline,
-          transaction
-        });
-
-        department.masterDepartmentId = masterDepartmentId;
+        // Update all related sub-assessments deadlines
+        await SubAssessment.update(
+          { deadline },
+          {
+            where: { assessmentId: assessment.id },
+            transaction
+          }
+        );
       }
     }
-
-    // Save department changes
-    await department.save({ transaction });
-
-    // Fetch updated department with associations
-    const updatedDepartment = await Department.findByPk(department.id, {
-      include: [
-        { model: Company, as: 'company', attributes: ['companyName'] },
-        { model: MasterDepartment, as: 'masterDepartment', attributes: ['departmentName'] },
-        {
-          model: SubDepartment,
-          as: 'subDepartments',
-          attributes: ['id', 'subDepartmentName']
-        }
-      ],
-      transaction
-    });
 
     await transaction.commit();
+
+    // Fetch updated data to return in response
+    const updatedDepartment = await Department.findOne({
+      where: { id: departmentId },
+    });
 
     res.status(200).json({
       success: true,
       messages: ['Department updated successfully'],
       department: updatedDepartment
     });
+
   } catch (error) {
     await transaction.rollback();
-    console.error('Error updating department:', error);
     next(error);
   }
 };
@@ -386,50 +437,6 @@ export const deleteDepartment = async (req, res, next) => {
   }
 };
 
-export const getAssessmentByDepartmentId = async (req, res, next) => {
-  const { departmentId } = req.params;
-
-  try {
-    const department = await Department.findByPk(departmentId);
-    if (!department) {
-      throw new AppError('Department not found', 404);
-    }
-
-    // Find all assessments associated with the given department ID
-    const assessments = await Assessment.findAll({
-      where: { departmentId },
-      include: [
-        {
-          model: Department,
-          as: 'department',
-          attributes: ['id', 'departmentName']
-        }
-      ]
-    });
-
-    // Calculate answer statistics for each assessment
-    const assessmentsWithStats = await Promise.all(
-      assessments.map(async (assessment) => {
-        const stats = await calculateAssessmentStatistics(assessment.id);
-        return {
-          ...assessment.toJSON(),
-          stats
-        };
-      })
-    );
-
-    // Return response
-    res.status(200).json({
-      success: true,
-      messages: assessments.length === 0 ? ['No assessments found'] : ['Assessments retrieved successfully'],
-      assessments: assessmentsWithStats
-    });
-
-  } catch (error) {
-    console.error('Error fetching assessments for department:', error);
-    next(error);
-  }
-};
 
 export const getUsersByDepartmentId = async (req, res, next) => {
   const { departmentId } = req.params;
@@ -509,45 +516,7 @@ export const getUsersByDepartmentId = async (req, res, next) => {
   }
 };
 
-export const getSubDepartmentsByDepartmentId = async (req, res, next) => {
-  try {
-    const { departmentId } = req.params;
-    const roleId = req.user.roleId;
 
-    // Base query configuration
-    const queryConfig = {
-      where: { departmentId },
-      attributes: ['id', 'subDepartmentName'],
-      order: [['createdAt', 'DESC']],
-    };
-
-    // Add user association filter for non-admin roles
-    if (![ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN, ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.LEADERSHIP].includes(roleId)) {
-      queryConfig.include = [{
-        model: User,
-        as: 'users',
-        attributes: [],
-        where: { id: req.user.id },
-        required: true
-      }];
-    }
-
-    // Fetch subdepartments with configured filters
-    const subDepartments = await SubDepartment.findAll(queryConfig);
-
-    return res.status(200).json({
-      success: true,
-      messages: subDepartments.length === 0
-        ? ['No sub departments found']
-        : ['Sub departments retrieved successfully'],
-      subDepartments,
-    });
-
-  } catch (error) {
-    console.error('Error fetching subdepartments:', error);
-    next(error);
-  }
-};
 
 export const departmentProgressReport = async (req, res, next) => {
   const { departmentId } = req.params;

@@ -22,13 +22,14 @@ const runSeeds = async () => {
     const transaction = await sequelize.transaction();
     try {
         // await seedRoles({ transaction });
-        //  await seedResources({ transaction });
+        // await seedResources({ transaction });
         // await seedActions({ transaction });
-        await seedRoleResourceActionLinks({ transaction });
+        // await seedRoleResourceActionLinks({ transaction });
 
-        // await seedSuperAdmins({ transaction });
-        // await seedMasterSubDepartments({ transaction });
+        await seedSuperAdmins({ transaction });
         // await seedMasterDepartments({ transaction });
+
+        // await seedMasterSubDepartments({ transaction });
 
         // await seedIndustrySectors({ transaction });
 

@@ -8,7 +8,9 @@ const seedSuperAdmins = async () => {
     const superAdminsData = [
       {
         id: 'abcd12345678',
-        username: 'superadmin',
+        firstName: 'superadmin',
+        middleName:'empty',
+        lastName:'empty',
         email: 'testingbygeek@gmail.com',
         password: 'root@7ji',
       }
@@ -16,7 +18,7 @@ const seedSuperAdmins = async () => {
 
     for (const superAdminData of superAdminsData) {
       const existingSuperAdmin = await User.findOne({
-        where: { username: superAdminData.username },
+        where: { email: superAdminData.email },
         transaction,
       });
 

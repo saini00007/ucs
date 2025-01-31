@@ -59,37 +59,13 @@ export const validateRoleAssignment = async (currentUser, targetRoleId, existing
         throw new AppError('Admin cannot add admin', 403);
     }
 
-    // Department manager validations
-    if (currentUser.roleId === ROLE_IDS.DEPARTMENT_MANAGER &&
-        [ROLE_IDS.ADMIN,ROLE_IDS.LEADERSHIP, ROLE_IDS.DEPARTMENT_MANAGER].includes(targetRoleId)) {
-        throw new AppError('Department Manager cannot add admin ,leadersip or department manager', 403);
-    }
 
     // Role change validations
     if (existingRoleId) {
-        if (existingRoleId === ROLE_IDS.ADMIN && targetRoleId !== ROLE_IDS.ADMIN) {
-            throw new AppError('Cannot change admin role', 403);
+        if (existingRoleId !== targetRoleId) {
+            throw new AppError('Cannot change existing role', 403);
         }
 
-        if (targetRoleId === ROLE_IDS.ADMIN && existingRoleId !== ROLE_IDS.ADMIN) {
-            throw new AppError('Cannot assign admin role', 403);
-        }
-
-        if(existingRoleId===ROLE_IDS.LEADERSHIP &&existingRoleId !==ROLE_IDS.LEADERSHIP){
-            throw new AppError('Cannot change leadership role', 403);
-        }
-
-        if (targetRoleId === ROLE_IDS.LEADERSHIP && existingRoleId !== ROLE_IDS.LEADERSHIP) {
-            throw new AppError('Cannot assign leadership role', 403);
-        }
-
-        if (existingRoleId === ROLE_IDS.DEPARTMENT_MANAGER && targetRoleId !== ROLE_IDS.DEPARTMENT_MANAGER) {
-            throw new AppError('Cannot change departmentmanager role', 403);
-        }
-
-        if (targetRoleId === ROLE_IDS.DEPARTMENT_MANAGER && existingRoleId !== ROLE_IDS.DEPARTMENT_MANAGER) {
-            throw new AppError('Cannot assign departmentmanager role', 403);
-        }
     }
 
     return { isValid: true };

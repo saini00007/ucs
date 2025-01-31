@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import MasterDepartment from './MasterDepartment.js';
 
 const MasterSubDepartment = sequelize.define('MasterSubDepartment', {
     id: {
@@ -12,6 +13,15 @@ const MasterSubDepartment = sequelize.define('MasterSubDepartment', {
         allowNull: false,
         unique: true,
     },
+    MasterDepartmentId: {
+        type: DataTypes.UUID,
+        references: {
+            model: 'master_departments',
+            key: 'id',
+        },
+        allowNull: true,
+    }
+
 }, {
     tableName: 'master_sub_departments',
     timestamps: true,
@@ -24,6 +34,12 @@ MasterSubDepartment.associate = (models) => {
         foreignKey: 'subDepartmentId',
         as: 'subDepartments'
     });
+    MasterSubDepartment.belongsTo(models.MasterDepartment, {
+        foreignKey: 'masterDepartmentId',
+        targetKey: 'id',
+        as: 'masterDepartment'
+    })
 };
+
 
 export default MasterSubDepartment;

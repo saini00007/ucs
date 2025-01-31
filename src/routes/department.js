@@ -3,7 +3,7 @@ import validate from '../middleware/validate.js';
 import { createDepartmentSchema, updateDepartmentSchema } from '../joi/department.js';
 import {
     getDepartmentById,
-    createDepartment,
+    createDepartments,
     updateDepartment,
     deleteDepartment,
     getAssessmentByDepartmentId,
@@ -43,9 +43,8 @@ router.post('/',
         ACTION_IDS.CREATE
     ),
     checkAccess,
-    validate(createDepartmentSchema),
-    createDepartment
-);
+    // validate(createDepartmentSchema),
+    createDepartments);
 
 // Route to update a department by its ID
 router.put('/:departmentId',

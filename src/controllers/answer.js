@@ -2,6 +2,7 @@ import { AssessmentQuestion, EvidenceFile, Answer, User, SubAssessment } from '.
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS } from '../utils/constants.js';
+import { submitAssessment } from './assessment.js';
 
 export const createAnswer = async (req, res, next) => {
   const { assessmentQuestionId } = req.params;
@@ -40,13 +41,16 @@ export const createAnswer = async (req, res, next) => {
 
     // Validate that evidence files are uploaded if the answer is "yes"
     const isAnswerYes = answerText === ANSWER_TYPES.YES;
+
     if (isAnswerYes && (!req.files?.['files'] || req.files['files'].length === 0)) {
       throw new AppError('Evidence files are required when the answer is "yes".', 400);
     }
     if (!isAnswerYes && req.files['files'] && req.files?.['files'].length > 0) {
       throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
     }
+
     const isAutoApproved = answerText === ANSWER_TYPES.NO || answerText === ANSWER_TYPES.NOT_APPLICABLE;
+
     // Create the answer
     const answer = await Answer.create({
       assessmentQuestionId,
@@ -79,12 +83,12 @@ export const createAnswer = async (req, res, next) => {
         include: [{
           model: User,
           as: 'creator',
-          attributes: ['id', 'username']
+          attributes: ['id', 'firstName', 'lastName']
         }]
       }, {
         model: User,
         as: 'creator',
-        attributes: ['id', 'username']
+        attributes: ['id', 'firstName', 'lastName']
       }],
       transaction,
     });
@@ -100,7 +104,6 @@ export const createAnswer = async (req, res, next) => {
     });
   } catch (error) {
     transaction.rollback();
-    console.error('Error creating answer:', error);
     next(error);
   }
 };
@@ -201,7 +204,7 @@ export const updateAnswer = async (req, res, next) => {
       });
 
       // If all rejected answers are updated, change status back to SUBMITTED_FOR_REVIEW
-      if (remainingRejected === 0) {
+      if (remainingRejected === 0 && submitAssessment.reviewStatus === SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION) {
         await answer.assessmentQuestion.subAssessment.update({
           reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
           submittedForReviewAt: new Date(),
@@ -221,13 +224,13 @@ export const updateAnswer = async (req, res, next) => {
           include: [{
             model: User,
             as: 'creator',
-            attributes: ['id', 'username']
+            attributes: ['id', 'firstName', 'lastName']
           }]
         },
         {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username']
+          attributes: ['id', 'firstName', 'lastName']
         }
       ],
       transaction
@@ -280,8 +283,8 @@ export const serveFile = async (req, res, next) => {
 export const submitReviewDecision = async (req, res, next) => {
   const { answerId } = req.params;
   const { decision } = req.body;
-  console.log(decision)
   const userId = req.user.id;
+  console.log(decision);
 
   const transaction = await sequelize.transaction();
 

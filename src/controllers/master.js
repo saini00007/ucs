@@ -1,4 +1,4 @@
-import { Role, MasterDepartment, IndustrySector, ControlFramework } from '../models/index.js';
+import { Role, MasterDepartment, IndustrySector, ControlFramework, MasterSubDepartment } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import { ROLE_IDS } from '../utils/constants.js';
 
@@ -49,7 +49,16 @@ export const getRoles = async (req, res, next) => {
 export const getMasterDepartments = async (req, res, next) => {
     try {
         // Fetch all master departments
-        const masterDepartments = await MasterDepartment.findAll();
+        const masterDepartments = await MasterDepartment.findAll({
+            attributes:['id','departmentName'],
+            include:[
+                {
+                    model:MasterSubDepartment,
+                    as:'masterSubDepartments',
+                    attributes:['id','subDepartmentName']
+                }
+            ]
+        });
 
         // Return successful response
         res.status(200).json({
@@ -86,7 +95,7 @@ export const getControlFrameworks = async (req, res, next) => {
 
         const controlFrameworks = await ControlFramework.findAll({
             order: [['framework_type', 'ASC']],
-            attributes: ['id', 'frameworkType']
+            attributes: ['id', 'frameworkType','category']
         });
 
 

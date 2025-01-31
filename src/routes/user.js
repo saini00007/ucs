@@ -9,6 +9,7 @@ import {
   addUserToDepartment,
   removeUserFromSubDepartment,
   addUserToSubDepartment,
+  getSubAssessmentByUserId,
 } from '../controllers/user.js';
 import validate from '../middleware/validate.js';
 import { createUserSchema, updateUserSchema } from '../joi/user.js';
@@ -19,26 +20,30 @@ import { getSubDepartmentsByDepartmentId } from '../controllers/department.js';
 
 const router = express.Router();
 
+
+router.get('/:userId/sub-assessments',getSubAssessmentByUserId);
+
+
 // Route to add a new user
 router.post('/',
-  (req, res, next) => {
-    if (req.body.roleId === ROLE_IDS.ADMIN || req.body.roleId === ROLE_IDS.LEADERSHIP) {
-      return attachResourceInfo(
-        RESOURCE_TYPES.USER,
-        CONTENT_RESOURCE_TYPES.COMPANY,
-        'companyId',
-        ACTION_IDS.CREATE
-      )(req, res, next);
-    }
-    return attachResourceInfo(
-      RESOURCE_TYPES.USER,
-      CONTENT_RESOURCE_TYPES.DEPARTMENT,
-      'departmentId',
-      ACTION_IDS.CREATE
-    )(req, res, next);
-  },
-  checkAccess,
-  validate(createUserSchema),
+  // (req, res, next) => {
+  //   if (req.body.roleId === ROLE_IDS.ADMIN || req.body.roleId === ROLE_IDS.LEADERSHIP) {
+  //     return attachResourceInfo(
+  //       RESOURCE_TYPES.USER,
+  //       CONTENT_RESOURCE_TYPES.COMPANY,
+  //       'companyId',
+  //       ACTION_IDS.CREATE
+  //     )(req, res, next);
+  //   }
+  //   return attachResourceInfo(
+  //     RESOURCE_TYPES.USER,
+  //     CONTENT_RESOURCE_TYPES.DEPARTMENT,
+  //     'departmentId',
+  //     ACTION_IDS.CREATE
+  //   )(req, res, next);
+  // },
+  // checkAccess,
+  // validate(createUserSchema),
   addUser
 );
 

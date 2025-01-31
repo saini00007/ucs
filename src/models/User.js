@@ -20,7 +20,15 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(12),
     primaryKey: true,
   },
-  username: {
+  firstName: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+  },
+  middleName:{
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  lastName:{
     type: DataTypes.TEXT,
     allowNull: false,
   },
@@ -89,8 +97,8 @@ const User = sequelize.define('User', {
   paranoid: true,
   hooks: {
     beforeValidate: async (user, options) => {
-      if (!user.id && user.username) {
-        user.id = await generateUserId(user.username);
+      if (!user.id && user.firstName) {
+        user.id = await generateUserId(user.firstName);
       }
     },
   },

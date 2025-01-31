@@ -14,7 +14,13 @@ import {
     getDepartmentsDashboard,
     getAssessmentsCategoryWise,
     getRiskMetricsForCompany,
-    getCompanyOverview
+    getCompanyOverview,
+    createCompanyDetails,
+    addCompanyControlFrameworks,
+    getDepartmentsWithSubDepartmentsByCompanyId,
+    updateCompanyDetails,
+    updateCompanyControlFrameworks,
+    getCompanySetupStatus
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -28,6 +34,27 @@ const uploadCompanyLogo = uploadMiddleware.companyLogo(5, 1)
 
 const router = express.Router();
 
+
+
+
+
+router.get('/:companyId/setup-status', getCompanySetupStatus);
+router.post('/:companyId/details',uploadCompanyLogo,createCompanyDetails)
+router.put('/:companyId/details',uploadCompanyLogo,updateCompanyDetails)
+router.post('/:companyId/control-frameworks',addCompanyControlFrameworks)
+router.put('/:companyId/control-frameworks',updateCompanyControlFrameworks)
+router.get('/:companyId/department-subdepartment-list',getDepartmentsWithSubDepartmentsByCompanyId)
+
+
+
+
+
+
+
+
+
+
+
 // Route to create a new company
 router.post('/',
     attachResourceInfo(
@@ -37,7 +64,6 @@ router.post('/',
         ACTION_IDS.CREATE
     ),
     checkAccess,
-    uploadCompanyLogo,
     validate(createCompanySchema),
     createCompany
 );

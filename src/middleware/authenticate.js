@@ -22,7 +22,7 @@ const authenticate = async (req, res, next) => {
         // Retrieve the user from the database
         const user = await User.findOne({
             where: { id: decoded.userId },
-            attributes: ['id', 'username', 'email', 'roleId', 'companyId'],
+            attributes: ['id', 'firstName','middleName','lastName', 'email', 'roleId', 'companyId'],
             include: [
                 {
                     model: Department,

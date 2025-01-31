@@ -7,53 +7,84 @@ const Company = sequelize.define('Company', {
     primaryKey: true,
     defaultValue: DataTypes.UUIDV4,
   },
-  companyName: {
-    type: DataTypes.TEXT,
-    allowNull: false,
+  companyLegalName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  tradeName: {
+    type: DataTypes.STRING,
+  },
+  website: {
+    type: DataTypes.STRING,
+  },
+  incorporationDate: {
+    type: DataTypes.DATE
+  },
+  companySize: {
+    type: DataTypes.STRING
+  },
+  streetAddress: {
+    type: DataTypes.STRING
+  },
+  city: {
+    type: DataTypes.STRING
+  },
+  state: {
+    type: DataTypes.STRING
+  },
+  country: {
+    type: DataTypes.STRING
   },
   companyLogo: {
     type: DataTypes.BLOB,
-    allowNull: true,
   },
-  postalAddress: {
-    type: DataTypes.TEXT,
-    allowNull: true,
+  postalCode: {
+    type: DataTypes.STRING,
   },
-  gstNumber: {
-    type: DataTypes.TEXT,
-    allowNull: true,
+  taxIdType: {
+    type: DataTypes.STRING
   },
-  panNumber: {
+  taxIdNumber: {
+    type: DataTypes.STRING
+  },
+  companyRegistrationNumber: {
+    type: DataTypes.STRING
+  },
+  panReferenceNumber: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
   primaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
+    validate: {
+      isEmail: true
+    }
   },
   secondaryEmail: {
     type: DataTypes.TEXT,
     allowNull: false,
+    validate: {
+      isEmail: true
+    }
   },
   primaryPhone: {
     type: DataTypes.TEXT,
-    allowNull: true,
   },
   secondaryPhone: {
     type: DataTypes.TEXT,
-    allowNull: true,
   },
   primaryCountryCode: {
     type: DataTypes.STRING(5),
-    allowNull: true,
   },
   secondaryCountryCode: {
     type: DataTypes.STRING(5),
-    allowNull: true,
   },
   auditCompletionDeadline: {
     type: DataTypes.DATE,
-    allowNull: true
+  },
+  annualRevenueRange: {
+    type: DataTypes.STRING,
   },
   createdByUserId: {
     type: DataTypes.STRING(12),
@@ -71,6 +102,18 @@ const Company = sequelize.define('Company', {
     },
     allowNull: true,
   },
+  detailsStatus: {
+    type: DataTypes.ENUM('incomplete', 'complete'),
+    defaultValue: 'incomplete'
+  },
+  controlFrameworksStatus: {
+    type: DataTypes.ENUM('incomplete', 'complete'),
+    defaultValue: 'incomplete'
+  },
+  departmentsStatus: {
+    type: DataTypes.ENUM('incomplete', 'complete'),
+    defaultValue: 'incomplete'
+  }
 }, {
   tableName: 'companies',
   timestamps: true,

@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
+import { ASSESSMENT_TYPE } from '../utils/constants.js';
 
 const Assessment = sequelize.define('Assessment', {
   id: {
@@ -40,11 +41,11 @@ const Assessment = sequelize.define('Assessment', {
     type: DataTypes.DATE,
     allowNull: true
   },
-  // assessmentType: {
-  //   type: DataTypes.STRING,
-  //   defaultValue: 'default',
-  //   allowNull: true
-  // }
+  assessmentType: {
+    type: DataTypes.ENUM(Object.values(ASSESSMENT_TYPE)),
+    defaultValue: ASSESSMENT_TYPE.DEFAULT,
+    allowNull: true
+  }
 }, {
   tableName: 'assessments',
   timestamps: true,

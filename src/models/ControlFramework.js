@@ -11,6 +11,10 @@ const ControlFramework = sequelize.define('ControlFramework', {
     type: DataTypes.STRING,
     allowNull: false,
     unique: true
+  },
+  category: {
+    type: DataTypes.STRING,
+    defaultValue: 'general'
   }
 }, {
   tableName: 'control_frameworks',

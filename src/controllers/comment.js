@@ -24,7 +24,7 @@ export const createComment = async (req, res, next) => {
     // Fetch the newly created comment with user data
     const commentWithUser = await Comment.findOne({
       where: { id: newComment.id },
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName','lastName'] }],
     });
 
     // Return success and the created comment with user data

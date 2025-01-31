@@ -86,7 +86,7 @@ export const resetPassword = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   const { identifier, password } = req.body;
-  
+
   console.log(req.body);
 
   // Validate if identifier and password are provided
@@ -169,7 +169,7 @@ export const verifyOtp = async (req, res, next) => {
 
     // Fetch user details, including associated departments and company
     const user = await User.findByPk(userId, {
-      attributes: ['id', 'username', 'email', 'roleId', 'companyId', 'phoneNumber'],
+      attributes: ['id', 'firstName', 'lastName', 'middleName', 'email', 'roleId', 'companyId', 'phoneNumber'],
       include: [
         {
           model: Department,
@@ -182,7 +182,7 @@ export const verifyOtp = async (req, res, next) => {
         {
           model: Company,
           as: 'company',
-          attributes: ['id', 'companyName'],
+          attributes: ['id', 'companyLegalName'],
         }
       ],
     });

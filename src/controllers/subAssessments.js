@@ -7,6 +7,7 @@ import { checkSubAssessmentCompletion } from "../utils/subAssessmentUtils";
 import sequelize from "../config/db";
 import { Op } from "sequelize";
 
+
 export const getSubAssessmentById = async (req, res, next) => {
     const { subAssessmentId } = req.params;
 
@@ -56,6 +57,7 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
         }
 
         const subAssessmentState = checkSubAssessmentState(subAssessment);
+        console.log('---------------------------------------');
         if (!subAssessmentState.success) {
             throw new AppError(
                 req.user.roleId === ROLE_IDS.SUPER_ADMIN
@@ -97,13 +99,13 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
                             include: [{
                                 model: User,
                                 as: 'creator',
-                                attributes: ['id', 'username'],
+                                attributes: ['id', 'firstName', 'lastName'],
                             }]
                         },
                         {
                             model: User,
                             as: 'creator',
-                            attributes: ['id', 'username'],
+                            attributes: ['id', 'firstName', 'lastName'],
                         }
                     ],
                 },
@@ -114,7 +116,7 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
                     include: [{
                         model: User,
                         as: 'creator',
-                        attributes: ['id', 'username'],
+                        attributes: ['id', 'firstName', 'lastName'],
                     }],
                     order: [['createdAt', 'ASC']],
                 },
@@ -122,6 +124,8 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
             limit: limitNum,
             offset: (pageNum - 1) * limitNum,
         });
+        console.log('--------------------hehehe----------------');
+
 
         // Calculate pagination info
         const totalPages = Math.ceil(count / limitNum);
@@ -175,10 +179,10 @@ export const submitForReview = async (req, res, next) => {
         }
 
         // Check if all questions are answered
-         const unansweredQuestions = subAssessment.questions.filter(q => !q.answer);
-         if (unansweredQuestions.length > 0) {
-             throw new AppError('All questions must be answered before submission', 400);
-         }
+        const unansweredQuestions = subAssessment.questions.filter(q => !q.answer);
+        if (unansweredQuestions.length > 0) {
+            throw new AppError('All questions must be answered before submission', 400);
+        }
 
         // Update subAssessment status
         await subAssessment.update({
@@ -200,19 +204,76 @@ export const submitForReview = async (req, res, next) => {
     }
 };
 
+export const resubmitAfterRevision = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const userId = req.user.id;
+    
+    const transaction = await sequelize.transaction();
+    
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: {
+                id: subAssessmentId,
+                reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION
+            },
+            transaction
+        });
+        
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not in need revision status', 404);
+        }
+        
+        // Check if any answers are still rejected
+        const rejectedAnswers = await Answer.count({
+            include: [{
+                model: AssessmentQuestion,
+                as: 'assessmentQuestion',
+                where: { subAssessmentId }
+            }],
+            where: {
+                reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
+            },
+            transaction
+        });
+
+        if (rejectedAnswers > 0) {
+            throw new AppError('All rejected answers must be updated before resubmission', 400);
+        }
+        
+        // Update subAssessment status
+        await subAssessment.update({
+            reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
+            submittedForReviewAt: new Date(),
+            submittedForReviewBy: userId
+        }, { transaction });
+        
+        await transaction.commit();
+        
+        res.status(200).json({
+            success: true,
+            messages: ['Assessment resubmitted for review successfully']
+        });
+        
+    } catch (error) {
+        await transaction.rollback();
+        next(error);
+    }
+};
+
 export const getQuestionsForReview = async (req, res, next) => {
     const { subAssessmentId } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
     try {
         const subAssessment = await SubAssessment.findOne({
-            where: { 
+            where: {
                 id: subAssessmentId,
                 reviewStatus: {
                     [Op.in]: [SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW, SUB_ASSESSMENT_REVIEW_STATUS.UNDER_REVIEW]
                 }
             }
         });
+
 
         if (!subAssessment) {
             throw new AppError('SubAssessment not found or not submitted for review', 404);
@@ -241,7 +302,7 @@ export const getQuestionsForReview = async (req, res, next) => {
                             {
                                 [Op.and]: [
                                     { answerText: ANSWER_TYPES.YES },
-                                    { 
+                                    {
                                         reviewStatus: {
                                             [Op.in]: [ANSWER_REVIEW_STATUS.PENDING, ANSWER_REVIEW_STATUS.REJECTED]
                                         }
@@ -261,7 +322,7 @@ export const getQuestionsForReview = async (req, res, next) => {
                         {
                             model: User,
                             as: 'creator',
-                            attributes: ['id', 'username']
+                            attributes: ['id', 'firstName', 'lastName']
                         }
                     ]
                 }
@@ -408,3 +469,4 @@ export const getRejectedQuestions = async (req, res, next) => {
         next(error);
     }
 };
+

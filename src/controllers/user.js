@@ -1,4 +1,4 @@
-import { User, Department, Company, UserDepartmentLink, SubDepartment, UserSubDepartmentLink } from '../models/index.js';
+import { User, Department, Company, UserDepartmentLink, SubDepartment, UserSubDepartmentLink, SubAssessment } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import sendEmail from '../utils/mailer.js';
@@ -6,60 +6,82 @@ import generateToken from '../utils/token.js';
 import bcrypt from 'bcrypt';
 import AppError from '../utils/AppError.js';
 import { validateAdminAssignment, validateRoleAssignment, validateEmailForUser } from '../utils/userUtils.js'
-import { ROLE_IDS } from '../utils/constants.js';
+import { ROLE_IDS, SUB_ASSESSMENT_TYPE } from '../utils/constants.js';
 
 const createUser = async (userData, res, next) => {
     const transaction = await sequelize.transaction();
-
     try {
-        const hashedPassword = await bcrypt.hash(userData.password, 10);
-        const { departmentId, ...trimmedUserData } = userData;
+        const password = "root@7ji"; // Default password
+        const hashedPassword = await bcrypt.hash(password, 10);
 
+        // Destructure and prepare user data
+        const { departments, ...trimmedUserData } = userData;
+
+        // Create user
         const user = await User.create({
             ...trimmedUserData,
             password: hashedPassword,
         }, { transaction });
 
-        if (departmentId) {
-            const department = await Department.findByPk(departmentId);
-            if (!department) {
-                throw new AppError('Department not found', 404);
-            }
+        // Handle departments if present
+        if (departments?.length > 0) {
+            await UserDepartmentLink.bulkCreate(
+                departments.map(dept => ({
+                    userId: user.id,
+                    departmentId: dept.id
+                })),
+                { transaction }
+            );
 
-            await UserDepartmentLink.create({
-                userId: user.id,
-                departmentId
-            }, { transaction });
+            // Handle subdepartments
+            const subDeptLinks = departments.flatMap(dept =>
+                (dept.subDepartments || []).map(subId => ({
+                    userId: user.id,
+                    subDepartmentId: subId
+                }))
+            );
+            console.log(subDeptLinks);
+
+            if (subDeptLinks.length > 0) {
+                await UserSubDepartmentLink.bulkCreate(subDeptLinks, { transaction });
+            }
         }
 
+
+        // Fetch created user with associations
         const userWithDepartments = await User.findOne({
             where: { id: user.id },
             attributes: { exclude: ['password', 'deletedAt'] },
             include: [{
                 model: Department,
                 as: 'departments',
-                through: { attributes: [] },
-                attributes: ['id'],
+                through: { attributes: [] }
+            },
+            {
+                model: SubDepartment,
+                as: 'subDepartments',
+                through: { attributes: [] }
             }],
             transaction
         });
 
+        // Generate password reset token and send email
         const token = generateToken(user.id, 'reset-password');
         const resetLink = `http://localhost:3000/set-password?token=${token}`;
+
         await sendEmail(
             userData.email,
             'Set Your Password',
-            `Hi ${userData.username},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`
+            `Hi ${userData.firstName},\n\nPlease set your password by clicking the link below:\n\n${resetLink}\n\nThe link expires in 15 minutes.`
         );
 
         await transaction.commit();
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             messages: ['User added successfully, password setup email sent'],
             user: userWithDepartments
         });
-
     } catch (error) {
         await transaction.rollback();
         next(error);
@@ -67,56 +89,51 @@ const createUser = async (userData, res, next) => {
 };
 
 export const addUser = async (req, res, next) => {
-    const { username, email, roleId, phoneNumber, departmentId, companyId, countryCode } = req.body;
+    const { firstName, middleName, lastName, roleId, phoneNumber, email, departments, companyId, countryCode } = req.body;
     const currentUser = req.user;
     const password = "root@7ji";
+    console.log(req.body)
 
     try {
         // Since validation functions now throw AppError, we don't need to check isValid
         await validateEmailForUser(email, null, roleId, companyId);
         await validateRoleAssignment(currentUser, roleId);
+        const userData = {
+            firstName,
+            middleName,
+            lastName,
+            password,
+            email,
+            roleId,
+            companyId,
+            phoneNumber,
+            countryCode
+        };
 
         if (roleId === ROLE_IDS.ADMIN) {
             await validateAdminAssignment(companyId);
             // For admin role, create user with provided company
-            await createUser({
-                username,
-                password,
-                email,
-                roleId,
-                companyId,
-                phoneNumber,
-                countryCode
-            }, res, next);
+            await createUser(userData, res, next);
         } else if (roleId === ROLE_IDS.LEADERSHIP) {
-            await createUser({
-                username,
-                password,
-                email,
-                roleId,
-                companyId,
-                phoneNumber,
-                countryCode
-            }, res, next);
+            await createUser(userData, res, next);
         }
         else {
-            // For non-admin roles, check department exists
-            const department = await Department.findOne({ where: { id: departmentId } });
-            if (!department) {
-                throw new AppError('Department not found', 404);
+
+            if (!departments || departments.length === 0) {
+                throw new AppError('Departments are required for this role', 400);
+            }
+            const existingDepts = await Department.findAll({
+                where: { id: departments.map(d => d.id) }
+            });
+
+            if (existingDepts.length !== departments.length) {
+                throw new AppError('One or more departments not found', 404);
             }
 
-            // For non-admin roles, create user with department's company
-            await createUser({
-                username,
-                password,
-                email,
-                roleId,
-                departmentId,
-                companyId: department.companyId,
-                phoneNumber,
-                countryCode
-            }, res, next);
+            if (!userData.companyId) {
+                userData.companyId = existingDepts[0].companyId;
+            }
+            await createUser({ ...userData, departments }, res, next);
         }
 
     } catch (error) {
@@ -126,11 +143,38 @@ export const addUser = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
     const { userId } = req.params;
-    const { username, email, roleId, phoneNumber } = req.body;
+    const {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        roleId,
+        phoneNumber,
+        departments,
+        countryCode
+    } = req.body;
 
     const transaction = await sequelize.transaction();
+
     try {
-        const user = await User.findOne({ where: { id: userId }, transaction });
+        // Find user with current departments and subdepartments
+        const user = await User.findOne({
+            where: { id: userId },
+            include: [
+                {
+                    model: Department,
+                    as: 'departments',
+                    through: { attributes: [] }
+                },
+                {
+                    model: SubDepartment,
+                    as: 'subDepartments',
+                    through: { attributes: [] }
+                }
+            ],
+            transaction
+        });
+
         if (!user) {
             throw new AppError('User not found', 404);
         }
@@ -141,27 +185,99 @@ export const updateUser = async (req, res, next) => {
         }
 
         // Role validation if role is being updated
-        if (roleId && roleId !== user.roleId) {
-            await validateRoleAssignment(req.user, roleId, user.roleId);
+        await validateRoleAssignment(req.user, roleId, user.roleId);
+
+        // Update user basic fields
+        const updateFields = {
+            ...(firstName && { firstName }),
+            ...(middleName && { middleName }),
+            ...(lastName && { lastName }),
+            ...(email && { email }),
+            ...(phoneNumber && { phoneNumber }),
+            ...(roleId && { roleId }),
+            ...(countryCode && { countryCode })
+        };
+
+        await user.update(updateFields, { transaction });
+
+        // Handle department updates if provided
+        if (departments) {
+            // Get current department and subdepartment IDs
+            const currentDeptIds = user.departments.map(d => d.id);
+            const currentSubDeptIds = user.subDepartments.map(sd => sd.id);
+
+            // Calculate departments to add and remove
+            const newDeptIds = departments.map(d => d.id);
+            const deptsToAdd = newDeptIds.filter(id => !currentDeptIds.includes(id));
+            const deptsToRemove = currentDeptIds.filter(id => !newDeptIds.includes(id));
+
+            // Calculate subdepartments to add and remove
+            const newSubDeptIds = departments.flatMap(dept => dept.subDepartments || []);
+            const subDeptsToAdd = newSubDeptIds.filter(id => !currentSubDeptIds.includes(id));
+
+            // Remove all subdepartments of removed departments and any subdepartments not in new list
+            const remainingDepts = departments.filter(d => !deptsToRemove.includes(d.id));
+            const validSubDeptIds = remainingDepts.flatMap(dept => dept.subDepartments || []);
+            const subDeptsToRemove = currentSubDeptIds.filter(id => !validSubDeptIds.includes(id));
+
+            // Remove old department links
+            if (deptsToRemove.length > 0) {
+                await UserDepartmentLink.destroy({
+                    where: {
+                        userId,
+                        departmentId: deptsToRemove
+                    },
+                    transaction
+                });
+            }
+
+            // Remove old subdepartment links
+            if (subDeptsToRemove.length > 0) {
+                await UserSubDepartmentLink.destroy({
+                    where: {
+                        userId,
+                        subDepartmentId: subDeptsToRemove
+                    },
+                    transaction
+                });
+            }
+
+            // Add new department links
+            if (deptsToAdd.length > 0) {
+                await UserDepartmentLink.bulkCreate(
+                    deptsToAdd.map(deptId => ({
+                        userId,
+                        departmentId: deptId
+                    })),
+                    { transaction }
+                );
+            }
+
+            // Add new subdepartment links
+            if (subDeptsToAdd.length > 0) {
+                await UserSubDepartmentLink.bulkCreate(
+                    subDeptsToAdd.map(subDeptId => ({
+                        userId,
+                        subDepartmentId: subDeptId
+                    })),
+                    { transaction }
+                );
+            }
         }
 
-        // Update user fields
-        if (username) user.username = username;
-        if (email) user.email = email;
-        if (phoneNumber) user.phoneNumber = phoneNumber;
-        if (roleId) user.roleId = roleId;
-
-        await user.save({ transaction });
-
-        // Fetch updated user with departments
+        // Fetch updated user with all associations
         const updatedUser = await User.findOne({
             where: { id: userId },
             attributes: { exclude: ['password', 'deletedAt'] },
             include: [{
                 model: Department,
                 as: 'departments',
-                through: { attributes: [] },
-                attributes: ['id'],
+                through: { attributes: [] }
+            },
+            {
+                model: SubDepartment,
+                as: 'subDepartments',
+                through: { attributes: [] }
             }],
             transaction
         });
@@ -198,7 +314,7 @@ export const deleteUser = async (req, res, next) => {
         // Check if the requesting user has the right to delete the target user
         const canDelete =
             (requestingUserRoleId === ROLE_IDS.SUPER_ADMIN) ||
-            (requestingUserRoleId === ROLE_IDS.ADMIN && [ROLE_IDS.DEPARTMENT_MANAGER,ROLE_IDS.LEADERSHIP, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
+            (requestingUserRoleId === ROLE_IDS.ADMIN && [ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.LEADERSHIP, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
             (requestingUserRoleId === ROLE_IDS.LEADERSHIP && [ROLE_IDS.DEPARTMENT_MANAGER, ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId)) ||
             (requestingUserRoleId === ROLE_IDS.DEPARTMENT_MANAGER && [ROLE_IDS.ASSESSOR, ROLE_IDS.REVIEWER].includes(userToDeleteRoleId));
 
@@ -555,6 +671,65 @@ export const removeUserFromSubDepartment = async (req, res, next) => {
         });
     } catch (error) {
         next(error);
+    }
+};
+
+
+export const getSubAssessmentByUserId = async (req, res, next) => {
+    try {
+        const { userId } = req.params
+        // const userId = req.user.id;
+
+        // Get user's sub-departments and their sub-assessments
+        const userSubAssessments = await SubAssessment.findAll({
+            where: {
+                subAssessmentType: SUB_ASSESSMENT_TYPE.DEFAULT
+            },
+            include: [
+                {
+                    model: SubDepartment,
+                    as: 'subDepartment',
+                    attributes: ['id', 'subDepartmentName'],
+                    required: true,
+                    include: [
+                        {
+                            model: User,
+                            as: 'users',
+                            where: { id: userId },
+                            attributes: [],
+                            through: { attributes: [] }
+                        },
+                        {
+                            model: Department,
+                            as: 'department',
+                            attributes: ['id', 'departmentName']
+                        }
+                    ]
+                }
+            ]
+        });
+
+        if (!userSubAssessments || userSubAssessments.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No sub-assessments found for this user',
+                subAssessments: []
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Sub-assessments fetched successfully',
+            subAssessments: userSubAssessments
+        });
+
+    } catch (error) {
+        console.error('Error in getSubAssessmentByUserId:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
     }
 };
 

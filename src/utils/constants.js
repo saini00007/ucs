@@ -24,6 +24,11 @@ export const ANSWER_REVIEW_STATUS = {
     IMPROVED: 'improved'
 };
 
+export const ANSWER_TYPE = {
+    DEFAULT: 'default',
+    IMPROVED: 'improved'
+}
+
 export const SUB_ASSESSMENT_REVIEW_STATUS = {
     DRAFT: 'draft',           // Initial state
     SUBMITTED_FOR_REVIEW: 'submittedForReview',  // Submitted to reviewer
@@ -113,7 +118,17 @@ export const frameworkFieldMapping = {
     'PCIDSS': 'pcidss',
     'IEC62443': 'iec62443ControlId',
     'NIST80082': 'nist80082ControlId',
-    'MITREDEFEND': 'mitreDefendControlId', 
+    'MITREDEFEND': 'mitreDefendControlId',
     'NISTCSF': 'nistCsfControlId',
     'ISO27001': 'iso270012022CIdNum'
-  };
+};
+
+export const ASSESSMENT_TYPE = {
+    DEFAULT: 'default',
+    CUSTOM: 'custom'
+}
+
+export const SUB_ASSESSMENT_TYPE = {
+    DEFAULT: 'default',
+    CUSTOM: 'custom'
+}

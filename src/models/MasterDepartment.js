@@ -24,6 +24,10 @@ MasterDepartment.associate = (models) => {
     foreignKey: 'masterDepartmentId', 
     as: 'departments' 
   });
+  MasterDepartment.hasMany(models.MasterSubDepartment,{
+    foreignKey:'masterDepartmentId',
+    as:'masterSubDepartments'
+  })
   
   // MasterQuestion association (many-to-many)
   MasterDepartment.belongsToMany(models.MasterQuestion, { 

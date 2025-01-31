@@ -36,14 +36,14 @@ const checkAnswerAccess = async (user, resourceId) => {
         if (!answer) {
             throw new AppError('Answer not Found', 404);
         }
-       
+
         const subDepartment = answer.assessmentQuestion.subAssessment.subDepartment;
         const companyId = subDepartment.department.companyId;
         const departmentId = subDepartment.department.id;
         const subDepartmentId = subDepartment.id;
 
         // Check access scope
-        const accessScope = checkAccessScope(user, companyId, departmentId,subDepartmentId);
+        const accessScope = checkAccessScope(user, companyId, departmentId, subDepartmentId);
         if (!accessScope.success) {
             throw new AppError('Access denied: insufficient permissions', 403);
         }

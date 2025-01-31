@@ -37,11 +37,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/', authRoutes);
 
-app.use(authenticate);
+ app.use(authenticate);
 
 app.use('/companies', companyRoutes);
 app.use('/departments', departmentRoutes);
-app.use('/sub-departments',SubDepartmentRoutes)
+app.use('/sub-departments', SubDepartmentRoutes)
 app.use('/users', userRoutes);
 app.use('/assessments', assessmentRoutes);
 app.use('/sub-assessments', SubAssessmentRoutes);
