@@ -1,7 +1,7 @@
 import { AssessmentQuestion, EvidenceFile, Answer, User, SubAssessment } from '../models/index.js';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
-import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS } from '../utils/constants.js';
+import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS, REVISION_STATUS } from '../utils/constants.js';
 import { submitAssessment } from './assessment.js';
 
 export const createAnswer = async (req, res, next) => {
@@ -49,13 +49,11 @@ export const createAnswer = async (req, res, next) => {
       throw new AppError('No evidence files should be uploaded when the answer is "no" or "not applicable".', 400);
     }
 
-    const isAutoApproved = answerText === ANSWER_TYPES.NO || answerText === ANSWER_TYPES.NOT_APPLICABLE;
-
     // Create the answer
     const answer = await Answer.create({
       assessmentQuestionId,
       createdByUserId: userId,
-      reviewStatus: isAutoApproved ? ANSWER_REVIEW_STATUS.APPROVED : ANSWER_REVIEW_STATUS.PENDING,
+      reviewStatus: ANSWER_REVIEW_STATUS.PENDING,
       answerText,
     }, { transaction });
 
@@ -153,23 +151,20 @@ export const updateAnswer = async (req, res, next) => {
       throw new AppError('Evidence files are required for YES answers', 400);
     }
 
+    // Determine revision status based on assessment state
+    let revisionStatus;
+    if (answer.assessmentQuestion.subAssessment.reviewStatus === SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION) {
+      revisionStatus = REVISION_STATUS.IMPROVED;
+    } else {
+      revisionStatus = REVISION_STATUS.INITIAL;
+    }
+
     // Prepare update data
     const updateData = {
       answerText,
-      createdByUserId: userId
+      createdByUserId: userId,
+      revisionStatus
     };
-
-    // If updating to NO or NOT_APPLICABLE, auto-approve the answer
-    if (isUpdatingToNo) {
-      updateData.reviewStatus = ANSWER_REVIEW_STATUS.APPROVED;
-      updateData.reviewedAt = new Date();
-    }
-    // If this was a rejected answer being updated to YES, set to IMPROVED
-    else if (answer.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED && isUpdatingToYes) {
-      updateData.reviewStatus = ANSWER_REVIEW_STATUS.IMPROVED;
-      updateData.reviewedAt = null;
-      updateData.reviewedByUserId = null;
-    }
 
     // Update answer
     await answer.update(updateData, { transaction });
@@ -185,32 +180,6 @@ export const updateAnswer = async (req, res, next) => {
           answerId: answer.id
         }, { transaction })
       ));
-    }
-
-    // If this was a rejected answer update OR changing to auto-approved status, 
-    // check if all rejected answers are now updated
-    if (answer.reviewStatus === ANSWER_REVIEW_STATUS.IMPROVED ||
-      (isUpdatingToNo && answer.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED)) {
-      const remainingRejected = await Answer.count({
-        include: [{
-          model: AssessmentQuestion,
-          as: 'assessmentQuestion',
-          where: { subAssessmentId: answer.assessmentQuestion.subAssessmentId }
-        }],
-        where: {
-          reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
-        },
-        transaction
-      });
-
-      // If all rejected answers are updated, change status back to SUBMITTED_FOR_REVIEW
-      if (remainingRejected === 0 && submitAssessment.reviewStatus === SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION) {
-        await answer.assessmentQuestion.subAssessment.update({
-          reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
-          submittedForReviewAt: new Date(),
-          submittedForReviewBy: userId
-        }, { transaction });
-      }
     }
 
     // Fetch updated answer with associations
@@ -243,7 +212,6 @@ export const updateAnswer = async (req, res, next) => {
       messages: ['Answer updated successfully'],
       answer: updatedAnswer
     });
-
   } catch (error) {
     await transaction.rollback();
     next(error);
@@ -284,7 +252,6 @@ export const submitReviewDecision = async (req, res, next) => {
   const { answerId } = req.params;
   const { decision } = req.body;
   const userId = req.user.id;
-  console.log(decision);
 
   const transaction = await sequelize.transaction();
 
@@ -313,43 +280,6 @@ export const submitReviewDecision = async (req, res, next) => {
       reviewedAt: new Date()
     }, { transaction });
 
-    // Check if all answers are reviewed
-    const subAssessmentId = answer.assessmentQuestion.subAssessmentId;
-    const pendingAnswers = await Answer.count({
-      include: [{
-        model: AssessmentQuestion,
-        as: 'assessmentQuestion',
-        where: { subAssessmentId }
-      }],
-      where: {
-        reviewStatus: ANSWER_REVIEW_STATUS.PENDING
-      },
-      transaction
-    });
-
-    // Update subAssessment status based on review results
-    if (pendingAnswers === 0) {
-      const rejectedAnswers = await Answer.count({
-        include: [{
-          model: AssessmentQuestion,
-          as: 'assessmentQuestion',
-          where: { subAssessmentId }
-        }],
-        where: {
-          reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
-        },
-        transaction
-      });
-
-      const newStatus = rejectedAnswers > 0 ?
-        SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION :
-        SUB_ASSESSMENT_REVIEW_STATUS.COMPLETED;
-
-      await answer.assessmentQuestion.subAssessment.update({
-        reviewStatus: newStatus,
-        completedAt: newStatus === SUB_ASSESSMENT_REVIEW_STATUS.COMPLETED ? new Date() : null
-      }, { transaction });
-    }
 
     await transaction.commit();
     res.status(200).json({

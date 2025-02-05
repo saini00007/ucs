@@ -20,12 +20,11 @@ export const ROLE_IDS = {
 export const ANSWER_REVIEW_STATUS = {
     PENDING: 'pending',
     APPROVED: 'approved',
-    REJECTED: 'rejected',
-    IMPROVED: 'improved'
+    REJECTED: 'rejected'
 };
 
-export const ANSWER_TYPE = {
-    DEFAULT: 'default',
+export const REVISION_STATUS = {
+    INITIAL: 'initial',
     IMPROVED: 'improved'
 }
 
@@ -115,12 +114,13 @@ export const resourceTypeToId = {
 };
 
 export const frameworkFieldMapping = {
-    'PCIDSS': 'pcidss',
-    'IEC62443': 'iec62443ControlId',
-    'NIST80082': 'nist80082ControlId',
-    'MITREDEFEND': 'mitreDefendControlId',
-    'NISTCSF': 'nistCsfControlId',
-    'ISO27001': 'iso270012022CIdNum'
+    'PCI DSS': 'pcidss',
+    'PCI-DSS': 'pcidss',  // Adding both versions since they appear in different categories
+    'IEC 62443': 'iec62443ControlId',
+    'NIST SP 800-82 (OT/ICS)': 'nist80082ControlId',
+    'MITRE DEFEND': 'mitreDefendControlId',
+    'NIST CSF': 'nistCsfControlId',
+    'ISO 27001/ISO 27002': 'iso270012022CIdNum'
 };
 
 export const ASSESSMENT_TYPE = {

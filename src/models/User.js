@@ -24,11 +24,11 @@ const User = sequelize.define('User', {
     type: DataTypes.TEXT,
     allowNull: false,
   },
-  middleName:{
+  middleName: {
     type: DataTypes.TEXT,
     allowNull: true,
   },
-  lastName:{
+  lastName: {
     type: DataTypes.TEXT,
     allowNull: false,
   },

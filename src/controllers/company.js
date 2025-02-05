@@ -454,12 +454,6 @@ export const getCompanySetupStatus = async (req, res) => {
 
 
 
-
-
-
-
-
-
 export const updateCompany = async (req, res, next) => {
   console.log(req.body);
   const { companyId } = req.params;
@@ -909,7 +903,7 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
         attributes: ['id', 'departmentName', 'createdAt'],
         order: [['createdAt', 'DESC']]
       });
-    } 
+    }
     // For department manager, fetch only assigned departments
     else if (user.roleId === ROLE_IDS.DEPARTMENT_MANAGER) {
       departments = await Department.findAll({
@@ -1041,7 +1035,7 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     // Get company basic info
     const company = await Company.findByPk(companyId, {
-      attributes: ['id', 'companyName']
+      attributes: ['id', 'companyLegalName']
     });
 
     if (!company) {
@@ -1075,6 +1069,7 @@ export const getReportByCompanyId = async (req, res, next) => {
     if (unauthorizedIds.length > 0) {
       throw new AppError(`Invalid or unauthorized control framework IDs: ${unauthorizedIds.join(', ')}`, 400);
     }
+
 
     // Get the full framework details
     const controlFrameworks = await ControlFramework.findAll({
@@ -1110,19 +1105,19 @@ export const getReportByCompanyId = async (req, res, next) => {
       throw new AppError(`No departments found for company ID: ${companyId}`, 404);
     }
 
-    // Validate all assessments are submitted
-    const hasUnsubmittedAssessment = departments.some(dept =>
-      dept.assessments.some(assessment => !assessment.submitted)
-    );
+    // // Validate all assessments are submitted
+    // const hasUnsubmittedAssessment = departments.some(dept =>
+    //   dept.assessments.some(assessment => !assessment.submitted)
+    // );
 
-    if (hasUnsubmittedAssessment) {
-      throw new AppError('All assessments must be submitted before generating report', 400);
-    }
+    // if (hasUnsubmittedAssessment) {
+    //   throw new AppError('All assessments must be submitted before generating report', 400);
+    // }
 
-    // Build framework conditions for filtering - modified to check any framework
+    // Build framework conditions for filtering
     const frameworkConditions = frameworks.map(framework => ({
       [frameworkFieldMapping[framework]]: {
-        [Op.not]: null  // Just check for not null to include any question with this framework
+        [Op.not]: null
       }
     }));
 
@@ -1157,7 +1152,7 @@ export const getReportByCompanyId = async (req, res, next) => {
                 model: MasterQuestion.scope('riskReport'),
                 as: 'masterQuestion',
                 where: {
-                  [Op.or]: frameworkConditions  // Using OR to include questions with any of the frameworks
+                  [Op.or]: frameworkConditions
                 }
               },
               {
@@ -1205,7 +1200,8 @@ export const getReportByCompanyId = async (req, res, next) => {
 
     // Prepare final response
     const finalReport = {
-      ...company.toJSON(),
+      id: company.id,
+      companyName: company.companyLegalName,
       statistics: companyStats,
       departments: enhancedDepartmentReport,
       metadata: {
@@ -1228,6 +1224,7 @@ export const getReportByCompanyId = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const getCompanyLogo = async (req, res, next) => {
   try {

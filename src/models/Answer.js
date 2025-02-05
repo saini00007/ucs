@@ -1,6 +1,7 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
-import { ANSWER_REVIEW_STATUS } from '../utils/constants.js';
+import { ANSWER_REVIEW_STATUS, REVISION_STATUS } from '../utils/constants.js';
+import { object } from 'joi';
 
 const Answer = sequelize.define('Answer', {
   id: {
@@ -18,10 +19,19 @@ const Answer = sequelize.define('Answer', {
     allowNull: false,
     onDelete: 'CASCADE',
   },
+  finalReview: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   reviewStatus: {
     type: DataTypes.ENUM(Object.values(ANSWER_REVIEW_STATUS)),
     defaultValue: ANSWER_REVIEW_STATUS.PENDING,
     allowNull: false,
+  },
+  revisionStatus: {
+    type: DataTypes.ENUM(Object.values(REVISION_STATUS)),
+    defaultValue: REVISION_STATUS.INITIAL,
+    allowNull: true
   },
   reviewedAt: {
     type: DataTypes.DATE,

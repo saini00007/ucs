@@ -2,7 +2,7 @@ import { Answer, Assessment, AssessmentQuestion, EvidenceFile, MasterQuestion, S
 import { checkSubAssessmentAccess } from "../services/contextChecks";
 import { checkAssessmentState, checkSubAssessmentState } from "../utils/accessValidators";
 import AppError from "../utils/AppError";
-import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS, ROLE_IDS } from "../utils/constants";
+import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS, ROLE_IDS, REVISION_STATUS } from "../utils/constants";
 import { checkSubAssessmentCompletion } from "../utils/subAssessmentUtils";
 import sequelize from "../config/db";
 import { Op } from "sequelize";
@@ -124,7 +124,6 @@ export const getAssessmentQuestionsBySubAssessmentId = async (req, res, next) =>
             limit: limitNum,
             offset: (pageNum - 1) * limitNum,
         });
-        console.log('--------------------hehehe----------------');
 
 
         // Calculate pagination info
@@ -169,7 +168,16 @@ export const submitForReview = async (req, res, next) => {
             include: [{
                 model: AssessmentQuestion,
                 as: 'questions',
-                include: ['answer']
+                include: [
+                    {
+                        model: Answer,
+                        as: 'answer'
+                    },
+                    {
+                        model: MasterQuestion,
+                        as: 'masterQuestion'
+                    }
+                ]
             }],
             transaction
         });
@@ -184,6 +192,31 @@ export const submitForReview = async (req, res, next) => {
             throw new AppError('All questions must be answered before submission', 400);
         }
 
+        // Process answers - auto-approve "no" and "not applicable" answers
+        const answerUpdates = subAssessment.questions.map(async question => {
+            const answer = question.answer;
+            const lowerCaseAnswer = answer.answerText?.toLowerCase().trim();
+            
+            // Check if the answer matches NO or NOT_APPLICABLE types
+            if (lowerCaseAnswer === ANSWER_TYPES.NO || 
+                lowerCaseAnswer === ANSWER_TYPES.NOT_APPLICABLE) {
+                await Answer.update(
+                    {
+                        finalReview: true,
+                        reviewStatus: ANSWER_REVIEW_STATUS.APPROVED,
+                        reviewedAt: new Date()
+                    },
+                    {
+                        where: { id: answer.id },
+                        transaction
+                    }
+                );
+            }
+        });
+
+        // Wait for all answer updates to complete
+        await Promise.all(answerUpdates);
+
         // Update subAssessment status
         await subAssessment.update({
             reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
@@ -197,7 +230,6 @@ export const submitForReview = async (req, res, next) => {
             success: true,
             messages: ['Assessment submitted for review successfully']
         });
-
     } catch (error) {
         await transaction.rollback();
         next(error);
@@ -207,53 +239,257 @@ export const submitForReview = async (req, res, next) => {
 export const resubmitAfterRevision = async (req, res, next) => {
     const { subAssessmentId } = req.params;
     const userId = req.user.id;
-    
+
     const transaction = await sequelize.transaction();
-    
+
     try {
         const subAssessment = await SubAssessment.findOne({
             where: {
                 id: subAssessmentId,
                 reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION
             },
+            include: [{
+                model: AssessmentQuestion,
+                as: 'questions',
+                include: [{
+                    model: Answer,
+                    as: 'answer'
+                }]
+            }],
             transaction
         });
-        
+
         if (!subAssessment) {
             throw new AppError('SubAssessment not found or not in need revision status', 404);
         }
-        
-        // Check if any answers are still rejected
-        const rejectedAnswers = await Answer.count({
+
+        // Check for rejected answers that haven't been improved
+        const unprocessedAnswers = await Answer.findAll({
             include: [{
                 model: AssessmentQuestion,
                 as: 'assessmentQuestion',
-                where: { subAssessmentId }
+                where: { subAssessmentId },
+                required: true
             }],
             where: {
-                reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
+                reviewStatus: ANSWER_REVIEW_STATUS.REJECTED,
+                revisionStatus: {
+                    [Op.ne]: REVISION_STATUS.IMPROVED
+                }
             },
             transaction
         });
 
-        if (rejectedAnswers > 0) {
-            throw new AppError('All rejected answers must be updated before resubmission', 400);
+        if (unprocessedAnswers.length > 0) {
+            const unprocessedQuestionIds = unprocessedAnswers.map(answer => 
+                answer.assessmentQuestion.masterQuestionId
+            );
+            
+            throw new AppError(
+                'Please improve all rejected answers before resubmitting.',
+                400,
+                { unprocessedQuestionIds }
+            );
         }
-        
+
+        // Process all answers based on their type
+        const answers = subAssessment.questions
+            .filter(q => q.answer)
+            .map(q => q.answer);
+
+        // Update answer statuses
+        const answerUpdates = answers.map(async answer => {
+            const updateData = {};
+            
+            if (answer.answerText === ANSWER_TYPES.YES) {
+                updateData.reviewStatus = ANSWER_REVIEW_STATUS.PENDING;
+                updateData.finalReview = false;
+            } else if (
+                answer.answerText === ANSWER_TYPES.NO || 
+                answer.answerText === ANSWER_TYPES.NOT_APPLICABLE
+            ) {
+                updateData.reviewStatus = ANSWER_REVIEW_STATUS.APPROVED;
+                updateData.finalReview = true;
+                updateData.reviewedAt = new Date();
+            }
+
+            await Answer.update(updateData, {
+                where: { id: answer.id },
+                transaction
+            });
+        });
+
+        await Promise.all(answerUpdates);
+
         // Update subAssessment status
         await subAssessment.update({
             reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
             submittedForReviewAt: new Date(),
             submittedForReviewBy: userId
         }, { transaction });
-        
+
         await transaction.commit();
-        
+
         res.status(200).json({
             success: true,
             messages: ['Assessment resubmitted for review successfully']
         });
-        
+    } catch (error) {
+        await transaction.rollback();
+        next(error);
+    }
+};
+
+export const submitForRevision = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const userId = req.user.id;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: {
+                id: subAssessmentId,
+                reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.UNDER_REVIEW
+            },
+            include: [{
+                model: AssessmentQuestion,
+                as: 'questions',
+                include: [{
+                    model: Answer,
+                    as: 'answer'
+                }]
+            }],
+            transaction
+        });
+
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not under review', 404);
+        }
+
+        // Get all answers for this subAssessment
+        const answers = subAssessment.questions
+            .filter(q => q.answer)
+            .map(q => q.answer);
+
+        // Update approved answers - set finalReview to true
+        await Answer.update(
+            {
+                finalReview: true
+            },
+            {
+                where: {
+                    id: {
+                        [Op.in]: answers
+                            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED)
+                            .map(a => a.id)
+                    }
+                },
+                transaction
+            }
+        );
+
+        // Update rejected answers - set revisionStatus to initial
+        await Answer.update(
+            {
+                revisionStatus: REVISION_STATUS.INITIAL
+            },
+            {
+                where: {
+                    id: {
+                        [Op.in]: answers
+                            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED)
+                            .map(a => a.id)
+                    }
+                },
+                transaction
+            }
+        );
+
+        // Update subAssessment status to reflect revision needed
+        await subAssessment.update({
+            reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION,
+            revisedAt: new Date(),
+            revisedBy: userId
+        }, { transaction });
+
+        await transaction.commit();
+
+        res.status(200).json({
+            success: true,
+            messages: ['Assessment submitted for revision successfully']
+        });
+
+    } catch (error) {
+        await transaction.rollback();
+        next(error);
+    }
+};
+
+export const markReviewComplete = async (req, res, next) => {
+    const { subAssessmentId } = req.params;
+    const userId = req.user.id;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        const subAssessment = await SubAssessment.findOne({
+            where: {
+                id: subAssessmentId,
+                reviewStatus: {
+                    [Op.in]: [
+                        SUB_ASSESSMENT_REVIEW_STATUS.UNDER_REVIEW,
+                        SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW
+                    ]
+                }
+            },
+            include: [{
+                model: AssessmentQuestion,
+                as: 'questions',
+                include: [{
+                    model: Answer,
+                    as: 'answer'
+                }]
+            }],
+            transaction
+        });
+
+        if (!subAssessment) {
+            throw new AppError('SubAssessment not found or not in review state', 404);
+        }
+
+        // Get all answers for this subAssessment
+        const answers = subAssessment.questions
+            .filter(q => q.answer)
+            .map(q => q.answer);
+
+        // Update all answers to finalReview true since review is complete
+        await Answer.update(
+            {
+                finalReview: true
+            },
+            {
+                where: {
+                    id: {
+                        [Op.in]: answers.map(a => a.id)
+                    }
+                },
+                transaction
+            }
+        );
+
+        // Update subAssessment status to completed
+        await subAssessment.update({
+            reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.COMPLETED,
+        }, { transaction });
+
+        await transaction.commit();
+
+        res.status(200).json({
+            success: true,
+            messages: ['Mark review complete successfully']
+        });
+
     } catch (error) {
         await transaction.rollback();
         next(error);
@@ -273,7 +509,6 @@ export const getQuestionsForReview = async (req, res, next) => {
                 }
             }
         });
-
 
         if (!subAssessment) {
             throw new AppError('SubAssessment not found or not submitted for review', 404);
@@ -297,21 +532,8 @@ export const getQuestionsForReview = async (req, res, next) => {
                     as: 'answer',
                     required: true,
                     where: {
-                        [Op.or]: [
-                            // Case 1: YES answers with PENDING or REJECTED status
-                            {
-                                [Op.and]: [
-                                    { answerText: ANSWER_TYPES.YES },
-                                    {
-                                        reviewStatus: {
-                                            [Op.in]: [ANSWER_REVIEW_STATUS.PENDING, ANSWER_REVIEW_STATUS.REJECTED]
-                                        }
-                                    }
-                                ]
-                            },
-                            // Case 2: Any answer type with IMPROVED status
-                            { reviewStatus: ANSWER_REVIEW_STATUS.IMPROVED }
-                        ]
+                        answerText: ANSWER_TYPES.YES,
+                        finalReview: false  // Only get answers where final decision is false
                     },
                     include: [
                         {
@@ -340,7 +562,6 @@ export const getQuestionsForReview = async (req, res, next) => {
                 currentPage: parseInt(page)
             }
         });
-
     } catch (error) {
         next(error);
     }
@@ -447,6 +668,11 @@ export const getRejectedQuestions = async (req, res, next) => {
                             model: EvidenceFile,
                             as: 'evidenceFiles',
                             attributes: ['id', 'filePath', 'fileName'],
+                        },
+                        {
+                            model: User,
+                            as: 'creator',
+                            attributes: ['id', 'firstName', 'lastName']
                         }
                     ]
                 }

@@ -4,7 +4,8 @@ import validate from '../middleware/validate.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
 import { RESOURCE_TYPES, ACTION_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
-import { getAssessmentQuestionsBySubAssessmentId, getQuestionsForReview, getRejectedQuestions, getSubAssessmentById, reopenSubAssessment, resubmitAfterRevision, submitForReview, submitSubAssessment } from '../controllers/subAssessments.js';
+import { getAssessmentQuestionsBySubAssessmentId, getQuestionsForReview, getRejectedQuestions, getSubAssessmentById, markReviewComplete, reopenSubAssessment, resubmitAfterRevision, submitForReview, submitForRevision, submitSubAssessment } from '../controllers/subAssessments.js';
+import { getSubAssessmentStats } from '../controllers/user.js';
 
 const router = express.Router();
 
@@ -76,7 +77,17 @@ router.put(
     resubmitAfterRevision
 );
 
+router.put(
+    '/:subAssessmentId/need-revision',
+    submitForRevision
+);
 
+router.put(
+    '/:subAssessmentId/mark-review-complete',
+    markReviewComplete
+);
+
+router.get('/:subAssessmentId/stats', getSubAssessmentStats)
 
 
 

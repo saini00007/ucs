@@ -1,4 +1,4 @@
-import { User, Department, Company, UserDepartmentLink, SubDepartment, UserSubDepartmentLink, SubAssessment } from '../models/index.js';
+import { User, Department, Company, UserDepartmentLink, SubDepartment, UserSubDepartmentLink, SubAssessment, AssessmentQuestion, Answer } from '../models/index.js';
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import sendEmail from '../utils/mailer.js';
@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import AppError from '../utils/AppError.js';
 import { validateAdminAssignment, validateRoleAssignment, validateEmailForUser } from '../utils/userUtils.js'
 import { ROLE_IDS, SUB_ASSESSMENT_TYPE } from '../utils/constants.js';
+import { calculateSubAssessmentStats } from '../utils/subAssessmentUtils.js';
 
 const createUser = async (userData, res, next) => {
     const transaction = await sequelize.transaction();
@@ -675,17 +676,25 @@ export const removeUserFromSubDepartment = async (req, res, next) => {
 };
 
 
-export const getSubAssessmentByUserId = async (req, res, next) => {
+export const getSubAssessmentByUserId = async (req, res) => {
     try {
-        const { userId } = req.params
-        // const userId = req.user.id;
+        const { userId } = req.params;
 
-        // Get user's sub-departments and their sub-assessments
-        const userSubAssessments = await SubAssessment.findAll({
+        const assessments = await SubAssessment.findAll({
             where: {
                 subAssessmentType: SUB_ASSESSMENT_TYPE.DEFAULT
             },
             include: [
+                {
+                    model: AssessmentQuestion,
+                    as: 'questions',
+                    attributes: ['id'],
+                    include: [{
+                        model: Answer,
+                        as: 'answer',
+                        attributes: ['answerText', 'reviewStatus', 'revisionStatus']
+                    }]
+                },
                 {
                     model: SubDepartment,
                     as: 'subDepartment',
@@ -709,28 +718,74 @@ export const getSubAssessmentByUserId = async (req, res, next) => {
             ]
         });
 
-        if (!userSubAssessments || userSubAssessments.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: 'No sub-assessments found for this user',
-                subAssessments: []
-            });
-        }
+        const formattedAssessments = assessments.map(assessment => {
+            const raw = assessment.get();
+            const stats = calculateSubAssessmentStats(assessment);
+            delete raw.questions;
 
-        return res.status(200).json({
+            return {
+                ...raw,
+                stats
+            };
+        });
+
+        return res.json({
             success: true,
-            message: 'Sub-assessments fetched successfully',
-            subAssessments: userSubAssessments
+            subAssessments: formattedAssessments
         });
 
     } catch (error) {
-        console.error('Error in getSubAssessmentByUserId:', error);
+        console.error('Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+};
+export const getSubAssessmentStats = async (req, res) => {
+    try {
+        const { subAssessmentId } = req.params;
+
+        // Fetch the sub-assessment with its questions and answers
+        const subAssessment = await SubAssessment.findOne({
+            where: { id: subAssessmentId },
+            include: [
+                {
+                    model: AssessmentQuestion,
+                    as: 'questions',
+                    attributes: ['id'],
+                    include: [{
+                        model: Answer,
+                        as: 'answer',
+                        attributes: [
+                            'answerText',
+                            'reviewStatus',
+                            'revisionStatus',
+                            'finalReview',  // Added this field
+                            'id'           // Also adding id for better tracking
+                        ]
+                    }]
+                }
+            ]
+        });
+
+        if (!subAssessment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Sub-assessment not found'
+            });
+        }
+
+        // Calculate stats using the existing calculateSubAssessmentStats function
+        const stats = calculateSubAssessmentStats(subAssessment);
+
+        return res.json({
+            success: true,
+            stats
+        });
+    } catch (error) {
+        console.error('Error fetching sub-assessment stats:', error);
         return res.status(500).json({
             success: false,
-            message: 'Internal server error',
-            error: error.message
+            message: 'Internal server error'
         });
     }
 };
-
 
