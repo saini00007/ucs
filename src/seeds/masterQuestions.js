@@ -101,7 +101,7 @@ const seedMasterQuestions = async (customFilePath = DEFAULT_EXCEL_PATH) => {
           revRiskImpactRating: parseFloatSafe(row['Revised Risk Impact Rating']),
           targetRiskRating: row['Taget Risk Risk Rating'] || null,
           department: row['Department'] || null,
-          subDepartment: randomSubDepartment 
+          subDepartment: randomSubDepartment
         };
 
         console.log(`Processing Question ${index + 1}/${rows.length}: "${questionData.questionText?.substring(0, 50)}..."`);

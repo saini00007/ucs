@@ -196,9 +196,9 @@ export const submitForReview = async (req, res, next) => {
         const answerUpdates = subAssessment.questions.map(async question => {
             const answer = question.answer;
             const lowerCaseAnswer = answer.answerText?.toLowerCase().trim();
-            
+
             // Check if the answer matches NO or NOT_APPLICABLE types
-            if (lowerCaseAnswer === ANSWER_TYPES.NO || 
+            if (lowerCaseAnswer === ANSWER_TYPES.NO ||
                 lowerCaseAnswer === ANSWER_TYPES.NOT_APPLICABLE) {
                 await Answer.update(
                     {
@@ -239,7 +239,6 @@ export const submitForReview = async (req, res, next) => {
 export const resubmitAfterRevision = async (req, res, next) => {
     const { subAssessmentId } = req.params;
     const userId = req.user.id;
-
     const transaction = await sequelize.transaction();
 
     try {
@@ -281,10 +280,9 @@ export const resubmitAfterRevision = async (req, res, next) => {
         });
 
         if (unprocessedAnswers.length > 0) {
-            const unprocessedQuestionIds = unprocessedAnswers.map(answer => 
-                answer.assessmentQuestion.masterQuestionId
+            const unprocessedQuestionIds = unprocessedAnswers.map(
+                answer => answer.assessmentQuestion.masterQuestionId
             );
-            
             throw new AppError(
                 'Please improve all rejected answers before resubmitting.',
                 400,
@@ -292,15 +290,14 @@ export const resubmitAfterRevision = async (req, res, next) => {
             );
         }
 
-        // Process all answers based on their type
-        const answers = subAssessment.questions
-            .filter(q => q.answer)
+        // Get only previously rejected answers
+        const rejectedAnswers = subAssessment.questions
+            .filter(q => q.answer && q.answer.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED)
             .map(q => q.answer);
 
-        // Update answer statuses
-        const answerUpdates = answers.map(async answer => {
+        // Update only previously rejected answers based on their type
+        const answerUpdates = rejectedAnswers.map(async answer => {
             const updateData = {};
-            
             if (answer.answerText === ANSWER_TYPES.YES) {
                 updateData.reviewStatus = ANSWER_REVIEW_STATUS.PENDING;
                 updateData.finalReview = false;
@@ -312,7 +309,6 @@ export const resubmitAfterRevision = async (req, res, next) => {
                 updateData.finalReview = true;
                 updateData.reviewedAt = new Date();
             }
-
             await Answer.update(updateData, {
                 where: { id: answer.id },
                 transaction
@@ -321,7 +317,6 @@ export const resubmitAfterRevision = async (req, res, next) => {
 
         await Promise.all(answerUpdates);
 
-        // Update subAssessment status
         await subAssessment.update({
             reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.SUBMITTED_FOR_REVIEW,
             submittedForReviewAt: new Date(),
@@ -334,6 +329,7 @@ export const resubmitAfterRevision = async (req, res, next) => {
             success: true,
             messages: ['Assessment resubmitted for review successfully']
         });
+
     } catch (error) {
         await transaction.rollback();
         next(error);
@@ -341,12 +337,19 @@ export const resubmitAfterRevision = async (req, res, next) => {
 };
 
 export const submitForRevision = async (req, res, next) => {
+    console.log('[submitForRevision] Starting with params:', {
+        subAssessmentId: req.params.subAssessmentId,
+        userId: req.user.id
+    });
+
     const { subAssessmentId } = req.params;
     const userId = req.user.id;
 
     const transaction = await sequelize.transaction();
+    console.log('[submitForRevision] Transaction started');
 
     try {
+        console.log('[submitForRevision] Fetching subAssessment with questions and answers');
         const subAssessment = await SubAssessment.findOne({
             where: {
                 id: subAssessmentId,
@@ -364,15 +367,36 @@ export const submitForRevision = async (req, res, next) => {
         });
 
         if (!subAssessment) {
+            console.log('[submitForRevision] SubAssessment not found or not under review');
             throw new AppError('SubAssessment not found or not under review', 404);
         }
+
+        console.log('[submitForRevision] SubAssessment found:', {
+            id: subAssessment.id,
+            reviewStatus: subAssessment.reviewStatus
+        });
 
         // Get all answers for this subAssessment
         const answers = subAssessment.questions
             .filter(q => q.answer)
             .map(q => q.answer);
 
+        console.log('[submitForRevision] Extracted answers:', {
+            totalAnswers: answers.length,
+            approvedAnswers: answers.filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED).length,
+            rejectedAnswers: answers.filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED).length
+        });
+
         // Update approved answers - set finalReview to true
+        const approvedAnswerIds = answers
+            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED)
+            .map(a => a.id);
+
+        console.log('[submitForRevision] Updating approved answers:', {
+            count: approvedAnswerIds.length,
+            ids: approvedAnswerIds
+        });
+
         await Answer.update(
             {
                 finalReview: true
@@ -380,9 +404,7 @@ export const submitForRevision = async (req, res, next) => {
             {
                 where: {
                     id: {
-                        [Op.in]: answers
-                            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.APPROVED)
-                            .map(a => a.id)
+                        [Op.in]: approvedAnswerIds
                     }
                 },
                 transaction
@@ -390,6 +412,15 @@ export const submitForRevision = async (req, res, next) => {
         );
 
         // Update rejected answers - set revisionStatus to initial
+        const rejectedAnswerIds = answers
+            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED)
+            .map(a => a.id);
+
+        console.log('[submitForRevision] Updating rejected answers:', {
+            count: rejectedAnswerIds.length,
+            ids: rejectedAnswerIds
+        });
+
         await Answer.update(
             {
                 revisionStatus: REVISION_STATUS.INITIAL
@@ -397,15 +428,14 @@ export const submitForRevision = async (req, res, next) => {
             {
                 where: {
                     id: {
-                        [Op.in]: answers
-                            .filter(a => a.reviewStatus === ANSWER_REVIEW_STATUS.REJECTED)
-                            .map(a => a.id)
+                        [Op.in]: rejectedAnswerIds
                     }
                 },
                 transaction
             }
         );
 
+        console.log('[submitForRevision] Updating subAssessment status');
         // Update subAssessment status to reflect revision needed
         await subAssessment.update({
             reviewStatus: SUB_ASSESSMENT_REVIEW_STATUS.NEED_REVISION,
@@ -413,15 +443,19 @@ export const submitForRevision = async (req, res, next) => {
             revisedBy: userId
         }, { transaction });
 
+        console.log('[submitForRevision] Committing transaction');
         await transaction.commit();
 
         res.status(200).json({
             success: true,
             messages: ['Assessment submitted for revision successfully']
         });
+        console.log('[submitForRevision] Request completed successfully');
 
     } catch (error) {
+        console.error('[submitForRevision] Error occurred:', error);
         await transaction.rollback();
+        console.log('[submitForRevision] Transaction rolled back');
         next(error);
     }
 };

@@ -56,7 +56,7 @@ router.put('/:userId',
     ACTION_IDS.UPDATE
   ),
   checkAccess,
-  validate(updateUserSchema),
+  // validate(updateUserSchema),
   updateUser
 );
 

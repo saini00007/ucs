@@ -446,14 +446,6 @@ export const getCompanySetupStatus = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
 export const updateCompany = async (req, res, next) => {
   console.log(req.body);
   const { companyId } = req.params;
@@ -949,7 +941,7 @@ export const getDepartmentsByCompanyId = async (req, res, next) => {
 
 export const getUsersByCompanyId = async (req, res, next) => {
   const { companyId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, roleId } = req.query;
 
   try {
     // 1. First validate the company exists
@@ -965,16 +957,20 @@ export const getUsersByCompanyId = async (req, res, next) => {
       throw new AppError('Invalid pagination parameters', 400);
     }
 
-    // 3. Get the total count of users WITHOUT includes
-    // This ensures accurate counting without JOIN complications
+    // 3. Prepare where clause with optional roleId filter
+    const whereClause = {
+      companyId,
+      ...(roleId && { roleId }) // Using roleId directly as string
+    };
+
+    // 4. Get the total count of users with filter
     const count = await User.count({
-      where: { companyId }
+      where: whereClause
     });
 
-    // 4. Get the users WITH their associations
-    // This query focuses on getting the detailed data we need
+    // 5. Get the users WITH their associations
     const users = await User.findAll({
-      where: { companyId },
+      where: whereClause,
       attributes: {
         exclude: ['password', 'deletedAt']
       },
@@ -982,8 +978,8 @@ export const getUsersByCompanyId = async (req, res, next) => {
         {
           model: Department,
           as: 'departments',
-          through: { attributes: [] },  // Exclude junction table attributes
-          required: false,              // Use LEFT JOIN instead of INNER JOIN
+          through: { attributes: [] },
+          required: false,
           attributes: ['id', 'departmentName'],
         },
         {
@@ -996,16 +992,16 @@ export const getUsersByCompanyId = async (req, res, next) => {
       ],
       limit: limitNum,
       offset: (pageNum - 1) * limitNum,
-      order: [['id', 'ASC']], // Add consistent ordering
+      order: [['id', 'ASC']],
     });
 
-    // 5. Calculate pagination details
+    // 6. Calculate pagination details
     const totalPages = Math.ceil(count / limitNum);
     if (pageNum > totalPages && count > 0) {
       throw new AppError('Page not found', 404);
     }
 
-    // 6. Send the response
+    // 7. Send the response
     res.status(200).json({
       success: true,
       messages: count === 0 ? ['No users found'] : ['Users retrieved successfully'],
