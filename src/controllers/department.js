@@ -22,7 +22,7 @@ import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
 import { createDepartmentAssessment, validateAssessmentDeadline, validateDepartmentMappings } from '../utils/departmentUtils.js';
-import { ANSWER_TYPES, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS } from '../utils/constants.js';
+import { ANSWER_TYPES, ASSESSMENT_TYPE, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS, SUB_ASSESSMENT_TYPE } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 
 export const createDepartments = async (req, res, next) => {
@@ -517,7 +517,6 @@ export const getUsersByDepartmentId = async (req, res, next) => {
 };
 
 
-
 export const departmentProgressReport = async (req, res, next) => {
   const { departmentId } = req.params;
 
@@ -937,6 +936,10 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
       include: [{
         model: Assessment,
         as: 'assessments',
+        where: {
+          assessmentType: ASSESSMENT_TYPE.DEFAULT
+        },
+        required: false,
         include: [{
           model: AssessmentQuestion,
           as: 'questions',
@@ -954,6 +957,10 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
         include: [{
           model: SubAssessment,
           as: 'subAssessments',
+          where: {
+            subAssessmentType: SUB_ASSESSMENT_TYPE.DEFAULT
+          },
+          required: false,
           include: [{
             model: AssessmentQuestion,
             as: 'questions',
@@ -976,11 +983,11 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
       });
     }
 
-    const assessment = department.assessments?.[0];//assessmentType=default
+    const assessment = department.assessments?.[0];
     if (!assessment) {
       return res.status(404).json({
         success: false,
-        messages: ['No assessment found for department']
+        messages: ['No default assessment found for department']
       });
     }
 
@@ -988,29 +995,29 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
     const departmentMetrics = calculateMetrics(assessment.questions);
 
     // Calculate metrics for all subdepartments
-    const subdepartmentsData = department.subDepartments.map(subdepartment => {
-      const subAssessment = subdepartment.subAssessments[0]; //assessmentType=default
-      if (!subAssessment) return null;
+    const subdepartmentsData = department.subDepartments
+      .map(subdepartment => {
+        const subAssessment = subdepartment.subAssessments?.[0];
+        if (!subAssessment) return null;
 
-      const subMetrics = calculateMetrics(subAssessment.questions);
-      return {
-        id: subdepartment.id,
-        subDepartmentName: subdepartment.subDepartmentName,
-        riskMetrics: {
-          departmentRiskIndex: subMetrics.departmentRiskIndex,
-          controlCoverageRatio: subMetrics.controlCoverageRatio,
-          gapDensityRate: subMetrics.gapDensityRate,
-          departmentComplianceScore: subMetrics.departmentComplianceScore,
-          documentationCoverageRatio: subMetrics.documentationCoverageRatio
-          // controlGaps: subMetrics.controlGaps,
-          // totalControlCount: subMetrics.totalControlCount,
-          // implementedControlCount: subMetrics.implementedControlCount
-        }
-      };
-    }).filter(Boolean);
+        const subMetrics = calculateMetrics(subAssessment.questions);
+        return {
+          id: subdepartment.id,
+          subDepartmentName: subdepartment.subDepartmentName,
+          riskMetrics: {
+            departmentRiskIndex: subMetrics.departmentRiskIndex,
+            controlCoverageRatio: subMetrics.controlCoverageRatio,
+            gapDensityRate: subMetrics.gapDensityRate,
+            departmentComplianceScore: subMetrics.departmentComplianceScore,
+            documentationCoverageRatio: subMetrics.documentationCoverageRatio
+          }
+        };
+      })
+      .filter(Boolean);
 
-    const data = {
-      department: {
+    res.status(200).json({
+      success: true,
+      departmentRiskMetrics: {
         id: departmentId,
         departmentName: department.departmentName,
         riskMetrics: {
@@ -1019,19 +1026,12 @@ export const getRiskMetricsForDepartment = async (req, res, next) => {
           gapDensityRate: departmentMetrics.gapDensityRate,
           departmentComplianceScore: departmentMetrics.departmentComplianceScore,
           documentationCoverageRatio: departmentMetrics.documentationCoverageRatio
-          // controlGaps: departmentMetrics.controlGaps,
-          // totalControlCount: departmentMetrics.totalControlCount,
-          // implementedControlCount: departmentMetrics.implementedControlCount
         },
         subDepartmentsRiskMetrics: subdepartmentsData
       }
-    };
-
-    return res.status(200).json({
-      success: true,
-      departmentRiskMetrics: data.department
     });
   } catch (error) {
+    console.error('Error fetching risk metrics:', error);
     next(error);
   }
 };

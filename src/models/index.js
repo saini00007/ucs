@@ -1,3 +1,4 @@
+// index.js
 import User from './User.js';
 import Company from './Company.js';
 import Department from './Department.js';
@@ -23,6 +24,15 @@ import SubDepartment from './SubDepartment.js';
 import MasterSubDepartment from './MasterSubDepartment.js';
 import UserSubDepartmentLink from './UserSubDepartmentLink.js';
 
+// Import new models
+import RiskVulnerabilityAssessment from './RiskVulnerabilityAssessment.js';
+import ISO27001Control from './ISO27001Control.js';
+import NISTCSFControl from './NISTCSFControl.js';
+import MITREControl from './MITREControl.js';
+import NIST80082Control from './NIST80082Control.js';
+import IEC62443Control from './IEC62443Control.js';
+import PCIDSSControl from './PCIDSSControl.js';
+
 const models = {
   User,
   Company,
@@ -47,9 +57,18 @@ const models = {
   CompanyControlFrameworkLink,
   SubDepartment,
   SubAssessment,
-  MasterSubDepartment
+  MasterSubDepartment,
+  // Add new models
+  RiskVulnerabilityAssessment,
+  ISO27001Control,
+  NISTCSFControl,
+  MITREControl,
+  NIST80082Control,
+  IEC62443Control,
+  PCIDSSControl
 };
 
+// Run associations
 Object.values(models)
   .filter(model => typeof model.associate === 'function')
   .forEach(model => model.associate(models));
@@ -78,5 +97,13 @@ export {
   CompanyControlFrameworkLink,
   SubAssessment,
   SubDepartment,
-  MasterSubDepartment
+  MasterSubDepartment,
+  // Export new models
+  RiskVulnerabilityAssessment,
+  ISO27001Control,
+  NISTCSFControl,
+  MITREControl,
+  NIST80082Control,
+  IEC62443Control,
+  PCIDSSControl
 };

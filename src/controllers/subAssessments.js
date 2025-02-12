@@ -581,7 +581,18 @@ export const getQuestionsForReview = async (req, res, next) => {
                             attributes: ['id', 'firstName', 'lastName']
                         }
                     ]
-                }
+                },
+                {
+                    model: Comment,
+                    as: 'comments',
+                    paranoid: false,
+                    include: [{
+                        model: User,
+                        as: 'creator',
+                        attributes: ['id', 'firstName', 'lastName'],
+                    }],
+                    order: [['createdAt', 'ASC']],
+                },
             ],
             limit: parseInt(limit),
             offset: (parseInt(page) - 1) * parseInt(limit)
@@ -709,7 +720,18 @@ export const getRejectedQuestions = async (req, res, next) => {
                             attributes: ['id', 'firstName', 'lastName']
                         }
                     ]
-                }
+                },
+                {
+                    model: Comment,
+                    as: 'comments',
+                    paranoid: false,
+                    include: [{
+                        model: User,
+                        as: 'creator',
+                        attributes: ['id', 'firstName', 'lastName'],
+                    }],
+                    order: [['createdAt', 'ASC']],
+                },
             ],
             limit: parseInt(limit),
             offset: (parseInt(page) - 1) * parseInt(limit)

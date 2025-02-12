@@ -2,6 +2,13 @@ import MasterQuestion from '../models/MasterQuestion.js';
 import MasterDepartment from '../models/MasterDepartment.js';
 import MasterSubDepartment from '../models/MasterSubDepartment.js';
 import QuestionDepartmentLink from '../models/QuestionDepartmentLink.js';
+import ISO27001Control from '../models/ISO27001Control.js';
+import NISTCSFControl from '../models/NISTCSFControl.js';
+import MITREControl from '../models/MITREControl.js';
+import NIST80082Control from '../models/NIST80082Control.js';
+import IEC62443Control from '../models/IEC62443Control.js';
+import PCIDSSControl from '../models/PCIDSSControl.js';
+import RiskVulnerabilityAssessment from '../models/RiskVulnerabilityAssessment.js';
 import * as xlsx from 'xlsx';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,20 +64,58 @@ const seedMasterQuestions = async (customFilePath = DEFAULT_EXCEL_PATH) => {
 
     for (const [index, row] of rows.entries()) {
       try {
-        // Generate a random subdepartment
         const randomSubDepartment = subDepartments[Math.floor(Math.random() * subDepartments.length)];
 
+        // Create base question data
         const questionData = {
           srno: parseInt(row['SRNO']) || null,
           sp80053ControlNum: row['SP 800-53 Control Number'] || null,
           controlName: row['Control (or Control Enhancement) Name'] || null,
-          iso270012022CIdNum: row['ISO 27001:2022 Control ID Number'] || null,
-          nistCsfControlId: row['NIST CSF Control ID'] || null,
-          mitreDefendControlId: row['MITRE Defend Control ID'] || null,
-          nist80082ControlId: row['NIST 800-82 Control ID'] || null,
-          iec62443ControlId: row['IEC 62443 Control ID'] || null,
-          pcidss: row['PCIDSS'] || null,
           questionText: row['Question'] || null,
+          department: row['Department'] || null,
+          subDepartment: randomSubDepartment 
+        };
+
+        console.log(`Processing Question ${index + 1}/${rows.length}: "${questionData.questionText?.substring(0, 50)}..."`);
+
+        if (!questionData.department) {
+          console.warn(`No department specified for question ${index + 1}`);
+          continue;
+        }
+
+        // Find the department
+        const department = await MasterDepartment.findOne({
+          where: { departmentName: questionData.department.trim() }
+        });
+
+        if (!department) {
+          console.warn(`Department "${questionData.department}" not found for question ${index + 1}`);
+          continue;
+        }
+
+        // Find or create the subdepartment
+        const [subDepartment] = await MasterSubDepartment.findOrCreate({
+          where: { subDepartmentName: questionData.subDepartment }
+        });
+
+        // Create the master question
+        const question = await MasterQuestion.create({
+          ...questionData,
+          masterDepartmentId: department.id,
+          masterSubDepartmentId: subDepartment.id
+        });
+
+        console.log(`Question inserted with ID: ${question.id}`);
+
+        // Create department link
+        await QuestionDepartmentLink.create({
+          masterQuestionId: question.id,
+          masterDepartmentId: department.id
+        });
+
+        // Create RiskVulnerabilityAssessment
+        await RiskVulnerabilityAssessment.create({
+          masterQuestionId: question.id,
           vulnerabilityDesc: row['VULNERBILITY DESCRIPTION'] || null,
           vulnerabilityRating: row['Vulnerability Rating'] || null,
           vulnerabilityValue: parseFloatSafe(row['Vulnerability Value']),
@@ -99,47 +144,69 @@ const seedMasterQuestions = async (customFilePath = DEFAULT_EXCEL_PATH) => {
           riskTreatmentPlan5: row['Risk Treatment Plan (Recommendations)5'] || null,
           revRiskLikelihoodRating: parseFloatSafe(row['Revised Risk Likelihood Rating']),
           revRiskImpactRating: parseFloatSafe(row['Revised Risk Impact Rating']),
-          targetRiskRating: row['Taget Risk Risk Rating'] || null,
-          department: row['Department'] || null,
-          subDepartment: randomSubDepartment
-        };
+          targetRiskRating: row['Taget Risk Risk Rating'] || null
+        });
 
-        console.log(`Processing Question ${index + 1}/${rows.length}: "${questionData.questionText?.substring(0, 50)}..."`);
-
-        if (!questionData.department) {
-          console.warn(`No department specified for question ${index + 1}`);
-          continue;
+        // Create associated controls if data exists
+        if (row['ISO 27001:2022 Control ID Number']) {
+          await ISO27001Control.create({
+            masterQuestionId: question.id,
+            controlId: row['ISO 27001:2022 Control ID Number'],
+            controlDetails: JSON.stringify({
+              controlNumber: row['ISO 27001:2022 Control ID Number']
+            })
+          });
         }
 
-        // Find the department
-        const department = await MasterDepartment.findOne({
-          where: { departmentName: questionData.department.trim() }
-        });
-
-        if (!department) {
-          console.warn(`Department "${questionData.department}" not found for question ${index + 1}`);
-          continue;
+        if (row['NIST CSF Control ID']) {
+          await NISTCSFControl.create({
+            masterQuestionId: question.id,
+            controlId: row['NIST CSF Control ID'],
+            frameworkDetails: JSON.stringify({
+              controlNumber: row['NIST CSF Control ID']
+            })
+          });
         }
 
-        // Find or create the subdepartment
-        const [subDepartment] = await MasterSubDepartment.findOrCreate({
-          where: { subDepartmentName: questionData.subDepartment }
-        });
+        if (row['MITRE Defend Control ID']) {
+          await MITREControl.create({
+            masterQuestionId: question.id,
+            controlId: row['MITRE Defend Control ID'],
+            mitreDetails: JSON.stringify({
+              controlNumber: row['MITRE Defend Control ID']
+            })
+          });
+        }
 
-        // Create the question with department and subdepartment IDs
-        const question = await MasterQuestion.create({
-          ...questionData,
-          masterDepartmentId: department.id,
-          masterSubDepartmentId: subDepartment.id
-        });
+        if (row['NIST 800-82 Control ID']) {
+          await NIST80082Control.create({
+            masterQuestionId: question.id,
+            controlId: row['NIST 800-82 Control ID'],
+            controlDetails: JSON.stringify({
+              controlNumber: row['NIST 800-82 Control ID']
+            })
+          });
+        }
 
-        console.log(`Question inserted with ID: ${question.id}`);
+        if (row['IEC 62443 Control ID']) {
+          await IEC62443Control.create({
+            masterQuestionId: question.id,
+            controlId: row['IEC 62443 Control ID'],
+            controlDetails: JSON.stringify({
+              controlNumber: row['IEC 62443 Control ID']
+            })
+          });
+        }
 
-        // Create department link
-        await QuestionDepartmentLink.create({
-          masterQuestionId: question.id,
-          masterDepartmentId: department.id
-        });
+        if (row['PCIDSS']) {
+          await PCIDSSControl.create({
+            masterQuestionId: question.id,
+            controlId: row['PCIDSS'],
+            pciDetails: JSON.stringify({
+              controlNumber: row['PCIDSS']
+            })
+          });
+        }
 
       } catch (innerError) {
         console.error(`Error processing row ${index + 1}:`, innerError.message);

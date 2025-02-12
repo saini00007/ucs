@@ -20,7 +20,8 @@ import {
     getDepartmentsWithSubDepartmentsByCompanyId,
     updateCompanyDetails,
     updateCompanyControlFrameworks,
-    getCompanySetupStatus
+    getCompanySetupStatus,
+    getCompanyAssessmentProgress
 } from '../controllers/company.js';
 
 import attachResourceInfo from '../utils/attachResourceInfo.js';
@@ -44,6 +45,7 @@ router.put('/:companyId/details',uploadCompanyLogo,updateCompanyDetails)
 router.post('/:companyId/control-frameworks',addCompanyControlFrameworks)
 router.put('/:companyId/control-frameworks',updateCompanyControlFrameworks)
 router.get('/:companyId/department-subdepartment-list',getDepartmentsWithSubDepartmentsByCompanyId)
+router.get('/:companyId/assessment-progress',getCompanyAssessmentProgress)
 
 
 
