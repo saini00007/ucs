@@ -317,3 +317,40 @@ export const getSubAssessmentStatus = (subAssessment, statistics) => {
     return 'active';
 };
 
+
+export const calculateAnswerStats = (questions) => {
+    // For debugging
+    console.log('Processing questions:', questions.map(q => ({
+        id: q.id,
+        answerText: q.answer?.answerText
+    })));
+
+    const answeredQuestions = questions.filter(q => q.answer).length;
+    
+    const yesAnswers = questions.filter(q => q.answer?.answerText === ANSWER_TYPES.YES).length;
+    const noAnswers = questions.filter(q => q.answer?.answerText === ANSWER_TYPES.NO).length;
+    const naAnswers = questions.filter(q => q.answer?.answerText === ANSWER_TYPES.NOT_APPLICABLE).length;
+    
+    const totalAnswered = yesAnswers + noAnswers + naAnswers;
+    const totalQuestions = questions.length;
+
+    return {
+        totalQuestions,
+        answeredQuestions,
+        completionPercentage: totalQuestions ? Math.round((answeredQuestions / totalQuestions) * 100) : 0,
+        answers: {
+            yes: {
+                count: yesAnswers,
+                percentage: totalAnswered ? Math.round((yesAnswers / totalAnswered) * 100) : 0
+            },
+            no: {
+                count: noAnswers,
+                percentage: totalAnswered ? Math.round((noAnswers / totalAnswered) * 100) : 0
+            },
+            notApplicable: {
+                count: naAnswers,
+                percentage: totalAnswered ? Math.round((naAnswers / totalAnswered) * 100) : 0
+            }
+        }
+    };
+};

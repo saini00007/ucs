@@ -11,10 +11,11 @@ import {
     getSubDepartmentsByDepartmentId,
     departmentProgressReport,
     getSubAssessmentsCategoryWise,
-    tempDPR,
     getRiskMetricsForDepartment,
     getDepartmentOverview,
     getReportByDepartmentId,
+    getDepartmentProgressMetrics,
+    getDepartmentAssessmentMetrics,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
@@ -125,6 +126,11 @@ router.get('/:departmentId/overview',
 
 router.get('/:departmentId/report',
     getReportByDepartmentId
+)
+
+router.get('/:departmentId/progress-metrics',getDepartmentProgressMetrics)
+router.get('/:departmentId/assessment-metrics',getDepartmentAssessmentMetrics
+
 )
 
 

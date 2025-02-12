@@ -1,5 +1,6 @@
-import { Assessment, Department, SubAssessment, SubDepartment, User } from "../models";
+import { Answer, Assessment, AssessmentQuestion, Department, SubAssessment, SubDepartment, User } from "../models";
 import AppError from "../utils/AppError";
+import { calculateSubAssessmentStats } from "../utils/subAssessmentUtils";
 
 export const getUsersBySubDepartmentId = async (req, res, next) => {
     const { subDepartmentId } = req.params;
@@ -74,15 +75,35 @@ export const getSubAssessmentBySubDepartmentId = async (req, res, next) => {
                     model: SubDepartment,
                     as: 'subDepartment',
                     attributes: ['id', 'subDepartmentName']
+                },
+                {
+                    model: AssessmentQuestion,
+                    as: 'questions',
+                    attributes: ['id'],
+                    include: [{
+                        model: Answer,
+                        as: 'answer',
+                        attributes: ['answerText', 'reviewStatus', 'revisionStatus']
+                    }]
                 }
             ]
         });
 
-        // Return response
+        const formattedAssessments = subAssessments.map(assessment => {
+            const raw = assessment.get();
+            const stats = calculateSubAssessmentStats(assessment);
+            delete raw.questions;
+
+            return {
+                ...raw,
+                stats
+            };
+        });
+
         res.status(200).json({
             success: true,
-            messages: subAssessments.length === 0 ? ['No sub assessments found'] : ['Sub Assessments retrieved successfully'],
-            subAssessments
+            messages: formattedAssessments.length === 0 ? ['No sub assessments found'] : ['Sub Assessments retrieved successfully'],
+            subAssessments: formattedAssessments
         });
 
     } catch (error) {
@@ -91,8 +112,8 @@ export const getSubAssessmentBySubDepartmentId = async (req, res, next) => {
     }
 };
 
-export const getSubDepartmentById = async(req, res, next) =>
-{
+
+export const getSubDepartmentById = async (req, res, next) => {
     const { subDepartmentId } = req.params;
 
     try {
@@ -101,7 +122,7 @@ export const getSubDepartmentById = async(req, res, next) =>
                 {
                     model: Department,
                     as: 'department',
-                    attributes: ['id','departmentName']
+                    attributes: ['id', 'departmentName']
                 },
             ],
         });

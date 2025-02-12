@@ -20,7 +20,7 @@ import {
 import { Op } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
-import { calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
+import { calculateAnswerStats, calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
 import { createDepartmentAssessment, validateAssessmentDeadline, validateDepartmentMappings } from '../utils/departmentUtils.js';
 import { ANSWER_TYPES, ASSESSMENT_TYPE, frameworkFieldMapping, ROLE_IDS, SUB_ASSESSMENT_REVIEW_STATUS, SUB_ASSESSMENT_TYPE } from '../utils/constants.js';
 import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
@@ -661,108 +661,87 @@ export const departmentProgressReport = async (req, res, next) => {
   }
 };
 
-export const tempDPR = async (req, res, next) => {
+
+export const getDepartmentAssessmentMetrics = async (req, res, next) => {
   const { departmentId } = req.params;
-
+  
   try {
-    const department = await Department.findOne({
-      where: { id: departmentId },
-      attributes: ['id', 'departmentName'],
-      include: [
-        {
-          model: Assessment,
-          as: 'assessments',
-          attributes: [
-            'id',
-            'assessmentName',
-            'assessmentStarted',
-            'submitted',
-            'startedAt',
-            'submittedAt',
-            'deadline'
+      // Get department with related data
+      const departmentData = await Department.findOne({
+          where: { id: departmentId },
+          attributes: ['id', 'departmentName'],
+          include: [
+              {
+                  model: SubDepartment,
+                  as: 'subDepartments',
+                  attributes: ['id', 'subDepartmentName'],
+                  include: [
+                      {
+                          model: SubAssessment,
+                          as: 'subAssessments',
+                          attributes: ['id', 'deadline'],
+                          include: [
+                              {
+                                  model: AssessmentQuestion,
+                                  as: 'questions',
+                                  include: [
+                                      {
+                                          model: Answer,
+                                          as: 'answer',
+                                          attributes: ['answerText', 'reviewStatus']
+                                      }
+                                  ]
+                              }
+                          ]
+                      }
+                  ]
+              }
           ]
-        },
-        {
-          model: SubDepartment,
-          as: 'subDepartments',
-          attributes: ['id', 'subDepartmentName'],
-          include: [{
-            model: SubAssessment,
-            as: 'subAssessments',
-            attributes: [
-              'id',
-              'subAssessmentName',
-              'subAssessmentStarted',
-              'submitted',
-              'startedAt',
-              'submittedAt',
-              'deadline',
-              'assessmentId'
-            ]
-          }]
-        }
-      ]
-    });
-
-    if (!department) {
-      return res.status(404).json({
-        success: false,
-        messages: ['Department not found']
       });
-    }
 
-    const departmentData = department.toJSON();
-
-    // Process main assessments
-    const assessmentsWithStats = await Promise.all(
-      departmentData.assessments.map(async (assessment) => {
-        const statistics = await calculateAssessmentStatistics(assessment.id);
-        const status = getAssessmentStatus(assessment, statistics);
-
-        return {
-          ...assessment,
-          statistics,
-          status
-        };
-      })
-    );
-
-    // Process sub-departments and their assessments
-    const subDepartmentsWithStats = await Promise.all(
-      departmentData.subDepartments.map(async (subDept) => {
-        const subAssessmentsWithStats = await Promise.all(
-          subDept.subAssessments.map(async (subAssessment) => {
-            const statistics = await calculateAssessmentStatistics(subAssessment.id);
-            const status = getAssessmentStatus(subAssessment, statistics);
-
-            return {
-              ...subAssessment,
-              statistics,
-              status
-            };
-          })
-        );
-
-        return {
-          id: subDept.id,
-          subDepartmentName: subDept.subDepartmentName,
-          subAssessments: subAssessmentsWithStats
-        };
-      })
-    );
-
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: departmentData.id,
-        departmentName: departmentData.departmentName,
-        assessments: assessmentsWithStats,
-        subDepartments: subDepartmentsWithStats
+      if (!departmentData) {
+          return res.status(404).json({
+              success: false,
+              message: 'Department not found'
+          });
       }
-    });
+
+      // Process subdepartments
+      const allQuestions = [];
+      const subDepartmentMetrics = [];
+
+      departmentData.subDepartments.forEach(subDept => {
+          const subDeptQuestions = [];
+          
+          // Collect all questions from subassessments
+          subDept.subAssessments.forEach(subAssess => {
+              subDeptQuestions.push(...(subAssess.questions || []));
+              allQuestions.push(...(subAssess.questions || []));
+          });
+
+          // Calculate metrics for this subdepartment
+          subDepartmentMetrics.push({
+              id: subDept.id,
+              name: subDept.subDepartmentName,
+              deadline: subDept.subAssessments[0]?.deadline,
+              metrics: calculateAnswerStats(subDeptQuestions)
+          });
+      });
+
+      // Calculate department level metrics
+      const departmentMetrics = calculateAnswerStats(allQuestions);
+
+      res.status(200).json({
+          success: true,
+          data: {
+              departmentName: departmentData.departmentName,
+              departmentMetrics,
+              subDepartments: subDepartmentMetrics
+          }
+      });
 
   } catch (error) {
-    next(error);
+      next(error);
   }
 };
 
@@ -1350,3 +1329,87 @@ export const getReportByDepartmentId = async (req, res, next) => {
   }
 };
 
+// Controller
+export const getDepartmentProgressMetrics = async (req, res, next) => {
+  const { departmentId } = req.params;
+  const { startDate, endDate } = req.query;
+  
+  try {
+      // First get all subdepartments of the department
+      const departmentData = await Department.findOne({
+          where: { id: departmentId },
+          include: [{
+              model: SubDepartment,
+              as: 'subDepartments',
+              attributes: ['id', 'subDepartmentName']
+          }]
+      });
+
+      if (!departmentData) {
+          throw new AppError('Department not found', 404);
+      }
+
+      // Get answer frequency for each subdepartment
+      const questionsFrequency = await AssessmentQuestion.findAll({
+          attributes: ['createdAt'],
+          include: [{
+              model: SubAssessment,
+              as: 'subAssessment',
+              required: true,
+              include: [{
+                  model: SubDepartment,
+                  as: 'subDepartment',
+                  required: true,
+                  where: {
+                      departmentId
+                  },
+                  attributes: ['id', 'subDepartmentName']
+              }]
+          }],
+          where: startDate && endDate ? {
+              createdAt: {
+                  [Op.between]: [new Date(startDate), new Date(endDate)]
+              }
+          } : {}
+      });
+
+      // Group questions by date and subdepartment
+      const frequencyBySubDept = questionsFrequency.reduce((acc, question) => {
+          const date = question.createdAt.toISOString().split('T')[0];
+          const subDeptId = question.subAssessment.subDepartment.id;
+          const subDeptName = question.subAssessment.subDepartment.subDepartmentName;
+
+          if (!acc[date]) {
+              acc[date] = {
+                  date,
+                  // Initialize count for each subdepartment
+                  ...departmentData.subDepartments.reduce((subDepts, dept) => ({
+                      ...subDepts,
+                      [dept.subDepartmentName]: 0
+                  }), {})
+              };
+          }
+          
+          acc[date][subDeptName] = (acc[date][subDeptName] || 0) + 1;
+          return acc;
+      }, {});
+
+      // Convert to array and sort by date
+      const timelineData = Object.values(frequencyBySubDept)
+          .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      res.status(200).json({
+          success: true,
+          data: {
+              timelineData,
+              subDepartments: departmentData.subDepartments.map(dept => ({
+                  id: dept.id,
+                  name: dept.subDepartmentName
+              }))
+          }
+      });
+
+  } catch (error) {
+      next(error);
+  }
+};
