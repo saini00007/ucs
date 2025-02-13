@@ -4,7 +4,7 @@ import validate from '../middleware/validate.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
 import { RESOURCE_TYPES, ACTION_IDS, CONTENT_RESOURCE_TYPES } from '../utils/constants.js';
-import { getSubAssessmentBySubDepartmentId, getSubDepartmentById, getUsersBySubDepartmentId } from '../controllers/subDepartment.js';
+import { getSubAssessmentBySubDepartmentId, getSubDepartmentById, getSubdepartmentMetrics, getUsersBySubDepartmentId } from '../controllers/subDepartment.js';
 
 const router = express.Router();
 
@@ -44,6 +44,8 @@ router.get('/:subDepartmentId/sub-assessments',
     checkAccess,
     getSubAssessmentBySubDepartmentId
 )
+
+router.get('/:subDepartmentId/risk-metrics',getSubdepartmentMetrics)
 
 
 export default router;

@@ -1,4 +1,4 @@
-import { AssessmentQuestion, EvidenceFile, Answer, User, SubAssessment } from '../models/index.js';
+import { AssessmentQuestion, EvidenceFile, Answer, User, SubAssessment ,Comment} from '../models/index.js';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { ANSWER_TYPES, SUB_ASSESSMENT_REVIEW_STATUS, ANSWER_REVIEW_STATUS, REVISION_STATUS } from '../utils/constants.js';
@@ -108,7 +108,7 @@ export const createAnswer = async (req, res, next) => {
 
 export const updateAnswer = async (req, res, next) => {
   const { answerId } = req.params;
-  const { answerText } = req.body;
+  const { answerText,commentText } = req.body;
   const userId = req.user.id;
 
   const transaction = await sequelize.transaction();
@@ -205,13 +205,25 @@ export const updateAnswer = async (req, res, next) => {
       transaction
     });
 
+    let newComment = null;
+    if (commentText) {
+      newComment = await Comment.create({
+        assessmentQuestionId: answer.assessmentQuestion.id,
+        createdByUserId: userId,
+        commentText,
+        canDelete:false
+      }, { transaction });
+    }
+
     await transaction.commit();
 
     res.status(200).json({
       success: true,
       messages: ['Answer updated successfully'],
-      answer: updatedAnswer
+      answer: updatedAnswer,
+      ...(newComment && { newComment })
     });
+    
   } catch (error) {
     await transaction.rollback();
     next(error);

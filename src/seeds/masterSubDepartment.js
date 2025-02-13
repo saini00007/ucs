@@ -3,19 +3,29 @@ import sequelize from '../config/db.js';
 
 const seedMasterSubDepartments = async () => {
     const subDepartments = [
-      { name: 'Recruitment', department: 'Human Resources' },
-      { name: 'Training & Development', department: 'Human Resources' },
-      { name: 'Employee Relations', department: 'Human Resources' },
-      { name: 'Network Operations', department: 'IT Operations' },
-      { name: 'System Administration', department: 'IT Operations' },
-      { name: 'Technical Support', department: 'IT Operations' },
-      { name: 'Security Operations', department: 'Information Security' },
-      { name: 'Incident Response', department: 'Information Security' },
-      { name: 'Security Compliance', department: 'Information Security' },
-      { name: 'Disaster Recovery', department: 'Business Continuity' },
-      { name: 'Crisis Management', department: 'Business Continuity' },
-      { name: 'Access Control', department: 'Physical Security' },
-      { name: 'Surveillance', department: 'Physical Security' }
+      { name: 'Legal', department: 'Legal' },
+      { name: 'Physical Security', department: 'Physical Security' },
+      { name: 'Policy and Procedures', department: 'Business Continuity' },
+      { name: 'Policy', department: 'Human Resources' },
+      { name: 'Power Equipment and Cabling', department: 'Facilities Management' },
+      { name: 'Provenance', department: 'Procurement' },
+      { name: 'Remote Access', department: 'Network Security' },
+      { name: 'Security Groups', department: 'Information Security' },
+      { name: 'Supply Chain Protection', department: 'Procurement' },
+      { name: 'System Monitoring', department: 'Information Security' },
+      { name: 'Testing', department: 'IT Operations' },
+      { name: 'Wireless Access', department: 'Network Security' },
+      { name: 'Acquisition Process', department: 'Procurement' },
+      { name: 'Audit Record', department: 'Information Security' },
+      { name: 'Backup', department: 'IT Operations' },
+      { name: 'Business Operations', department: 'Business Operations' },
+      { name: 'Contingency Plan', department: 'Business Continuity' },
+      { name: 'Cybersecurity', department: 'Cybersecurity' },
+      { name: 'Emergency', department: 'Facilities Management' },
+      { name: 'Finance', department: 'Finance' },
+      { name: 'HR-TRAINING', department: 'Human Resources' },
+      { name: 'Identity Access Governance', department: 'IT Operations' },
+      { name: 'Information Flow', department: 'Network Security' },
     ];
   
     const transaction = await sequelize.transaction();

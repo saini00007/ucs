@@ -16,6 +16,10 @@ const Comment = sequelize.define('Comment', {
     allowNull: false,
     onDelete: 'CASCADE',
   },
+  canDelete: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true
+  },
   createdByUserId: {
     type: DataTypes.STRING(12),
     references: {

@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import morgan from 'morgan';
 
 import initializeDatabase from './initializeDatabase.js';
 import cookieParser from 'cookie-parser';
@@ -33,11 +34,12 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
 
 app.use('/', authRoutes);
 
- app.use(authenticate);
+app.use(authenticate);
 
 app.use('/companies', companyRoutes);
 app.use('/departments', departmentRoutes);

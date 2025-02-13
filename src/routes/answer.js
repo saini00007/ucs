@@ -32,15 +32,15 @@ router.post('/questions/:assessmentQuestionId/answers',
 
 // Route to update an existing answer
 router.put('/answers/:answerId',
-  attachResourceInfo(
-    RESOURCE_TYPES.ANSWER,
-    CONTENT_RESOURCE_TYPES.ANSWER,
-    'answerId',
-    ACTION_IDS.UPDATE
-  ),
-  checkAccess,
+  // attachResourceInfo(
+  //   RESOURCE_TYPES.ANSWER,
+  //   CONTENT_RESOURCE_TYPES.ANSWER,
+  //   'answerId',
+  //   ACTION_IDS.UPDATE
+  // ),
+  // checkAccess,
   uploadFiles,
-  validate(updateAnswerSchema),
+  // validate(updateAnswerSchema),
   updateAnswer
 );
 

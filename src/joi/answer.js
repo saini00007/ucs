@@ -7,19 +7,18 @@ const createAnswerSchema = Joi.object({
     .valid(...validAnswerValues)
     .insensitive()
     .required()
-    .custom((value, helpers) => {
-      if (typeof value === 'string') {
-        return value.toLowerCase();
-      }
-      return value;
-    }, 'lowercase conversion')
+    .custom((value) => (typeof value === 'string' ? value.toLowerCase() : value), 'lowercase conversion')
     .messages({
       'any.only': 'Answer must be one of the following: yes, no, not applicable.',
       'string.empty': 'Answer text cannot be empty.',
       'any.required': 'Answer text is required.',
     }),
-
 });
-const updateAnswerSchema = createAnswerSchema;
+
+const updateAnswerSchema = createAnswerSchema.keys({
+  commentText: Joi.string().allow('').optional().messages({
+    'string.empty': 'Comment text cannot be empty.',
+  }),
+});
 
 export { createAnswerSchema, updateAnswerSchema };

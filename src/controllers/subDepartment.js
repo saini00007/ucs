@@ -1,6 +1,9 @@
-import { Answer, Assessment, AssessmentQuestion, Department, SubAssessment, SubDepartment, User } from "../models";
+import { QueryTypes } from "sequelize";
+import { Answer, Assessment, AssessmentQuestion, Department, MasterQuestion, SubAssessment, SubDepartment, User } from "../models";
 import AppError from "../utils/AppError";
 import { calculateSubAssessmentStats } from "../utils/subAssessmentUtils";
+import { SUB_ASSESSMENT_TYPE } from "../utils/constants";
+import { calculateMetrics } from "../utils/calculateRiskMetrics";
 
 export const getUsersBySubDepartmentId = async (req, res, next) => {
     const { subDepartmentId } = req.params;
@@ -137,3 +140,68 @@ export const getSubDepartmentById = async (req, res, next) => {
         next(error);
     }
 }
+
+// subdepartmentMetrics.js
+export const getSubdepartmentMetrics = async (req, res, next) => {
+    const { subDepartmentId } = req.params;
+    try {
+        // Find specific subdepartment by ID
+        const subdepartment = await SubDepartment.findOne({
+            where: { id: subDepartmentId },
+            include: [{
+                model: SubAssessment,
+                as: 'subAssessments',
+                where: {
+                    subAssessmentType: SUB_ASSESSMENT_TYPE.DEFAULT
+                },
+                required: false,
+                include: [{
+                    model: AssessmentQuestion,
+                    as: 'questions',
+                    include: [{
+                        model: Answer,
+                        as: 'answer'
+                    }, {
+                        model: MasterQuestion,
+                        as: 'masterQuestion'
+                    }]
+                }]
+            }]
+        });
+
+        if (!subdepartment) {
+            return res.status(404).json({
+                success: false,
+                messages: ['Subdepartment not found']
+            });
+        }
+
+        const assessment = subdepartment.subAssessments?.[0];
+        if (!assessment) {
+            return res.status(404).json({
+                success: false,
+                messages: ['No default assessment found for subdepartment']
+            });
+        }
+
+        const metrics = calculateMetrics(assessment.questions);
+
+        return res.status(200).json({
+            success: true,
+            subdepartmentMetrics: {
+                id: subdepartment.id,
+                subDepartmentName: subdepartment.subDepartmentName,
+                riskMetrics: {
+                    departmentRiskIndex: metrics.departmentRiskIndex,
+                    controlCoverageRatio: metrics.controlCoverageRatio,
+                    gapDensityRate: metrics.gapDensityRate,
+                    departmentComplianceScore: metrics.departmentComplianceScore,
+                    documentationCoverageRatio: metrics.documentationCoverageRatio
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching subdepartment metrics:', error);
+        next(error);
+    }
+};

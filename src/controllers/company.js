@@ -5,12 +5,11 @@ import AppError from '../utils/AppError.js';
 import { calculateAssessmentStatistics, calculateAssessmentStatisticsForCompany, getAssessmentStatus } from '../utils/calculateStatistics.js';
 
 import { handleCompanyEmailUpdates, validateControlFrameworkIds, validateEmailForCompany } from '../utils/companyUtils.js'
-import { ASSESSMENT_TYPE, frameworkFieldMapping, ROLE_IDS } from '../utils/constants.js';
+import { ANSWER_TYPES, ASSESSMENT_TYPE, frameworkFieldMapping, ROLE_IDS } from '../utils/constants.js';
 // import { getCategorizedAssessments } from '../utils/assessmentUtils.js';
 import { getCategorizedAssessments, getCategorizedSubAssessments, getMetricsOfAssessments } from '../utils/progressStatistics.js';
 import { getFilteredAssessments } from '../utils/assessmentUtils.js';
 import { required } from 'joi';
-import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 
 export const createCompany = async (req, res, next) => {
   const {
@@ -1854,6 +1853,7 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
+    
     const departments = await Department.findAll({
       where: { companyId },
       include: [{
@@ -1896,14 +1896,14 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
 
       assessment?.questions?.forEach(question => {
         if (question.answer) {
-          const answerText = question.answer.answerText?.toLowerCase().trim();
-          if (answerText === 'yes') {
+          const answerText = question.answer.answerText
+          if (answerText ===ANSWER_TYPES.YES) {
             answerStats.yes++;
             overallAnswerStats.yes++;
-          } else if (answerText === 'no') {
+          } else if (answerText === ANSWER_TYPES.NO) {
             answerStats.no++;
             overallAnswerStats.no++;
-          } else if (answerText === 'not applicable') {
+          } else if (answerText === ANSWER_TYPES.NOT_APPLICABLE) {
             answerStats.notApplicable++;
             overallAnswerStats.notApplicable++;
           }
@@ -1970,4 +1970,34 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+
+// Helper function to calculate metrics from summarized data
+const calculateMetricsFromSummary = (summary) => {
+  const totalQuestions = summary.total_questions || 0;
+  if (totalQuestions === 0) {
+    return {
+      departmentRiskIndex: 0,
+      controlCoverageRatio: 0,
+      gapDensityRate: 0,
+      documentationCoverageRatio: 0,
+      departmentComplianceScore: 0
+    };
+  }
+
+  const implemented = summary.implemented || 0;
+  const gaps = (summary.critical || 0) + (summary.high || 0) + (summary.medium || 0);
+  
+  const departmentRiskIndex = ((summary.critical * 3 + summary.high * 2 + summary.medium) / totalQuestions);
+  const controlCoverageRatio = (implemented / totalQuestions) * 100;
+  const gapDensityRate = (gaps / totalQuestions) * 100;
+
+  return {
+    departmentRiskIndex: parseFloat(departmentRiskIndex.toFixed(2)),
+    controlCoverageRatio: parseFloat(controlCoverageRatio.toFixed(2)),
+    gapDensityRate: parseFloat(gapDensityRate.toFixed(2)),
+    documentationCoverageRatio: parseFloat(controlCoverageRatio.toFixed(2)),
+    departmentComplianceScore: parseFloat(controlCoverageRatio.toFixed(2))
+  };
 };

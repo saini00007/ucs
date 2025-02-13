@@ -3,11 +3,18 @@ import sequelize from '../config/db.js';
 
 const seedMasterDepartments = async () => {
   const departments = [
-    'Human Resources',
-    'IT Operations',
-    'Information Security',
     'Business Continuity',
+    'Business Operations',
+    'Cybersecurity',
+    'Facilities Management',
+    'Finance',
+    'Human Resources',
+    'Information Security',
+    'IT Operations',
+    'Legal',
+    'Network Security',
     'Physical Security',
+    'Procurement'
   ];
 
   const transaction = await sequelize.transaction();

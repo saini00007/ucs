@@ -16,6 +16,7 @@ import {
     getReportByDepartmentId,
     getDepartmentProgressMetrics,
     getDepartmentAssessmentMetrics,
+    getDepartmentMetrics,
 } from '../controllers/department.js';
 import attachResourceInfo from '../utils/attachResourceInfo.js';
 import checkAccess from '../middleware/authorize.js';
@@ -117,7 +118,7 @@ router.get('/:departmentId/sub-assessments/categorized',
 )
 
 router.get('/:departmentId/risk-metrics',
-    getRiskMetricsForDepartment
+    getDepartmentMetrics
 )
 
 router.get('/:departmentId/overview',

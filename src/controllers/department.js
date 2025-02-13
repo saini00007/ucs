@@ -17,7 +17,7 @@ import {
   ControlFramework,
   CompanyControlFrameworkLink
 } from '../models/index.js';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 import AppError from '../utils/AppError.js';
 import { calculateAnswerStats, calculateAssessmentStatistics, calculateSubAssessmentStatistics, getAssessmentStatus, getSubAssessmentStatus } from '../utils/calculateStatistics.js';
@@ -28,22 +28,20 @@ import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 export const createDepartments = async (req, res, next) => {
   const { companyId, mappings } = req.body;
   const transaction = await sequelize.transaction();
-
+  
   try {
-    await validateDepartmentMappings(mappings, companyId);
-
     const { company } = await validateDepartmentMappings(mappings, companyId);
-
-    // Check if previous steps are completed
+    
+    // Status checks
     if (company.detailsStatus !== 'complete') {
       throw new AppError('Complete company details first.', 400);
     }
-
     if (company.controlFrameworksStatus !== 'complete') {
       throw new AppError('Complete control frameworks setup first.', 400);
     }
 
     const createdData = await Promise.all(mappings.map(async (dept) => {
+      // Create department
       const department = await Department.create({
         departmentName: dept.mappedName,
         companyId,
@@ -51,13 +49,16 @@ export const createDepartments = async (req, res, next) => {
         createdByUserId: req.user.id
       }, { transaction });
 
+      // Create assessment
       const assessment = await Assessment.create({
         departmentId: department.id,
         deadline: dept.closureDate,
         assessmentName: `${dept.mappedName}_Assessment`
       }, { transaction });
 
-      const subdepartments = await Promise.all(dept.subdepartments.map(async (sub) => {
+      // Process subdepartments
+      const subdepartments = [];
+      for (const sub of dept.subdepartments) {
         const subdepartment = await SubDepartment.create({
           subDepartmentName: sub.mappedName,
           departmentId: department.id,
@@ -72,6 +73,7 @@ export const createDepartments = async (req, res, next) => {
           deadline: dept.closureDate
         }, { transaction });
 
+        // Find and create questions
         const questions = await MasterQuestion.findAll({
           where: {
             masterDepartmentId: dept.masterDepartmentId,
@@ -80,26 +82,31 @@ export const createDepartments = async (req, res, next) => {
           transaction
         });
 
-        await Promise.all(questions.map(question =>
-          AssessmentQuestion.create({
+        console.log(`Found ${questions.length} questions for subdepartment ${sub.mappedName}`);
+
+        // Create assessment questions one by one
+        for (const question of questions) {
+          await AssessmentQuestion.create({
             assessmentId: assessment.id,
             masterQuestionId: question.id,
             subAssessmentId: subassessment.id
-          }, { transaction })
-        ));
+          }, { transaction });
+        }
 
-        return { subdepartment, subassessment };
-      }));
+        subdepartments.push({ subdepartment, subassessment });
+      }
 
       return { department, assessment, subdepartments };
     }));
-    // Update department status to complete
-    await company.update({ departmentsStatus: 'complete' }, { transaction });
 
+    // Update department status
+    await company.update({ departmentsStatus: 'complete' }, { transaction });
+    
     await transaction.commit();
     res.status(201).json({ success: true, data: createdData });
-
+    
   } catch (error) {
+    console.error('Error in createDepartments:', error);
     await transaction.rollback();
     next(error);
   }
@@ -210,74 +217,13 @@ export const updateDepartment = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const updateDepartment = async (req, res, next) => {
-      const { departmentId } = req.params;
-      const { departmentName, deadline } = req.body;
-      const transaction = await sequelize.transaction();
-
-      try {
-        const department = await Department.findByPk(departmentId, {
-          include: [{
-            model: Company,
-            as: 'company'
-          }],
-          transaction
-        });
-
-        if (!department) {
-          throw new Error('Department not found');
-        }
-
-        // Update department name if provided
-        if (departmentName) {
-          await department.update({
-            departmentName,
-            updatedByUserId: req.user.id
-          }, { transaction });
-        }
-        if (company.auditCompletionDeadline && new Date(dept.closureDate) > new Date(company.auditCompletionDeadline)) {
-          throw new AppError(`Department deadline cannot exceed company audit completion deadline`, 400);
-        }
-
-        // Update assessment deadline if provided
-        if (deadline) {
-          const assessment = await Assessment.findOne({
-            where: { departmentId },
-            transaction
-          });
-
-          if (assessment) {
-            await assessment.update({ deadline }, { transaction });
-
-            // Update all related sub-assessments deadlines
-            await SubAssessment.update(
-              { deadline },
-              {
-                where: { assessmentId: assessment.id },
-                transaction
-              }
-            );
-          }
-        }
-
-        await transaction.commit();
-
-        // Fetch updated data to return in response
-        const updatedDepartment = await Department.findOne({
-          where: { id: departmentId },
-        });
-
-        res.status(200).json({
-          success: true,
-          messages: ['Department updated successfully'],
-          department: updatedDepartment
-        });
-
-      } catch (error) {
-        await transaction.rollback();
-        next(error);
-      }
-    };
+    const department = await Department.findByPk(departmentId, {
+      include: [{
+        model: Company,
+        as: 'company'
+      }],
+      transaction
+    });
 
     if (!department) {
       throw new Error('Department not found');
@@ -287,11 +233,7 @@ export const updateDepartment = async (req, res, next) => {
     if (departmentName) {
       await department.update({
         departmentName,
-        updatedByUserId: req.user.id
       }, { transaction });
-    }
-    if (company.auditCompletionDeadline && new Date(dept.closureDate) > new Date(company.auditCompletionDeadline)) {
-      throw new AppError(`Department deadline cannot exceed company audit completion deadline`, 400);
     }
 
     // Update assessment deadline if provided
@@ -664,84 +606,84 @@ export const departmentProgressReport = async (req, res, next) => {
 
 export const getDepartmentAssessmentMetrics = async (req, res, next) => {
   const { departmentId } = req.params;
-  
+  console.log('hi')
   try {
-      // Get department with related data
-      const departmentData = await Department.findOne({
-          where: { id: departmentId },
-          attributes: ['id', 'departmentName'],
+    // Get department with related data
+    const departmentData = await Department.findOne({
+      where: { id: departmentId },
+      attributes: ['id', 'departmentName'],
+      include: [
+        {
+          model: SubDepartment,
+          as: 'subDepartments',
+          attributes: ['id', 'subDepartmentName'],
           include: [
-              {
-                  model: SubDepartment,
-                  as: 'subDepartments',
-                  attributes: ['id', 'subDepartmentName'],
+            {
+              model: SubAssessment,
+              as: 'subAssessments',
+              attributes: ['id', 'deadline'],
+              include: [
+                {
+                  model: AssessmentQuestion,
+                  as: 'questions',
                   include: [
-                      {
-                          model: SubAssessment,
-                          as: 'subAssessments',
-                          attributes: ['id', 'deadline'],
-                          include: [
-                              {
-                                  model: AssessmentQuestion,
-                                  as: 'questions',
-                                  include: [
-                                      {
-                                          model: Answer,
-                                          as: 'answer',
-                                          attributes: ['answerText', 'reviewStatus']
-                                      }
-                                  ]
-                              }
-                          ]
-                      }
+                    {
+                      model: Answer,
+                      as: 'answer',
+                      attributes: ['answerText', 'reviewStatus']
+                    }
                   ]
-              }
+                }
+              ]
+            }
           ]
+        }
+      ]
+    });
+
+    if (!departmentData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found'
+      });
+    }
+
+    // Process subdepartments
+    const allQuestions = [];
+    const subDepartmentMetrics = [];
+
+    departmentData.subDepartments.forEach(subDept => {
+      const subDeptQuestions = [];
+
+      // Collect all questions from subassessments
+      subDept.subAssessments.forEach(subAssess => {
+        subDeptQuestions.push(...(subAssess.questions || []));
+        allQuestions.push(...(subAssess.questions || []));
       });
 
-      if (!departmentData) {
-          return res.status(404).json({
-              success: false,
-              message: 'Department not found'
-          });
+      // Calculate metrics for this subdepartment
+      subDepartmentMetrics.push({
+        id: subDept.id,
+        name: subDept.subDepartmentName,
+        deadline: subDept.subAssessments[0]?.deadline,
+        metrics: calculateAnswerStats(subDeptQuestions)
+      });
+    });
+
+    // Calculate department level metrics
+    const departmentMetrics = calculateAnswerStats(allQuestions);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        departmentName: departmentData.departmentName,
+        departmentMetrics,
+        subDepartments: subDepartmentMetrics
       }
-
-      // Process subdepartments
-      const allQuestions = [];
-      const subDepartmentMetrics = [];
-
-      departmentData.subDepartments.forEach(subDept => {
-          const subDeptQuestions = [];
-          
-          // Collect all questions from subassessments
-          subDept.subAssessments.forEach(subAssess => {
-              subDeptQuestions.push(...(subAssess.questions || []));
-              allQuestions.push(...(subAssess.questions || []));
-          });
-
-          // Calculate metrics for this subdepartment
-          subDepartmentMetrics.push({
-              id: subDept.id,
-              name: subDept.subDepartmentName,
-              deadline: subDept.subAssessments[0]?.deadline,
-              metrics: calculateAnswerStats(subDeptQuestions)
-          });
-      });
-
-      // Calculate department level metrics
-      const departmentMetrics = calculateAnswerStats(allQuestions);
-
-      res.status(200).json({
-          success: true,
-          data: {
-              departmentName: departmentData.departmentName,
-              departmentMetrics,
-              subDepartments: subDepartmentMetrics
-          }
-      });
+    });
 
   } catch (error) {
-      next(error);
+    next(error);
   }
 };
 
@@ -1333,83 +1275,150 @@ export const getReportByDepartmentId = async (req, res, next) => {
 export const getDepartmentProgressMetrics = async (req, res, next) => {
   const { departmentId } = req.params;
   const { startDate, endDate } = req.query;
-  
-  try {
-      // First get all subdepartments of the department
-      const departmentData = await Department.findOne({
-          where: { id: departmentId },
-          include: [{
-              model: SubDepartment,
-              as: 'subDepartments',
-              attributes: ['id', 'subDepartmentName']
-          }]
-      });
 
-      if (!departmentData) {
-          throw new AppError('Department not found', 404);
+  try {
+    // First get all subdepartments of the department
+    const departmentData = await Department.findOne({
+      where: { id: departmentId },
+      include: [{
+        model: SubDepartment,
+        as: 'subDepartments',
+        attributes: ['id', 'subDepartmentName']
+      }]
+    });
+
+    if (!departmentData) {
+      throw new AppError('Department not found', 404);
+    }
+
+    // Get answer frequency for each subdepartment
+    const questionsFrequency = await AssessmentQuestion.findAll({
+      attributes: ['createdAt'],
+      include: [{
+        model: SubAssessment,
+        as: 'subAssessment',
+        required: true,
+        include: [{
+          model: SubDepartment,
+          as: 'subDepartment',
+          required: true,
+          where: {
+            departmentId
+          },
+          attributes: ['id', 'subDepartmentName']
+        }]
+      }],
+      where: startDate && endDate ? {
+        createdAt: {
+          [Op.between]: [new Date(startDate), new Date(endDate)]
+        }
+      } : {}
+    });
+
+    // Group questions by date and subdepartment
+    const frequencyBySubDept = questionsFrequency.reduce((acc, question) => {
+      const date = question.createdAt.toISOString().split('T')[0];
+      const subDeptId = question.subAssessment.subDepartment.id;
+      const subDeptName = question.subAssessment.subDepartment.subDepartmentName;
+
+      if (!acc[date]) {
+        acc[date] = {
+          date,
+          // Initialize count for each subdepartment
+          ...departmentData.subDepartments.reduce((subDepts, dept) => ({
+            ...subDepts,
+            [dept.subDepartmentName]: 0
+          }), {})
+        };
       }
 
-      // Get answer frequency for each subdepartment
-      const questionsFrequency = await AssessmentQuestion.findAll({
-          attributes: ['createdAt'],
-          include: [{
-              model: SubAssessment,
-              as: 'subAssessment',
-              required: true,
-              include: [{
-                  model: SubDepartment,
-                  as: 'subDepartment',
-                  required: true,
-                  where: {
-                      departmentId
-                  },
-                  attributes: ['id', 'subDepartmentName']
-              }]
-          }],
-          where: startDate && endDate ? {
-              createdAt: {
-                  [Op.between]: [new Date(startDate), new Date(endDate)]
-              }
-          } : {}
-      });
+      acc[date][subDeptName] = (acc[date][subDeptName] || 0) + 1;
+      return acc;
+    }, {});
 
-      // Group questions by date and subdepartment
-      const frequencyBySubDept = questionsFrequency.reduce((acc, question) => {
-          const date = question.createdAt.toISOString().split('T')[0];
-          const subDeptId = question.subAssessment.subDepartment.id;
-          const subDeptName = question.subAssessment.subDepartment.subDepartmentName;
+    // Convert to array and sort by date
+    const timelineData = Object.values(frequencyBySubDept)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-          if (!acc[date]) {
-              acc[date] = {
-                  date,
-                  // Initialize count for each subdepartment
-                  ...departmentData.subDepartments.reduce((subDepts, dept) => ({
-                      ...subDepts,
-                      [dept.subDepartmentName]: 0
-                  }), {})
-              };
-          }
-          
-          acc[date][subDeptName] = (acc[date][subDeptName] || 0) + 1;
-          return acc;
-      }, {});
-
-      // Convert to array and sort by date
-      const timelineData = Object.values(frequencyBySubDept)
-          .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      res.status(200).json({
-          success: true,
-          data: {
-              timelineData,
-              subDepartments: departmentData.subDepartments.map(dept => ({
-                  id: dept.id,
-                  name: dept.subDepartmentName
-              }))
-          }
-      });
+    res.status(200).json({
+      success: true,
+      data: {
+        timelineData,
+        subDepartments: departmentData.subDepartments.map(dept => ({
+          id: dept.id,
+          name: dept.subDepartmentName
+        }))
+      }
+    });
 
   } catch (error) {
-      next(error);
+    next(error);
+  }
+};
+
+
+
+export const getDepartmentMetrics = async (req, res, next) => {
+  const { departmentId } = req.params;
+
+  try {
+    // Find single department with its default assessment
+    const department = await Department.findOne({
+      where: { id: departmentId },
+      include: [{
+        model: Assessment,
+        as: 'assessments',
+        where: {
+          assessmentType: ASSESSMENT_TYPE.DEFAULT
+        },
+        required: false,
+        include: [{
+          model: AssessmentQuestion,
+          as: 'questions',
+          include: [{
+            model: Answer,
+            as: 'answer'
+          }, {
+            model: MasterQuestion,
+            as: 'masterQuestion'
+          }]
+        }]
+      }]
+    });
+
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        messages: ['Department not found']
+      });
+    }
+
+    const assessment = department.assessments?.[0];
+    if (!assessment) {
+      return res.status(404).json({
+        success: false,
+        messages: ['No default assessment found for department']
+      });
+    }
+
+    const metrics = calculateMetrics(assessment.questions);
+
+    return res.status(200).json({
+      success: true,
+      departmentRiskMetrics: {
+        id: department.id,
+        departmentName: department.departmentName,
+        riskMetrics: {
+          departmentRiskIndex: metrics.departmentRiskIndex,
+          controlCoverageRatio: metrics.controlCoverageRatio,
+          gapDensityRate: metrics.gapDensityRate,
+          departmentComplianceScore: metrics.departmentComplianceScore,
+          documentationCoverageRatio: metrics.documentationCoverageRatio
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching department metrics:', error);
+    next(error);
   }
 };

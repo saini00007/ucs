@@ -40,26 +40,26 @@ router.get('/comments/:commentId',
 
 // Route to update an existing comment
 router.put('/comments/:commentId',
-  attachResourceInfo(
-    RESOURCE_TYPES.COMMENT,
-    CONTENT_RESOURCE_TYPES.COMMENT,
-    'commentId',
-    ACTION_IDS.UPDATE
-  ),
-  checkAccess,
-  validate(commentSchema),
+  // attachResourceInfo(
+  //   RESOURCE_TYPES.COMMENT,
+  //   CONTENT_RESOURCE_TYPES.COMMENT,
+  //   'commentId',
+  //   ACTION_IDS.UPDATE
+  // ),
+  // checkAccess,
+  // validate(commentSchema),
   updateComment
 );
 
 // Route to delete a comment by its ID
 router.delete('/comments/:commentId',
-  attachResourceInfo(
-    RESOURCE_TYPES.COMMENT,
-    CONTENT_RESOURCE_TYPES.COMMENT,
-    'commentId',
-    ACTION_IDS.REMOVE
-  ),
-  checkAccess,
+  // attachResourceInfo(
+  //   RESOURCE_TYPES.COMMENT,
+  //   CONTENT_RESOURCE_TYPES.COMMENT,
+  //   'commentId',
+  //   ACTION_IDS.REMOVE
+  // ),
+  // checkAccess,
   deleteComment
 );
 

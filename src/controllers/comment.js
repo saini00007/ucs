@@ -77,7 +77,7 @@ export const updateComment = async (req, res, next) => {
     // Retrieve the comment by its ID and include the user (creator) data
     const comment = await Comment.findOne({
       where: { id: commentId },
-      include: [{ model: User, as: 'creator', attributes: ['id', 'username'] }],
+      include: [{ model: User, as: 'creator', attributes: ['id', 'firstName','lastName'] }],
     });
 
     // If the comment is not found, return a 404 error

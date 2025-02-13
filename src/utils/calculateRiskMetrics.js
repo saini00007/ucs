@@ -18,30 +18,24 @@ export const calculateMetrics = (assessmentQuestions) => {
   }
 
   const totalControlCount = assessmentQuestions.length;
-  
-  // Count implemented controls (answered as 'yes')
-  const implementedControlCount = assessmentQuestions.filter(assessmentQuestion => 
+
+  const implementedControlCount = assessmentQuestions.filter(assessmentQuestion =>
     assessmentQuestion.answer && assessmentQuestion.answer.answerText?.toLowerCase() === 'yes'
   ).length;
 
-  // Calculate Documentation Coverage Ratio (DCR)
-  // Documented controls are those that have been answered as 'yes'
   const documentedControlCount = implementedControlCount;
-  const documentationCoverageRatio = totalControlCount ? 
+  const documentationCoverageRatio = totalControlCount ?
     (documentedControlCount / totalControlCount) * 100 : 0;
 
-  // Calculate Department Compliance Score (DCS)
-  // Required controls are all controls, compliant controls are those answered 'yes'
   const compliantControlCount = implementedControlCount;
   const requiredControlCount = totalControlCount;
-  const departmentComplianceScore = requiredControlCount ? 
+  const departmentComplianceScore = requiredControlCount ?
     (compliantControlCount / requiredControlCount) * 100 : 0;
 
   const controlGaps = assessmentQuestions.reduce((gapAccumulator, assessmentQuestion) => {
     if (assessmentQuestion.answer && assessmentQuestion.answer.answerText?.toLowerCase() === 'no') {
       gapAccumulator.totalGapsCount++;
       
-      // Check risk rating from master question
       const currentRiskRating = assessmentQuestion.masterQuestion?.currentRiskRating?.toLowerCase() || '';
       if (currentRiskRating.includes('critical')) gapAccumulator.criticalCount++;
       else if (currentRiskRating.includes('high')) gapAccumulator.highCount++;
@@ -50,14 +44,13 @@ export const calculateMetrics = (assessmentQuestions) => {
     return gapAccumulator;
   }, { criticalCount: 0, highCount: 0, mediumCount: 0, totalGapsCount: 0 });
 
-  // Calculate department risk metrics
-  const departmentRiskIndex = totalControlCount ? 
+  const departmentRiskIndex = totalControlCount ?
     ((controlGaps.criticalCount * 3 + controlGaps.highCount * 2 + controlGaps.mediumCount) / totalControlCount) : 0;
 
-  const controlCoverageRatio = totalControlCount ? 
+  const controlCoverageRatio = totalControlCount ?
     (implementedControlCount / totalControlCount) * 100 : 0;
 
-  const gapDensityRate = totalControlCount ? 
+  const gapDensityRate = totalControlCount ?
     (controlGaps.totalGapsCount / totalControlCount) * 100 : 0;
 
   return {

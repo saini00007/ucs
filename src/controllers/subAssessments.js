@@ -195,11 +195,11 @@ export const submitForReview = async (req, res, next) => {
         // Process answers - auto-approve "no" and "not applicable" answers
         const answerUpdates = subAssessment.questions.map(async question => {
             const answer = question.answer;
-            const lowerCaseAnswer = answer.answerText?.toLowerCase().trim();
+            const answerText = answer.answerText;
 
             // Check if the answer matches NO or NOT_APPLICABLE types
-            if (lowerCaseAnswer === ANSWER_TYPES.NO ||
-                lowerCaseAnswer === ANSWER_TYPES.NOT_APPLICABLE) {
+            if (answerText === ANSWER_TYPES.NO ||
+                answerText === ANSWER_TYPES.NOT_APPLICABLE) {
                 await Answer.update(
                     {
                         finalReview: true,
@@ -302,7 +302,7 @@ export const resubmitAfterRevision = async (req, res, next) => {
                 updateData.reviewStatus = ANSWER_REVIEW_STATUS.PENDING;
                 updateData.finalReview = false;
             } else if (
-                answer.answerText === ANSWER_TYPES.NO || 
+                answer.answerText === ANSWER_TYPES.NO ||
                 answer.answerText === ANSWER_TYPES.NOT_APPLICABLE
             ) {
                 updateData.reviewStatus = ANSWER_REVIEW_STATUS.APPROVED;
@@ -705,9 +705,7 @@ export const getRejectedQuestions = async (req, res, next) => {
                     model: Answer,
                     as: 'answer',
                     required: true,
-                    where: {
-                        reviewStatus: ANSWER_REVIEW_STATUS.REJECTED
-                    },
+                    where: { reviewStatus: ANSWER_REVIEW_STATUS.REJECTED },
                     include: [
                         {
                             model: EvidenceFile,
@@ -733,9 +731,11 @@ export const getRejectedQuestions = async (req, res, next) => {
                     order: [['createdAt', 'ASC']],
                 },
             ],
+            distinct: true,  // ✅ Ensures unique count of `AssessmentQuestion`
             limit: parseInt(limit),
             offset: (parseInt(page) - 1) * parseInt(limit)
         });
+
 
         res.status(200).json({
             success: true,
