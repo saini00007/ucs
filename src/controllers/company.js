@@ -1042,6 +1042,7 @@ export const getReportByCompanyId = async (req, res, next) => {
     });
 
     const frameworks = controlFrameworks.map(cf => cf.frameworkType);
+    console.log(frameworks)
 
     // Build includes array based on requested frameworks
     const frameworkIncludes = [];
@@ -1064,7 +1065,7 @@ export const getReportByCompanyId = async (req, res, next) => {
       });
     }
 
-    if (frameworks.includes('MITRE ATT&CK')) {
+    if (frameworks.includes('MITRE DEFEND')) {
       frameworkIncludes.push({
         model: MITREControl,
         as: 'mitreControl',
@@ -1377,7 +1378,7 @@ export const getDepartmentStatusReportAccordingToCompliance = async (req, res, n
     const calculateCompliance = (assessment) => {
       if (!assessment.questions || assessment.questions.length === 0) return 'HIGH';
 
-      const answeredQuestions = assessment.questions.filter(q => 
+      const answeredQuestions = assessment.questions.filter(q =>
         q.answer && q.answer.answerText
       );
 
@@ -1853,7 +1854,7 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
   const { companyId } = req.params;
 
   try {
-    
+
     const departments = await Department.findAll({
       where: { companyId },
       include: [{
@@ -1897,7 +1898,7 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
       assessment?.questions?.forEach(question => {
         if (question.answer) {
           const answerText = question.answer.answerText
-          if (answerText ===ANSWER_TYPES.YES) {
+          if (answerText === ANSWER_TYPES.YES) {
             answerStats.yes++;
             overallAnswerStats.yes++;
           } else if (answerText === ANSWER_TYPES.NO) {
@@ -1933,8 +1934,8 @@ export const getCompanyAssessmentProgress = async (req, res, next) => {
     }), { questions: 0, completed: 0 });
 
     // Calculate overall percentages
-    const totalCompletionPercentage = totalStats.questions > 0 
-      ? Math.round((totalStats.completed / totalStats.questions) * 100) 
+    const totalCompletionPercentage = totalStats.questions > 0
+      ? Math.round((totalStats.completed / totalStats.questions) * 100)
       : 0;
 
     // Calculate overall answer percentages
@@ -1988,7 +1989,7 @@ const calculateMetricsFromSummary = (summary) => {
 
   const implemented = summary.implemented || 0;
   const gaps = (summary.critical || 0) + (summary.high || 0) + (summary.medium || 0);
-  
+
   const departmentRiskIndex = ((summary.critical * 3 + summary.high * 2 + summary.medium) / totalQuestions);
   const controlCoverageRatio = (implemented / totalQuestions) * 100;
   const gapDensityRate = (gaps / totalQuestions) * 100;

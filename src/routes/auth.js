@@ -1,5 +1,5 @@
 import express from 'express';
-import { resetPassword, login, verifyOtp, requestPasswordReset } from '../controllers/auth.js';
+import { resetPassword, login, verifyOtp, requestPasswordReset, resendOtp } from '../controllers/auth.js';
 
 const router = express.Router();
 
@@ -14,5 +14,8 @@ router.post('/reset-password', resetPassword);
 
 // Route to request a password reset
 router.post('/request-password-reset', requestPasswordReset);
+
+router.post('/resend-otp', resendOtp);
+
 
 export default router;

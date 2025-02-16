@@ -211,6 +211,67 @@ export const verifyOtp = async (req, res, next) => {
   }
 };
 
+export const resendOtp = async (req, res, next) => {
+  const { token } = req.body;
+
+  // Validate if token is provided
+  if (!token) {
+    throw new AppError('Token is required.', 400);
+  }
+
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Ensure the token is for 'login' type
+    if (decoded.type !== 'login') {
+      throw new AppError('Invalid token type', 400);
+    }
+
+    const userId = decoded.userId;
+
+    // Find the user
+    const user = await User.findByPk(userId);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Delete any existing OTP for this user
+    await Otp.destroy({ where: { userId } });
+
+    // Generate a new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Generate a new login token (optional - if you want to reset the 5-minute window)
+    const newToken = generateToken(userId, 'login', '5m');
+
+    // Prepare and send email
+    const emailSubject = 'Your New OTP Code';
+    const emailText = `Hello ${user.username},\n\nYour new OTP code is: ${otp}\n\nThis code will expire in 5 minutes.`;
+    
+    await sendEmail(user.email, emailSubject, emailText);
+
+    // Save new OTP to database
+    const otpExpiration = new Date(Date.now() + 5 * 60 * 1000);
+    await Otp.create({ 
+      userId: user.id, 
+      otpCode: otp, 
+      expiresAt: otpExpiration 
+    });
+
+    // Send response
+    res.status(200).json({ 
+      success: true, 
+      messages: ['New OTP sent to email'], 
+      token: newToken,
+      otp: `${otp} ----for development purpose only`
+    });
+
+  } catch (error) {
+    console.error('Error resending OTP:', error);
+    next(error);
+  }
+};
 
 
 

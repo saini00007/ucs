@@ -28,10 +28,10 @@ import { calculateMetrics } from '../utils/calculateRiskMetrics.js';
 export const createDepartments = async (req, res, next) => {
   const { companyId, mappings } = req.body;
   const transaction = await sequelize.transaction();
-  
+
   try {
     const { company } = await validateDepartmentMappings(mappings, companyId);
-    
+
     // Status checks
     if (company.detailsStatus !== 'complete') {
       throw new AppError('Complete company details first.', 400);
@@ -101,10 +101,10 @@ export const createDepartments = async (req, res, next) => {
 
     // Update department status
     await company.update({ departmentsStatus: 'complete' }, { transaction });
-    
+
     await transaction.commit();
     res.status(201).json({ success: true, data: createdData });
-    
+
   } catch (error) {
     console.error('Error in createDepartments:', error);
     await transaction.rollback();
@@ -217,60 +217,77 @@ export const updateDepartment = async (req, res, next) => {
   const transaction = await sequelize.transaction();
 
   try {
+    // Find the department
     const department = await Department.findByPk(departmentId, {
-      include: [{
-        model: Company,
-        as: 'company'
-      }],
-      transaction
+      include: [
+        {
+          model: Assessment,
+          as: 'assessments',
+          include: [
+            {
+              model: SubAssessment,
+              as: 'subAssessments',
+            },
+          ],
+        },
+      ],
+      transaction,
     });
 
     if (!department) {
-      throw new Error('Department not found');
+      throw new AppError('Department not found', 404);
     }
 
     // Update department name if provided
     if (departmentName) {
-      await department.update({
-        departmentName,
-      }, { transaction });
+      await department.update({ departmentName }, { transaction });
     }
 
     // Update assessment deadline if provided
     if (deadline) {
-      const assessment = await Assessment.findOne({
-        where: { departmentId },
-        transaction
-      });
+      const assessment = department.assessments?.[0]; // Assuming there's only one assessment per department
 
       if (assessment) {
+        // Update the assessment deadline
         await assessment.update({ deadline }, { transaction });
 
         // Update all related sub-assessments deadlines
-        await SubAssessment.update(
-          { deadline },
-          {
-            where: { assessmentId: assessment.id },
-            transaction
-          }
+        await Promise.all(
+          assessment.subAssessments.map((subAssessment) =>
+            subAssessment.update({ deadline }, { transaction })
+          )
         );
+      } else {
+        throw new AppError('No assessment found for this department', 404);
       }
     }
 
+    // Commit the transaction
     await transaction.commit();
 
-    // Fetch updated data to return in response
-    const updatedDepartment = await Department.findOne({
-      where: { id: departmentId },
+    // Fetch the updated department with its assessments and sub-assessments
+    const updatedDepartment = await Department.findByPk(departmentId, {
+      include: [
+        {
+          model: Assessment,
+          as: 'assessments',
+          include: [
+            {
+              model: SubAssessment,
+              as: 'subAssessments',
+            },
+          ],
+        },
+      ],
     });
 
     res.status(200).json({
       success: true,
       messages: ['Department updated successfully'],
-      department: updatedDepartment
+      department: updatedDepartment,
     });
-
   } catch (error) {
+    // Rollback the transaction in case of error
     await transaction.rollback();
     next(error);
   }

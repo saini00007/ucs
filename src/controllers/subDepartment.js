@@ -115,6 +115,32 @@ export const getSubAssessmentBySubDepartmentId = async (req, res, next) => {
     }
 };
 
+export const updateSubDepartment = async (req, res, next) => {
+    const { subDepartmentId } = req.params;
+    const { subDepartmentName } = req.body;
+
+    try {
+        // Find and update the subdepartment
+        const subDepartment = await SubDepartment.findByPk(subDepartmentId);
+        
+        if (!subDepartment) {
+            throw new AppError('Sub department not found', 404);
+        }
+
+        await subDepartment.update({ subDepartmentName });
+
+        res.status(200).json({
+            success: true,
+            messages: ['Sub department updated successfully'],
+            subDepartment
+        });
+
+    } catch (error) {
+        console.error('Error updating sub department:', error);
+        next(error);
+    }
+};
+
 
 export const getSubDepartmentById = async (req, res, next) => {
     const { subDepartmentId } = req.params;

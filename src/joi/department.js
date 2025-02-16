@@ -47,7 +47,16 @@ const updateDepartmentSchema = Joi.object({
     .optional()
     .messages({
       'string.guid': 'Master Department ID must be a valid UUID',
-    })
+    }),
+  deadline: Joi.date()
+    .iso() // 2025-01-10T10:00:00Z
+    .greater('now')
+    .optional()
+    .messages({
+      'date.base': 'Deadline must be a valid date.',
+      'date.greater': 'Deadline must be in the future.',
+      'any.required': 'Deadline is required.',
+    }),
 });
 
 export { createDepartmentSchema, updateDepartmentSchema };
